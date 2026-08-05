@@ -2,7 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database.types";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth",
+  // Unauthenticated endpoints called from the public patient site
+  // (nutrithales.com.br) — must stay reachable without an admin session,
+  // including the CORS preflight OPTIONS request.
+  "/api/pacientes/self-register",
+  "/api/pacientes/forgot-password",
+];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
