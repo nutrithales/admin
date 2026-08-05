@@ -29,6 +29,7 @@ import {
 } from "@/services/pacientes.actions";
 import { PacienteFormModal } from "./PacienteFormModal";
 import { PlanoQuickEditModal } from "./PlanoQuickEditModal";
+import { PasswordRevealModal } from "@/components/ui/PasswordRevealModal";
 
 type Paciente = Tables<"pacientes">;
 
@@ -41,6 +42,9 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
   const [editing, setEditing] = useState<Paciente | null>(null);
   const [planoEditing, setPlanoEditing] = useState<Paciente | null>(null);
   const [deleting, setDeleting] = useState<Paciente | null>(null);
+  const [resetPassword, setResetPassword] = useState<{ nome: string; password: string } | null>(
+    null,
+  );
 
   useEffect(() => setPacientes(initialPacientes), [initialPacientes]);
 
@@ -69,16 +73,12 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
   }
 
   async function handleResetPassword(p: Paciente) {
-    if (!p.email) {
-      toast({ kind: "error", title: "Paciente sem e-mail cadastrado." });
-      return;
+    const result = await resetPacientePasswordAction(p.id);
+    if (result.success && result.password) {
+      setResetPassword({ nome: p.nome ?? "paciente", password: result.password });
+    } else {
+      toast({ kind: "error", title: "Erro", description: result.message });
     }
-    const result = await resetPacientePasswordAction(p.email);
-    toast({
-      kind: result.success ? "success" : "error",
-      title: result.success ? "E-mail enviado" : "Erro",
-      description: result.message,
-    });
   }
 
   async function handleDelete() {
@@ -242,6 +242,13 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
         paciente={planoEditing}
         onClose={() => setPlanoEditing(null)}
         onSaved={refresh}
+      />
+
+      <PasswordRevealModal
+        open={!!resetPassword}
+        password={resetPassword?.password ?? null}
+        pacienteNome={resetPassword?.nome}
+        onClose={() => setResetPassword(null)}
       />
 
       <ConfirmDialog

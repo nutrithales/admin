@@ -5,10 +5,14 @@ import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paciente";
+import { generateTemporaryPassword } from "@/utils/generate-password";
 
 export interface ActionResult {
   success: boolean;
   message: string;
+  /** Only set right after a password is generated — shown once to the
+   * admin so it can be handed to the patient. Never persisted or logged. */
+  password?: string;
 }
 
 export async function createPacienteAction(values: PacienteFormValues): Promise<ActionResult> {
@@ -21,21 +25,24 @@ export async function createPacienteAction(values: PacienteFormValues): Promise<
 
   const supabase = await createClient();
   const admin = createAdminClient();
+  const password = generateTemporaryPassword();
 
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
-    data.email,
-    { data: { nome: data.nome } },
-  );
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email: data.email,
+    password,
+    email_confirm: true,
+    user_metadata: { nome: data.nome },
+  });
 
-  if (inviteError || !invited.user) {
+  if (createError || !created.user) {
     return {
       success: false,
-      message: `Não foi possível criar o acesso do paciente: ${inviteError?.message ?? "erro desconhecido"}.`,
+      message: `Não foi possível criar o acesso do paciente: ${createError?.message ?? "erro desconhecido"}.`,
     };
   }
 
   const { error: insertError } = await supabase.from("pacientes").insert({
-    auth_id: invited.user.id,
+    auth_id: created.user.id,
     nome: data.nome,
     email: data.email,
     telefone: data.telefone || null,
@@ -46,14 +53,15 @@ export async function createPacienteAction(values: PacienteFormValues): Promise<
   });
 
   if (insertError) {
-    await admin.auth.admin.deleteUser(invited.user.id);
+    await admin.auth.admin.deleteUser(created.user.id);
     return { success: false, message: `Erro ao salvar paciente: ${insertError.message}` };
   }
 
   revalidatePath("/pacientes");
   return {
     success: true,
-    message: "Paciente cadastrado. Um convite de acesso foi enviado por e-mail.",
+    message: "Paciente cadastrado. Copie a senha abaixo e envie ao paciente.",
+    password,
   };
 }
 
@@ -154,19 +162,33 @@ export async function setPacienteStatusAction(
   };
 }
 
-export async function resetPacientePasswordAction(email: string): Promise<ActionResult> {
+export async function resetPacientePasswordAction(id: string): Promise<ActionResult> {
   await assertAdmin();
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: process.env.NEXT_PUBLIC_PATIENT_PASSWORD_RESET_URL,
-  });
+  const { data: existing, error: fetchError } = await supabase
+    .from("pacientes")
+    .select("auth_id")
+    .eq("id", id)
+    .single();
 
-  if (error) {
-    return { success: false, message: `Erro ao enviar redefinição de senha: ${error.message}` };
+  if (fetchError || !existing?.auth_id) {
+    return { success: false, message: "Paciente não encontrado ou sem acesso configurado." };
   }
 
-  return { success: true, message: "E-mail de redefinição de senha enviado ao paciente." };
+  const password = generateTemporaryPassword();
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(existing.auth_id, { password });
+
+  if (error) {
+    return { success: false, message: `Erro ao gerar nova senha: ${error.message}` };
+  }
+
+  return {
+    success: true,
+    message: "Nova senha gerada. Copie e envie ao paciente.",
+    password,
+  };
 }
 
 export async function changePacientePlanoAction(id: string, plano: string): Promise<ActionResult> {

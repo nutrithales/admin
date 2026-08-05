@@ -9,6 +9,7 @@ import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paci
 import { createPacienteAction, updatePacienteAction } from "@/services/pacientes.actions";
 import { useToast } from "@/contexts/ToastContext";
 import type { Tables } from "@/types/database.types";
+import { PasswordRevealModal } from "@/components/ui/PasswordRevealModal";
 
 const emptyForm: PacienteFormValues = {
   nome: "",
@@ -32,10 +33,12 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
   const [values, setValues] = useState<PacienteFormValues>(emptyForm);
   const [errors, setErrors] = useState<Partial<Record<keyof PacienteFormValues, string>>>({});
   const [saving, setSaving] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setErrors({});
+    setGeneratedPassword(null);
     if (paciente) {
       setValues({
         nome: paciente.nome ?? "",
@@ -77,21 +80,26 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
     if (result.success) {
       toast({ kind: "success", title: result.message });
       onSaved();
-      onClose();
+      if (result.password) {
+        setGeneratedPassword(result.password);
+      } else {
+        onClose();
+      }
     } else {
       toast({ kind: "error", title: "Não foi possível salvar", description: result.message });
     }
   }
 
   return (
+    <>
     <Modal
-      open={open}
+      open={open && !generatedPassword}
       onClose={onClose}
       title={paciente ? "Editar paciente" : "Novo paciente"}
       description={
         paciente
           ? "Atualize os dados cadastrais do paciente."
-          : "Um convite de acesso será enviado por e-mail ao paciente."
+          : "Uma senha de acesso será gerada para o paciente ao salvar."
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -182,5 +190,15 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
         </div>
       </form>
     </Modal>
+    <PasswordRevealModal
+      open={!!generatedPassword}
+      password={generatedPassword}
+      pacienteNome={values.nome}
+      onClose={() => {
+        setGeneratedPassword(null);
+        onClose();
+      }}
+    />
+    </>
   );
 }

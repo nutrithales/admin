@@ -16,14 +16,14 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase.
 
 3. **Primeiro administrador** — como o login só funciona para usuários
    presentes na tabela `administradores`, crie o primeiro manualmente:
-   - Crie o usuário em Authentication → Users (ou convide por e-mail).
-   - Insira uma linha em `administradores` com o `user_id` desse usuário.
+   - Crie o usuário em Authentication → Users (convide por e-mail ou defina
+     uma senha diretamente).
+   - Insira uma linha em `administradores` com o `auth_id` desse usuário.
 
-4. **E-mail de convite/redefinição de senha** — o cadastro de pacientes usa
-   `auth.admin.inviteUserByEmail` e o reset de senha usa
-   `auth.resetPasswordForEmail`. Configure o provedor de e-mail (SMTP) e a
-   lista de Redirect URLs em Authentication → URL Configuration para que
-   esses e-mails cheguem e apontem para o destino correto.
+4. **Senhas de pacientes** — ao cadastrar um paciente ou usar "Resetar
+   senha", o painel gera uma senha temporária e a exibe uma única vez para
+   o administrador copiar e repassar ao paciente (não depende de e-mail
+   configurado).
 
 5. **Instalar e rodar**:
    ```bash
