@@ -21,9 +21,11 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase.
    - Insira uma linha em `administradores` com o `auth_id` desse usuário.
 
 4. **Senhas de pacientes** — ao cadastrar um paciente ou usar "Resetar
-   senha", o painel gera uma senha temporária e a exibe uma única vez para
-   o administrador copiar e repassar ao paciente (não depende de e-mail
-   configurado).
+   senha", o painel gera uma senha temporária, envia por e-mail ao paciente
+   via Resend (`RESEND_API_KEY` / `EMAIL_FROM`) e também a exibe uma única
+   vez para o administrador copiar. Sem o Resend configurado, o envio falha
+   silenciosamente e a senha só fica disponível na tela — não depende de
+   SMTP do Supabase.
 
 5. **Instalar e rodar**:
    ```bash
@@ -42,6 +44,8 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase.
 - `src/services/*.actions.ts` — Server Actions (mutações).
 - `src/lib/supabase` — clientes Supabase (browser, server, admin/service-role,
   middleware).
+- `src/lib/email` — envio de e-mail transacional via Resend (credenciais de
+  acesso do paciente).
 - `supabase/migrations` — schema SQL, RLS e buckets de Storage.
 
 ## Notas de arquitetura

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paciente";
 import { generateTemporaryPassword } from "@/utils/generate-password";
+import { sendPatientCredentialsEmail } from "@/lib/email/patient-credentials";
 
 export interface ActionResult {
   success: boolean;
@@ -57,10 +58,18 @@ export async function createPacienteAction(values: PacienteFormValues): Promise<
     return { success: false, message: `Erro ao salvar paciente: ${insertError.message}` };
   }
 
+  const emailResult = await sendPatientCredentialsEmail({
+    to: data.email,
+    nome: data.nome,
+    password,
+  });
+
   revalidatePath("/pacientes");
   return {
     success: true,
-    message: "Paciente cadastrado. Copie a senha abaixo e envie ao paciente.",
+    message: emailResult.ok
+      ? "Paciente cadastrado. Um e-mail com a senha de acesso foi enviado a ele."
+      : `Paciente cadastrado, mas o e-mail não pôde ser enviado (${emailResult.error}). Copie a senha abaixo e envie manualmente.`,
     password,
   };
 }
@@ -168,11 +177,11 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
 
   const { data: existing, error: fetchError } = await supabase
     .from("pacientes")
-    .select("auth_id")
+    .select("auth_id, email, nome")
     .eq("id", id)
     .single();
 
-  if (fetchError || !existing?.auth_id) {
+  if (fetchError || !existing?.auth_id || !existing.email) {
     return { success: false, message: "Paciente não encontrado ou sem acesso configurado." };
   }
 
@@ -184,9 +193,17 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
     return { success: false, message: `Erro ao gerar nova senha: ${error.message}` };
   }
 
+  const emailResult = await sendPatientCredentialsEmail({
+    to: existing.email,
+    nome: existing.nome ?? "",
+    password,
+  });
+
   return {
     success: true,
-    message: "Nova senha gerada. Copie e envie ao paciente.",
+    message: emailResult.ok
+      ? "Nova senha gerada e enviada por e-mail ao paciente."
+      : `Nova senha gerada, mas o e-mail não pôde ser enviado (${emailResult.error}). Copie e envie manualmente.`,
     password,
   };
 }
