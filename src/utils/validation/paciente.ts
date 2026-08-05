@@ -47,3 +47,10 @@ export const pacienteSelfRegisterSchema = z.object({
 });
 
 export type PacienteSelfRegisterValues = z.infer<typeof pacienteSelfRegisterSchema>;
+
+export const pacienteForgotPasswordSchema = z.object({
+  email: z.string().trim().email("E-mail inválido."),
+  website: z.string().max(0).optional().or(z.literal("")),
+});
+
+export type PacienteForgotPasswordValues = z.infer<typeof pacienteForgotPasswordSchema>;

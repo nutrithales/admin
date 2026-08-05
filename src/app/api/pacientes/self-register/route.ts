@@ -3,26 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateTemporaryPassword } from "@/utils/generate-password";
 import { sendPatientCredentialsEmail } from "@/lib/email/patient-credentials";
 import { pacienteSelfRegisterSchema } from "@/utils/validation/paciente";
+import { corsHeaders } from "@/lib/http/cors";
 
 // Public, unauthenticated endpoint — called from the static signup page on
 // nutrithales.com.br (a different origin, hence the CORS handling below).
 // Every signup lands as status "pendente" and banned in Supabase Auth;
 // an admin has to approve it from the painel before the patient can log in.
-
-const ALLOWED_ORIGINS = new Set([
-  "https://nutrithales.com.br",
-  "https://www.nutrithales.com.br",
-]);
-
-function corsHeaders(origin: string | null): HeadersInit {
-  const allowOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://nutrithales.com.br";
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    Vary: "Origin",
-  };
-}
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(request.headers.get("origin")) });
