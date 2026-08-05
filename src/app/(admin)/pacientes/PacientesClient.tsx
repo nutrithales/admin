@@ -126,8 +126,10 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       header: "Status",
       sortValue: (p) => p.status,
       render: (p) => (
-        <Badge tone={p.status === "ativo" ? "success" : "muted"}>
-          {p.status === "ativo" ? "Ativo" : "Inativo"}
+        <Badge
+          tone={p.status === "ativo" ? "success" : p.status === "pendente" ? "warning" : "muted"}
+        >
+          {p.status === "ativo" ? "Ativo" : p.status === "pendente" ? "Pendente" : "Inativo"}
         </Badge>
       ),
     },
@@ -178,6 +180,10 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
             {p.status === "ativo" ? (
               <>
                 <Ban className="size-4" /> Desativar acesso
+              </>
+            ) : p.status === "pendente" ? (
+              <>
+                <CheckCircle2 className="size-4" /> Aprovar cadastro
               </>
             ) : (
               <>

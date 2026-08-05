@@ -46,7 +46,10 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
         telefone: paciente.telefone ?? "",
         cpf: paciente.cpf ?? "",
         plano: paciente.plano ?? "",
-        status: paciente.status === "inativo" ? "inativo" : "ativo",
+        status:
+          paciente.status === "inativo" || paciente.status === "pendente"
+            ? paciente.status
+            : "ativo",
         data_inicio: paciente.data_inicio ?? "",
       });
     } else {
@@ -162,10 +165,13 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
             <Select
               id="status"
               value={values.status}
-              onChange={(e) => setField("status", e.target.value as "ativo" | "inativo")}
+              onChange={(e) =>
+                setField("status", e.target.value as "ativo" | "inativo" | "pendente")
+              }
             >
               <option value="ativo">Ativo</option>
               <option value="inativo">Inativo</option>
+              <option value="pendente">Pendente</option>
             </Select>
           </FieldGroup>
         </div>
