@@ -52,8 +52,9 @@ export async function findSubstitutosAction(alimentoId: string, quantidadeG: num
   await assertAdmin();
   const supabase = await createClient();
 
-  const { data: original } = await supabase.from("alimentos").select("*").eq("id", alimentoId).maybeSingle();
-  if (!original) return [];
+  const { data } = await supabase.from("alimentos").select("*").eq("id", alimentoId).maybeSingle();
+  if (!data) return [];
+  const original = data;
 
   async function buscar(filtroGrupo: boolean): Promise<AlimentoOption[]> {
     let query = supabase
