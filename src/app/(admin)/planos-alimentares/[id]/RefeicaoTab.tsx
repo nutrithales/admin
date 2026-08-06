@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ChefHat, Apple } from "lucide-react";
+import { Plus, Trash2, ChefHat, Apple, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Label, FieldGroup } from "@/components/ui/Input";
@@ -11,9 +11,16 @@ import { MacroSummary } from "@/components/ui/MacroSummary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
 import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
-import { removerItemDoPlanoAction, reordenarItensAction, updateMetaRefeicaoAction } from "@/services/planos-estruturados.actions";
-import type { PlanoRefeicaoComItens, PlanoItemComDados } from "@/services/planos-estruturados.queries";
+import {
+  removerItemDoPlanoAction,
+  reordenarItensAction,
+  updateMetaRefeicaoAction,
+  substituirItemAvulsoAction,
+  substituirIngredienteAction,
+} from "@/services/planos-estruturados.actions";
+import type { PlanoRefeicaoComItens, PlanoItemComDados, IngredienteComAlimento } from "@/services/planos-estruturados.queries";
 import { AddItemModal } from "./AddItemModal";
+import { SubstituirModal } from "./SubstituirModal";
 
 export function macrosDoItem(item: PlanoItemComDados) {
   if (item.alimento && item.quantidade_g) {
@@ -37,7 +44,27 @@ export function macrosDaRefeicao(refeicao: PlanoRefeicaoComItens) {
   );
 }
 
-function ItemRow({ item, editavel, onRemove }: { item: PlanoItemComDados; editavel: boolean; onRemove: () => void }) {
+interface AlvoSubstituicao {
+  tipo: "item" | "ingrediente";
+  id: string;
+  alimentoId: string;
+  nome: string;
+  quantidadeG: number;
+}
+
+function ItemRow({
+  item,
+  editavel,
+  onRemove,
+  onSubstituirItem,
+  onSubstituirIngrediente,
+}: {
+  item: PlanoItemComDados;
+  editavel: boolean;
+  onRemove: () => void;
+  onSubstituirItem: () => void;
+  onSubstituirIngrediente: (ing: IngredienteComAlimento) => void;
+}) {
   const macros = arredondarMacros(macrosDoItem(item));
 
   return (
@@ -48,10 +75,23 @@ function ItemRow({ item, editavel, onRemove }: { item: PlanoItemComDados; editav
           <p className="truncate font-semibold text-ink">{item.receita?.nome ?? item.alimento?.nome}</p>
         </div>
         {item.receita ? (
-          <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+          <ul className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted">
             {item.ingredientes.map((ing) => (
-              <li key={ing.id}>
-                {ing.alimento.nome} — {Math.round(ing.quantidade_g_final)}g
+              <li key={ing.id} className="flex items-center gap-1.5">
+                <span>
+                  {ing.alimento.nome} — {Math.round(ing.quantidade_g_final)}g
+                </span>
+                {editavel && (
+                  <button
+                    type="button"
+                    onClick={() => onSubstituirIngrediente(ing)}
+                    className="text-muted-light transition-colors hover:text-brand-dark"
+                    aria-label={`Substituir ${ing.alimento.nome}`}
+                    title="Substituir ingrediente"
+                  >
+                    <Repeat className="size-3" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -66,14 +106,27 @@ function ItemRow({ item, editavel, onRemove }: { item: PlanoItemComDados; editav
         </div>
       </div>
       {editavel && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-red-50 hover:text-danger"
-          aria-label="Remover item"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {item.alimento && (
+            <button
+              type="button"
+              onClick={onSubstituirItem}
+              className="flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-bg-alt hover:text-brand-dark"
+              aria-label="Substituir alimento"
+              title="Substituir"
+            >
+              <Repeat className="size-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRemove}
+            className="flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-red-50 hover:text-danger"
+            aria-label="Remover item"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -89,6 +142,7 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
   const [metaCarboidrato, setMetaCarboidrato] = useState(refeicao.meta_carboidrato_g?.toString() ?? "");
   const [metaGordura, setMetaGordura] = useState(refeicao.meta_gordura_g?.toString() ?? "");
   const [savingMeta, setSavingMeta] = useState(false);
+  const [alvoSubstituicao, setAlvoSubstituicao] = useState<AlvoSubstituicao | null>(null);
 
   function refresh() {
     router.refresh();
@@ -123,6 +177,19 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
     toast({ kind: result.success ? "success" : "error", title: result.message });
     if (result.success) {
       setEditandoMeta(false);
+      refresh();
+    }
+  }
+
+  async function handleConfirmarSubstituicao(novoAlimentoId: string) {
+    if (!alvoSubstituicao) return;
+    const result =
+      alvoSubstituicao.tipo === "item"
+        ? await substituirItemAvulsoAction(alvoSubstituicao.id, planoId, novoAlimentoId)
+        : await substituirIngredienteAction(alvoSubstituicao.id, planoId, novoAlimentoId);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    if (result.success) {
+      setAlvoSubstituicao(null);
       refresh();
     }
   }
@@ -181,7 +248,32 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
           items={itensOrdenados}
           keyFor={(i) => i.id}
           onReorder={editavel ? handleReorder : () => {}}
-          renderItem={(item) => <ItemRow item={item} editavel={editavel} onRemove={() => handleRemove(item.id)} />}
+          renderItem={(item) => (
+            <ItemRow
+              item={item}
+              editavel={editavel}
+              onRemove={() => handleRemove(item.id)}
+              onSubstituirItem={() =>
+                item.alimento &&
+                setAlvoSubstituicao({
+                  tipo: "item",
+                  id: item.id,
+                  alimentoId: item.alimento.id,
+                  nome: item.alimento.nome,
+                  quantidadeG: item.quantidade_g ?? 0,
+                })
+              }
+              onSubstituirIngrediente={(ing) =>
+                setAlvoSubstituicao({
+                  tipo: "ingrediente",
+                  id: ing.id,
+                  alimentoId: ing.alimento.id,
+                  nome: ing.alimento.nome,
+                  quantidadeG: ing.quantidade_g_final,
+                })
+              }
+            />
+          )}
         />
       )}
 
@@ -192,6 +284,17 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
       )}
 
       <AddItemModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} planoRefeicaoId={refeicao.id} planoId={planoId} />
+
+      {alvoSubstituicao && (
+        <SubstituirModal
+          open={!!alvoSubstituicao}
+          onClose={() => setAlvoSubstituicao(null)}
+          alimentoId={alvoSubstituicao.alimentoId}
+          alimentoNome={alvoSubstituicao.nome}
+          quantidadeG={alvoSubstituicao.quantidadeG}
+          onConfirm={handleConfirmarSubstituicao}
+        />
+      )}
     </div>
   );
 }

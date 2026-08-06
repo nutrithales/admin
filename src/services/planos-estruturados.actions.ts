@@ -273,6 +273,43 @@ export async function addAlimentoAvulsoAoPlanoAction(
   return { success: true, message: "Alimento adicionado." };
 }
 
+/** Troca o alimento de um item avulso (plano_refeicao_itens.alimento_id)
+ * — a quantidade em gramas continua a mesma, só muda o alimento. */
+export async function substituirItemAvulsoAction(itemId: string, planoId: string, novoAlimentoId: string): Promise<ActionResult> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("plano_refeicao_itens").update({ alimento_id: novoAlimentoId }).eq("id", itemId);
+  if (error) return { success: false, message: `Erro ao substituir: ${error.message}` };
+
+  revalidatePlano(planoId);
+  return { success: true, message: "Alimento substituído." };
+}
+
+/** Troca o alimento de UM ingrediente materializado de uma receita
+ * (plano_refeicao_item_ingredientes) — zera `receita_item_id`, marcando
+ * que esse ingrediente divergiu do template da receita original. A
+ * quantidade em gramas é mantida (a troca é feita pra ser nutricionalmente
+ * equivalente na mesma quantidade, via `findSubstitutosAction`). */
+export async function substituirIngredienteAction(
+  ingredienteId: string,
+  planoId: string,
+  novoAlimentoId: string,
+): Promise<ActionResult> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("plano_refeicao_item_ingredientes")
+    .update({ alimento_id: novoAlimentoId, receita_item_id: null })
+    .eq("id", ingredienteId);
+
+  if (error) return { success: false, message: `Erro ao substituir ingrediente: ${error.message}` };
+
+  revalidatePlano(planoId);
+  return { success: true, message: "Ingrediente substituído." };
+}
+
 export async function removerItemDoPlanoAction(itemId: string, planoId: string): Promise<ActionResult> {
   await assertAdmin();
   const supabase = await createClient();

@@ -35,6 +35,71 @@ export async function buscarAlimentoComIAAction(nome: string): Promise<BuscarAli
   }
 }
 
+export interface SubstitutoOption extends AlimentoOption {
+  /** Menor = mais parecido nutricionalmente na mesma quantidade. Soma das
+   * diferenças percentuais de kcal/proteína/carboidrato/gordura — não é
+   * uma unidade física, só serve pra ordenar. */
+  distancia: number;
+}
+
+/** Sugere alimentos pra substituir `alimentoId` mantendo a mesma
+ * quantidade — usado tanto na Receita Modular (trocar um componente)
+ * quanto no builder de plano (trocar um ingrediente sem recalcular o
+ * resto da refeição). Prioriza candidatos do mesmo grupo/categoria; se
+ * não achar o suficiente, expande a busca pra base toda (ainda ordenado
+ * por proximidade nutricional, então o resultado continua sensato). */
+export async function findSubstitutosAction(alimentoId: string, quantidadeG: number, limit = 8): Promise<SubstitutoOption[]> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const { data: original } = await supabase.from("alimentos").select("*").eq("id", alimentoId).maybeSingle();
+  if (!original) return [];
+
+  async function buscar(filtroGrupo: boolean): Promise<AlimentoOption[]> {
+    let query = supabase
+      .from("alimentos")
+      .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar")
+      .eq("ativo", true)
+      .neq("id", alimentoId);
+    if (filtroGrupo && original.grupo_alimentar) query = query.eq("grupo_alimentar", original.grupo_alimentar);
+    else if (filtroGrupo && original.categoria) query = query.eq("categoria", original.categoria);
+    const { data } = await query.limit(300);
+    return (data ?? []) as unknown as AlimentoOption[];
+  }
+
+  let candidatos = original.grupo_alimentar || original.categoria ? await buscar(true) : [];
+  if (candidatos.length < limit) candidatos = await buscar(false);
+
+  const alvo = {
+    kcal: (original.kcal_100g * quantidadeG) / 100,
+    proteina: (original.proteina_100g * quantidadeG) / 100,
+    carboidrato: (original.carboidrato_100g * quantidadeG) / 100,
+    gordura: (original.gordura_100g * quantidadeG) / 100,
+  };
+
+  function pct(diff: number, base: number) {
+    return Math.abs(diff) / Math.max(base, 1);
+  }
+
+  return candidatos
+    .map((c) => {
+      const atual = {
+        kcal: (c.kcal_100g * quantidadeG) / 100,
+        proteina: (c.proteina_100g * quantidadeG) / 100,
+        carboidrato: (c.carboidrato_100g * quantidadeG) / 100,
+        gordura: (c.gordura_100g * quantidadeG) / 100,
+      };
+      const distancia =
+        pct(atual.kcal - alvo.kcal, alvo.kcal) +
+        pct(atual.proteina - alvo.proteina, alvo.proteina) +
+        pct(atual.carboidrato - alvo.carboidrato, alvo.carboidrato) +
+        pct(atual.gordura - alvo.gordura, alvo.gordura);
+      return { ...c, distancia };
+    })
+    .sort((a, b) => a.distancia - b.distancia)
+    .slice(0, limit);
+}
+
 function toRow(data: AlimentoFormValues) {
   return {
     nome: data.nome,
