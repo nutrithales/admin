@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
 import { z } from "zod";
 import { DIRETRIZES_METODOLOGIA } from "./diretrizes-metodologia";
 
@@ -66,13 +66,13 @@ export async function gerarRascunhoPlano(params: {
   metas: MetasPlano;
   instrucoesExtras?: string | null;
 }): Promise<RascunhoPlano> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada — a geração de rascunho por IA está desabilitada.");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY não configurada. A geração de rascunho por IA está desabilitada.");
   if (params.receitas.length === 0) {
-    throw new Error("Não há receitas ativas na biblioteca — cadastre receitas em /receitas antes de gerar um rascunho.");
+    throw new Error("Não há receitas ativas na biblioteca. Cadastre receitas em /receitas antes de gerar um rascunho.");
   }
 
-  const client = new Anthropic({ apiKey });
+  const ai = new GoogleGenAI({ apiKey });
 
   const userPrompt = `Paciente: ${params.paciente.nome}
 Peso: ${params.paciente.peso_kg ?? "não informado"} kg
@@ -90,45 +90,50 @@ ${params.slots.map((s) => `- ${s.nome}${s.meta_kcal != null ? ` (meta: ${s.meta_
 Receitas disponíveis na biblioteca (escolha só destas, pelo id exato):
 ${params.receitas.map((r) => `- id: ${r.id} | nome: ${r.nome} | tags: ${r.tags.join(", ") || "sem tags"}`).join("\n")}`;
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-5",
-    max_tokens: 2000,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userPrompt }],
-    tools: [
-      {
-        name: TOOL_NAME,
-        description: "Registra o rascunho do plano: quais receitas entram em cada horário.",
-        input_schema: {
-          type: "object",
-          properties: {
-            refeicoes: {
-              type: "array",
-              items: {
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: userPrompt,
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      tools: [
+        {
+          functionDeclarations: [
+            {
+              name: TOOL_NAME,
+              description: "Registra o rascunho do plano: quais receitas entram em cada horário.",
+              parametersJsonSchema: {
                 type: "object",
                 properties: {
-                  nome_slot: { type: "string" },
-                  receita_ids: { type: "array", items: { type: "string" } },
+                  refeicoes: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        nome_slot: { type: "string" },
+                        receita_ids: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["nome_slot", "receita_ids"],
+                    },
+                  },
                 },
-                required: ["nome_slot", "receita_ids"],
+                required: ["refeicoes"],
               },
             },
-          },
-          required: ["refeicoes"],
+          ],
         },
-      },
-    ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+      ],
+      toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY, allowedFunctionNames: [TOOL_NAME] } },
+    },
   });
 
-  const toolUse = message.content.find((block) => block.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
+  const call = response.functionCalls?.[0];
+  if (!call?.args) {
     throw new Error("A IA não retornou um rascunho estruturado.");
   }
 
-  const parsed = rascunhoSchema.safeParse(toolUse.input);
+  const parsed = rascunhoSchema.safeParse(call.args);
   if (!parsed.success) {
-    throw new Error("A IA retornou um formato inesperado — tente novamente.");
+    throw new Error("A IA retornou um formato inesperado. Tente novamente.");
   }
 
   return parsed.data;

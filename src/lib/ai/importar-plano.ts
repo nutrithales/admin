@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
 import { z } from "zod";
 
 const itemExtraidoSchema = z.object({
@@ -53,10 +53,10 @@ export async function importarPlano(params: {
   slots: string[];
   alimentos: AlimentoParaMatch[];
 }): Promise<PlanoExtraido> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada — a importação por IA está desabilitada.");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY não configurada. A importação por IA está desabilitada.");
 
-  const client = new Anthropic({ apiKey });
+  const ai = new GoogleGenAI({ apiKey });
 
   const contexto = `Horários disponíveis neste plano (use "nome_slot" com uma dessas strings, exatamente):
 ${params.slots.map((s) => `- ${s}`).join("\n")}
@@ -64,69 +64,74 @@ ${params.slots.map((s) => `- ${s}`).join("\n")}
 Alimentos já cadastrados na biblioteca (escolha "alimento_id" só entre estes, pelo id exato, ou deixe null):
 ${params.alimentos.map((a) => `- id: ${a.id} | nome: ${a.nome}`).join("\n") || "(nenhum alimento cadastrado ainda)"}`;
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-5",
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
       {
         role: "user",
-        content:
+        parts:
           params.conteudo.tipo === "pdf"
             ? [
-                { type: "document", source: { type: "base64", media_type: "application/pdf", data: params.conteudo.base64 } },
-                { type: "text", text: `${contexto}\n\nExtraia a estrutura do plano alimentar deste PDF.` },
+                { inlineData: { mimeType: "application/pdf", data: params.conteudo.base64 } },
+                { text: `${contexto}\n\nExtraia a estrutura do plano alimentar deste PDF.` },
               ]
-            : [{ type: "text", text: `${contexto}\n\nExtraia a estrutura do plano alimentar do texto abaixo:\n\n${params.conteudo.texto}` }],
+            : [{ text: `${contexto}\n\nExtraia a estrutura do plano alimentar do texto abaixo:\n\n${params.conteudo.texto}` }],
       },
     ],
-    tools: [
-      {
-        name: TOOL_NAME,
-        description: "Registra a estrutura extraída do plano alimentar.",
-        input_schema: {
-          type: "object",
-          properties: {
-            refeicoes: {
-              type: "array",
-              items: {
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      tools: [
+        {
+          functionDeclarations: [
+            {
+              name: TOOL_NAME,
+              description: "Registra a estrutura extraída do plano alimentar.",
+              parametersJsonSchema: {
                 type: "object",
                 properties: {
-                  nome_slot: { type: "string" },
-                  observacoes: { type: ["string", "null"] },
-                  itens: {
+                  refeicoes: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        nome_original: { type: "string" },
-                        quantidade_g: { type: ["number", "null"] },
-                        tipo_match: { type: "string", enum: ["alimento", "nao_encontrado"] },
-                        alimento_id: { type: ["string", "null"] },
+                        nome_slot: { type: "string" },
+                        observacoes: { type: ["string", "null"] },
+                        itens: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              nome_original: { type: "string" },
+                              quantidade_g: { type: ["number", "null"] },
+                              tipo_match: { type: "string", enum: ["alimento", "nao_encontrado"] },
+                              alimento_id: { type: ["string", "null"] },
+                            },
+                            required: ["nome_original", "quantidade_g", "tipo_match", "alimento_id"],
+                          },
+                        },
                       },
-                      required: ["nome_original", "quantidade_g", "tipo_match", "alimento_id"],
+                      required: ["nome_slot", "observacoes", "itens"],
                     },
                   },
                 },
-                required: ["nome_slot", "observacoes", "itens"],
+                required: ["refeicoes"],
               },
             },
-          },
-          required: ["refeicoes"],
+          ],
         },
-      },
-    ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+      ],
+      toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY, allowedFunctionNames: [TOOL_NAME] } },
+    },
   });
 
-  const toolUse = message.content.find((block) => block.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
+  const call = response.functionCalls?.[0];
+  if (!call?.args) {
     throw new Error("A IA não retornou uma extração estruturada.");
   }
 
-  const parsed = planoExtraidoSchema.safeParse(toolUse.input);
+  const parsed = planoExtraidoSchema.safeParse(call.args);
   if (!parsed.success) {
-    throw new Error("A IA retornou um formato inesperado — tente novamente.");
+    throw new Error("A IA retornou um formato inesperado. Tente novamente.");
   }
 
   return parsed.data;
