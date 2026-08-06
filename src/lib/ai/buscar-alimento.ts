@@ -28,7 +28,8 @@ Regras importantes:
 - Isso é sempre uma ESTIMATIVA de partida — o nutricionista sempre revisa e ajusta antes de salvar. Nunca finja precisão que você não tem.
 - No campo "observacoes", deixe claro que os valores são uma estimativa da IA e devem ser conferidos contra o rótulo ou uma tabela oficial antes de uso clínico.
 - "grupo_alimentar" deve ser um destes valores (ou null se não se aplicar claramente): fruta, vegetal_a, vegetal_b, cereal, tuberculo, leguminosa, proteina_animal, laticinio, gordura, acucar_doce, bebida, suplemento.
-- Se não conseguir estimar com confiança razoável, ainda assim preencha os campos numéricos com sua melhor estimativa (nunca deixe null), mas deixe isso bem explícito nas observações.`;
+- Se não conseguir estimar com confiança razoável, ainda assim preencha os campos numéricos com sua melhor estimativa (nunca deixe null), mas deixe isso bem explícito nas observações.
+- Nunca use travessão (—) em nenhum texto, em nenhuma circunstância. Prefira ponto, vírgula, dois pontos ou parênteses.`;
 
 /** Estima a composição nutricional de um alimento não cadastrado, pra
  * pré-preencher o formulário — nunca salva nada sozinha, sempre volta

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, RotateCcw, Sparkles, FileUp } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -21,6 +21,7 @@ import {
 import { exportarPlanoPdfAction } from "@/services/planos-pdf.actions";
 import type { PlanoEstruturadoCompleto } from "@/services/planos-estruturados.queries";
 import { RefeicaoTab, macrosDaRefeicao } from "./RefeicaoTab";
+import { ImportarPlanoModal } from "./ImportarPlanoModal";
 
 export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto }) {
   const router = useRouter();
@@ -39,6 +40,7 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
   const [finalizando, setFinalizando] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [gerandoRascunho, setGerandoRascunho] = useState(false);
+  const [importarOpen, setImportarOpen] = useState(false);
 
   const totalItens = useMemo(() => refeicoesOrdenadas.reduce((acc, r) => acc + r.itens.length, 0), [refeicoesOrdenadas]);
 
@@ -121,9 +123,14 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
               {plano.status === "finalizado" ? "Finalizado" : "Rascunho"}
             </Badge>
             {editavel && totalItens === 0 && (
-              <Button variant="outline" loading={gerandoRascunho} onClick={handleGerarRascunho} title="Só disponível enquanto o plano está vazio">
-                <Sparkles className="size-4" /> Gerar rascunho com IA
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setImportarOpen(true)} title="Só disponível enquanto o plano está vazio">
+                  <FileUp className="size-4" /> Importar plano
+                </Button>
+                <Button variant="outline" loading={gerandoRascunho} onClick={handleGerarRascunho} title="Só disponível enquanto o plano está vazio">
+                  <Sparkles className="size-4" /> Gerar rascunho com IA
+                </Button>
+              </>
             )}
             <Button variant="outline" loading={exportando} onClick={handleExportar}>
               <Download className="size-4" /> Exportar PDF
@@ -174,7 +181,7 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               disabled={!editavel}
-              placeholder="Orientações finais do plano — entram no PDF exportado."
+              placeholder="Orientações finais do plano. Entram no PDF exportado."
             />
           </FieldGroup>
           <FieldGroup>
@@ -215,6 +222,8 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
           {refeicaoAtiva && <RefeicaoTab refeicao={refeicaoAtiva} planoId={plano.id} editavel={editavel} />}
         </>
       )}
+
+      <ImportarPlanoModal open={importarOpen} onClose={() => setImportarOpen(false)} onImportado={refresh} planoId={plano.id} />
     </div>
   );
 }

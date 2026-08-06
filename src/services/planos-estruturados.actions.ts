@@ -7,6 +7,7 @@ import type { ActionResult } from "@/services/pacientes.actions";
 import { scaleRecipe, type ItemParaEscalar, type MetaEscala } from "@/lib/nutrition/scale-recipe";
 import { calcularMacrosTotais } from "@/lib/nutrition/calcular-macros";
 import { gerarRascunhoPlano } from "@/lib/ai/gerar-rascunho-plano";
+import { importarPlano } from "@/lib/ai/importar-plano";
 
 export interface PlanoMetasValues {
   titulo?: string;
@@ -497,6 +498,126 @@ export async function gerarRascunhoPlanoAction(planoId: string): Promise<ActionR
     message: algumAvisoDeEscala
       ? "Rascunho gerado — revise os itens, algumas quantidades ficaram fora da faixa ideal e podem precisar de ajuste manual."
       : "Rascunho gerado pela IA — revise antes de finalizar o plano.",
+  };
+}
+
+const IMPORT_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+
+export interface ImportarPlanoResult extends ActionResult {
+  /** Itens do documento original que a IA não conseguiu casar com nenhum
+   * alimento já cadastrado (ou sem quantidade explícita) — ficam de fora
+   * do plano, o nutricionista decide se cadastra o alimento e adiciona
+   * manualmente depois. Nunca inventamos um alimento novo aqui. */
+  naoEncontrados?: string[];
+}
+
+/** Importa um plano alimentar já pronto (PDF exportado de outro sistema,
+ * ou texto colado) e converte pro formato deste sistema — só funciona em
+ * plano vazio, pra nunca sobrescrever trabalho manual. A IA só extrai o
+ * que já está escrito no documento (nunca calcula quantidade) e só casa
+ * itens com alimentos já cadastrados (nunca inventa um novo); tudo isso é
+ * revalidado aqui contra o banco antes de gravar. */
+export async function importarPlanoAction(planoId: string, formData: FormData): Promise<ImportarPlanoResult> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const arquivo = formData.get("arquivo") as File | null;
+  const texto = (formData.get("texto") as string | null)?.trim();
+
+  if ((!arquivo || arquivo.size === 0) && !texto) {
+    return { success: false, message: "Envie um PDF ou cole o texto do plano." };
+  }
+  if (arquivo && arquivo.size > 0) {
+    if (arquivo.type !== "application/pdf") return { success: false, message: "Envie um arquivo PDF." };
+    if (arquivo.size > IMPORT_MAX_SIZE_BYTES) return { success: false, message: "O arquivo deve ter até 20MB." };
+  }
+
+  const { data: refeicoes, error: refeicoesError } = await supabase
+    .from("plano_refeicoes")
+    .select("id, nome")
+    .eq("plano_estruturado_id", planoId)
+    .order("ordem", { ascending: true });
+
+  if (refeicoesError || !refeicoes || refeicoes.length === 0) {
+    return { success: false, message: "Este plano não tem horários configurados." };
+  }
+
+  const { count: itensCount } = await supabase
+    .from("plano_refeicao_itens")
+    .select("id", { count: "exact", head: true })
+    .in(
+      "plano_refeicao_id",
+      refeicoes.map((r) => r.id),
+    );
+
+  if ((itensCount ?? 0) > 0) {
+    return { success: false, message: "Este plano já tem itens montados. A importação só funciona em planos vazios, pra nunca sobrescrever seu trabalho." };
+  }
+
+  const { data: alimentosCatalogo } = await supabase.from("alimentos").select("id, nome").eq("ativo", true);
+
+  let extraido;
+  try {
+    const conteudo =
+      arquivo && arquivo.size > 0
+        ? { tipo: "pdf" as const, base64: Buffer.from(await arquivo.arrayBuffer()).toString("base64") }
+        : { tipo: "texto" as const, texto: texto! };
+
+    extraido = await importarPlano({
+      conteudo,
+      slots: refeicoes.map((r) => r.nome),
+      alimentos: alimentosCatalogo ?? [],
+    });
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : "Erro ao importar o plano." };
+  }
+
+  const idsValidos = new Set((alimentosCatalogo ?? []).map((a) => a.id));
+  const slotIdPorNome = new Map(refeicoes.map((r) => [r.nome, r.id]));
+
+  let algumItemAdicionado = false;
+  const naoEncontrados: string[] = [];
+
+  for (const refeicaoExtraida of extraido.refeicoes) {
+    const slotId = slotIdPorNome.get(refeicaoExtraida.nome_slot);
+    if (!slotId) continue; // nome não bate com nenhum horário real — ignora essa entrada
+
+    let ordem = 0;
+    for (const item of refeicaoExtraida.itens) {
+      const idValido = item.tipo_match === "alimento" && item.alimento_id && idsValidos.has(item.alimento_id);
+      if (idValido && item.quantidade_g && item.quantidade_g > 0) {
+        const { error } = await supabase
+          .from("plano_refeicao_itens")
+          .insert({ plano_refeicao_id: slotId, alimento_id: item.alimento_id, quantidade_g: item.quantidade_g, ordem: ordem++ });
+        if (!error) {
+          algumItemAdicionado = true;
+          continue;
+        }
+      }
+      naoEncontrados.push(`${refeicaoExtraida.nome_slot}: ${item.nome_original}`);
+    }
+
+    if (refeicaoExtraida.observacoes?.trim()) {
+      await supabase.from("plano_refeicoes").update({ observacoes: refeicaoExtraida.observacoes.trim() }).eq("id", slotId);
+    }
+  }
+
+  if (!algumItemAdicionado) {
+    return {
+      success: false,
+      message: "Não consegui reconhecer nenhum item do documento na biblioteca de alimentos. Cadastre os alimentos primeiro (ou use 'Buscar com IA' em /alimentos) e tente de novo.",
+      naoEncontrados,
+    };
+  }
+
+  revalidatePlano(planoId);
+  return {
+    success: true,
+    message:
+      naoEncontrados.length > 0
+        ? `Plano importado: ${naoEncontrados.length} ite${naoEncontrados.length > 1 ? "ns" : "m"} não encontrado${naoEncontrados.length > 1 ? "s" : ""} na biblioteca, revise abaixo.`
+        : "Plano importado com sucesso. Revise antes de finalizar.",
+    naoEncontrados,
   };
 }
 
