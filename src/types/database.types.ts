@@ -690,6 +690,7 @@ export type Database = {
           meta_kcal: number | null
           meta_proteina_g: number | null
           nome: string
+          observacoes: string | null
           ordem: number
           plano_estruturado_id: string
         }
@@ -700,6 +701,7 @@ export type Database = {
           meta_kcal?: number | null
           meta_proteina_g?: number | null
           nome: string
+          observacoes?: string | null
           ordem?: number
           plano_estruturado_id: string
         }
@@ -710,6 +712,7 @@ export type Database = {
           meta_kcal?: number | null
           meta_proteina_g?: number | null
           nome?: string
+          observacoes?: string | null
           ordem?: number
           plano_estruturado_id?: string
         }

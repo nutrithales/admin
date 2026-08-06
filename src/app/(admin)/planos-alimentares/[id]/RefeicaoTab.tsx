@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, ChefHat, Apple, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Input, Label, FieldGroup } from "@/components/ui/Input";
+import { Input, Label, FieldGroup, Textarea } from "@/components/ui/Input";
 import { DragList } from "@/components/ui/DragList";
 import { MacroSummary } from "@/components/ui/MacroSummary";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -141,7 +141,9 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
   const [metaProteina, setMetaProteina] = useState(refeicao.meta_proteina_g?.toString() ?? "");
   const [metaCarboidrato, setMetaCarboidrato] = useState(refeicao.meta_carboidrato_g?.toString() ?? "");
   const [metaGordura, setMetaGordura] = useState(refeicao.meta_gordura_g?.toString() ?? "");
+  const [observacoes, setObservacoes] = useState(refeicao.observacoes ?? "");
   const [savingMeta, setSavingMeta] = useState(false);
+  const [savingObservacoes, setSavingObservacoes] = useState(false);
   const [alvoSubstituicao, setAlvoSubstituicao] = useState<AlvoSubstituicao | null>(null);
 
   function refresh() {
@@ -172,6 +174,7 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
       meta_proteina_g: metaProteina ? Number(metaProteina) : undefined,
       meta_carboidrato_g: metaCarboidrato ? Number(metaCarboidrato) : undefined,
       meta_gordura_g: metaGordura ? Number(metaGordura) : undefined,
+      observacoes: observacoes || undefined,
     });
     setSavingMeta(false);
     toast({ kind: result.success ? "success" : "error", title: result.message });
@@ -179,6 +182,20 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
       setEditandoMeta(false);
       refresh();
     }
+  }
+
+  async function handleSalvarObservacoes() {
+    setSavingObservacoes(true);
+    const result = await updateMetaRefeicaoAction(refeicao.id, planoId, {
+      meta_kcal: metaKcal ? Number(metaKcal) : undefined,
+      meta_proteina_g: metaProteina ? Number(metaProteina) : undefined,
+      meta_carboidrato_g: metaCarboidrato ? Number(metaCarboidrato) : undefined,
+      meta_gordura_g: metaGordura ? Number(metaGordura) : undefined,
+      observacoes: observacoes || undefined,
+    });
+    setSavingObservacoes(false);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    if (result.success) refresh();
   }
 
   async function handleConfirmarSubstituicao(novoAlimentoId: string) {
@@ -214,6 +231,22 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
           </Button>
         )}
       </div>
+
+      <FieldGroup>
+        <Label htmlFor={`observacoes-${refeicao.id}`}>Observações desta refeição</Label>
+        <Textarea
+          id={`observacoes-${refeicao.id}`}
+          value={observacoes}
+          onChange={(e) => setObservacoes(e.target.value)}
+          disabled={!editavel}
+          placeholder="Dicas de preparo, substituições sugeridas, notas para deixar o plano mais premium — aparece no PDF, só nesta refeição."
+        />
+        {editavel && (
+          <Button type="button" size="sm" variant="outline" loading={savingObservacoes} onClick={handleSalvarObservacoes} className="w-fit">
+            Salvar observações
+          </Button>
+        )}
+      </FieldGroup>
 
       {editandoMeta && (
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-3 sm:grid-cols-4">

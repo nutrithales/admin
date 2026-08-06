@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
   ingredienteLine: { fontSize: 9, color: "#5B6660", marginLeft: 8, marginTop: 1 },
   observacoesBox: { marginTop: 20, padding: 12, backgroundColor: "#F5F8F6", borderRadius: 6, fontSize: 9.5, lineHeight: 1.5 },
   observacoesTitle: { fontSize: 10, fontWeight: 700, marginBottom: 4, color: "#0FAE62" },
+  refeicaoObservacoesBox: { marginTop: 4, marginBottom: 4, padding: 7, backgroundColor: "#F5F8F6", borderRadius: 5, fontSize: 8.5, lineHeight: 1.4, color: "#3A423D" },
 });
 
 export interface PlanoPdfItem {
@@ -44,6 +45,7 @@ export interface PlanoPdfItem {
 
 export interface PlanoPdfRefeicao {
   nome: string;
+  observacoes?: string | null;
   itens: PlanoPdfItem[];
 }
 
@@ -117,6 +119,11 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
                 ))}
               </View>
             ))}
+            {refeicao.observacoes && (
+              <View style={styles.refeicaoObservacoesBox}>
+                <Text>{refeicao.observacoes}</Text>
+              </View>
+            )}
           </View>
         ))}
 

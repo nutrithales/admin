@@ -114,10 +114,22 @@ export async function updatePlanoMetasAction(id: string, metas: PlanoMetasValues
   return { success: true, message: "Metas atualizadas." };
 }
 
+export interface PlanoRefeicaoValues {
+  meta_kcal?: number;
+  meta_proteina_g?: number;
+  meta_carboidrato_g?: number;
+  meta_gordura_g?: number;
+  /** Nota específica dessa refeição, desse plano, desse paciente — dicas
+   * de preparo, observações diferenciadas. Diferente da observação de
+   * template em `refeicao_modelo_opcoes` e da observação geral do plano
+   * em `planos_estruturados.observacoes`. Entra no PDF exportado. */
+  observacoes?: string;
+}
+
 export async function updateMetaRefeicaoAction(
   planoRefeicaoId: string,
   planoId: string,
-  metas: Omit<PlanoMetasValues, "titulo">,
+  metas: PlanoRefeicaoValues,
 ): Promise<ActionResult> {
   await assertAdmin();
   const supabase = await createClient();
@@ -129,13 +141,14 @@ export async function updateMetaRefeicaoAction(
       meta_proteina_g: metas.meta_proteina_g ?? null,
       meta_carboidrato_g: metas.meta_carboidrato_g ?? null,
       meta_gordura_g: metas.meta_gordura_g ?? null,
+      observacoes: metas.observacoes || null,
     })
     .eq("id", planoRefeicaoId);
 
-  if (error) return { success: false, message: `Erro ao atualizar meta da refeição: ${error.message}` };
+  if (error) return { success: false, message: `Erro ao atualizar refeição: ${error.message}` };
 
   revalidatePlano(planoId);
-  return { success: true, message: "Meta da refeição atualizada." };
+  return { success: true, message: "Refeição atualizada." };
 }
 
 /** Soma o que já está montado numa refeição do plano (itens avulsos +

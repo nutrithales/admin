@@ -51,6 +51,7 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
       .sort((a, b) => a.ordem - b.ordem)
       .map((refeicao) => ({
         nome: refeicao.nome,
+        observacoes: refeicao.observacoes,
         itens: [...refeicao.itens]
           .sort((a, b) => a.ordem - b.ordem)
           .map((item) => ({
