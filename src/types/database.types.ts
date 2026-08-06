@@ -521,6 +521,148 @@ export type Database = {
         }
         Relationships: []
       }
+      plano_refeicao_item_ingredientes: {
+        Row: {
+          alimento_id: string
+          id: string
+          ordem: number
+          plano_refeicao_item_id: string
+          quantidade_g_final: number
+          receita_item_id: string | null
+        }
+        Insert: {
+          alimento_id: string
+          id?: string
+          ordem?: number
+          plano_refeicao_item_id: string
+          quantidade_g_final: number
+          receita_item_id?: string | null
+        }
+        Update: {
+          alimento_id?: string
+          id?: string
+          ordem?: number
+          plano_refeicao_item_id?: string
+          quantidade_g_final?: number
+          receita_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_refeicao_item_ingredientes_alimento_id_fkey"
+            columns: ["alimento_id"]
+            isOneToOne: false
+            referencedRelation: "alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_refeicao_item_ingredientes_plano_refeicao_item_id_fkey"
+            columns: ["plano_refeicao_item_id"]
+            isOneToOne: false
+            referencedRelation: "plano_refeicao_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_refeicao_item_ingredientes_receita_item_id_fkey"
+            columns: ["receita_item_id"]
+            isOneToOne: false
+            referencedRelation: "receita_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plano_refeicao_itens: {
+        Row: {
+          alimento_id: string | null
+          fator_escala: number | null
+          id: string
+          ordem: number
+          plano_refeicao_id: string
+          quantidade_g: number | null
+          receita_id: string | null
+        }
+        Insert: {
+          alimento_id?: string | null
+          fator_escala?: number | null
+          id?: string
+          ordem?: number
+          plano_refeicao_id: string
+          quantidade_g?: number | null
+          receita_id?: string | null
+        }
+        Update: {
+          alimento_id?: string | null
+          fator_escala?: number | null
+          id?: string
+          ordem?: number
+          plano_refeicao_id?: string
+          quantidade_g?: number | null
+          receita_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_refeicao_itens_alimento_id_fkey"
+            columns: ["alimento_id"]
+            isOneToOne: false
+            referencedRelation: "alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_refeicao_itens_plano_refeicao_id_fkey"
+            columns: ["plano_refeicao_id"]
+            isOneToOne: false
+            referencedRelation: "plano_refeicoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_refeicao_itens_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "receitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plano_refeicoes: {
+        Row: {
+          id: string
+          meta_carboidrato_g: number | null
+          meta_gordura_g: number | null
+          meta_kcal: number | null
+          meta_proteina_g: number | null
+          nome: string
+          ordem: number
+          plano_estruturado_id: string
+        }
+        Insert: {
+          id?: string
+          meta_carboidrato_g?: number | null
+          meta_gordura_g?: number | null
+          meta_kcal?: number | null
+          meta_proteina_g?: number | null
+          nome: string
+          ordem?: number
+          plano_estruturado_id: string
+        }
+        Update: {
+          id?: string
+          meta_carboidrato_g?: number | null
+          meta_gordura_g?: number | null
+          meta_kcal?: number | null
+          meta_proteina_g?: number | null
+          nome?: string
+          ordem?: number
+          plano_estruturado_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_refeicoes_plano_estruturado_id_fkey"
+            columns: ["plano_estruturado_id"]
+            isOneToOne: false
+            referencedRelation: "planos_estruturados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos_alimentares: {
         Row: {
           ativo: boolean | null
@@ -530,6 +672,7 @@ export type Database = {
           data_envio: string | null
           id: string
           path: string | null
+          plano_estruturado_id: string | null
           tipo: string
           titulo: string | null
         }
@@ -541,6 +684,7 @@ export type Database = {
           data_envio?: string | null
           id?: string
           path?: string | null
+          plano_estruturado_id?: string | null
           tipo?: string
           titulo?: string | null
         }
@@ -552,10 +696,75 @@ export type Database = {
           data_envio?: string | null
           id?: string
           path?: string | null
+          plano_estruturado_id?: string | null
           tipo?: string
           titulo?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "planos_alimentares_plano_estruturado_id_fkey"
+            columns: ["plano_estruturado_id"]
+            isOneToOne: false
+            referencedRelation: "planos_estruturados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos_estruturados: {
+        Row: {
+          auth_id: string
+          created_at: string
+          gerado_por_ia: boolean
+          id: string
+          meta_carboidrato_g: number | null
+          meta_gordura_g: number | null
+          meta_kcal: number | null
+          meta_proteina_g: number | null
+          observacoes: string | null
+          protocolo_id: string
+          status: string
+          titulo: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_id: string
+          created_at?: string
+          gerado_por_ia?: boolean
+          id?: string
+          meta_carboidrato_g?: number | null
+          meta_gordura_g?: number | null
+          meta_kcal?: number | null
+          meta_proteina_g?: number | null
+          observacoes?: string | null
+          protocolo_id: string
+          status?: string
+          titulo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string
+          gerado_por_ia?: boolean
+          id?: string
+          meta_carboidrato_g?: number | null
+          meta_gordura_g?: number | null
+          meta_kcal?: number | null
+          meta_proteina_g?: number | null
+          observacoes?: string | null
+          protocolo_id?: string
+          status?: string
+          titulo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planos_estruturados_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       protocolo_receitas_preferidas: {
         Row: {

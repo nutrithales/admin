@@ -1,0 +1,197 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Trash2, ChefHat, Apple } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Input, Label, FieldGroup } from "@/components/ui/Input";
+import { DragList } from "@/components/ui/DragList";
+import { MacroSummary } from "@/components/ui/MacroSummary";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useToast } from "@/contexts/ToastContext";
+import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
+import { removerItemDoPlanoAction, reordenarItensAction, updateMetaRefeicaoAction } from "@/services/planos-estruturados.actions";
+import type { PlanoRefeicaoComItens, PlanoItemComDados } from "@/services/planos-estruturados.queries";
+import { AddItemModal } from "./AddItemModal";
+
+export function macrosDoItem(item: PlanoItemComDados) {
+  if (item.alimento && item.quantidade_g) {
+    return calcularMacrosTotais([{ quantidade_g: item.quantidade_g, alimento: item.alimento }]);
+  }
+  return calcularMacrosTotais(item.ingredientes.map((ing) => ({ quantidade_g: ing.quantidade_g_final, alimento: ing.alimento })));
+}
+
+export function macrosDaRefeicao(refeicao: PlanoRefeicaoComItens) {
+  return refeicao.itens.reduce(
+    (acc, item) => {
+      const m = macrosDoItem(item);
+      return {
+        kcal: acc.kcal + m.kcal,
+        proteina_g: acc.proteina_g + m.proteina_g,
+        carboidrato_g: acc.carboidrato_g + m.carboidrato_g,
+        gordura_g: acc.gordura_g + m.gordura_g,
+      };
+    },
+    { kcal: 0, proteina_g: 0, carboidrato_g: 0, gordura_g: 0 },
+  );
+}
+
+function ItemRow({ item, editavel, onRemove }: { item: PlanoItemComDados; editavel: boolean; onRemove: () => void }) {
+  const macros = arredondarMacros(macrosDoItem(item));
+
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          {item.receita ? <ChefHat className="size-4 shrink-0 text-brand-dark" /> : <Apple className="size-4 shrink-0 text-brand-dark" />}
+          <p className="truncate font-semibold text-ink">{item.receita?.nome ?? item.alimento?.nome}</p>
+        </div>
+        {item.receita ? (
+          <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+            {item.ingredientes.map((ing) => (
+              <li key={ing.id}>
+                {ing.alimento.nome} — {Math.round(ing.quantidade_g_final)}g
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-xs text-muted">{item.quantidade_g}g</p>
+        )}
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <Badge tone="muted">{macros.kcal} kcal</Badge>
+          <Badge tone="muted">{macros.proteina_g}g P</Badge>
+          <Badge tone="muted">{macros.carboidrato_g}g C</Badge>
+          <Badge tone="muted">{macros.gordura_g}g G</Badge>
+        </div>
+      </div>
+      {editavel && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-red-50 hover:text-danger"
+          aria-label="Remover item"
+        >
+          <Trash2 className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRefeicaoComItens; planoId: string; editavel: boolean }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editandoMeta, setEditandoMeta] = useState(false);
+  const [metaKcal, setMetaKcal] = useState(refeicao.meta_kcal?.toString() ?? "");
+  const [metaProteina, setMetaProteina] = useState(refeicao.meta_proteina_g?.toString() ?? "");
+  const [metaCarboidrato, setMetaCarboidrato] = useState(refeicao.meta_carboidrato_g?.toString() ?? "");
+  const [metaGordura, setMetaGordura] = useState(refeicao.meta_gordura_g?.toString() ?? "");
+  const [savingMeta, setSavingMeta] = useState(false);
+
+  function refresh() {
+    router.refresh();
+  }
+
+  const itensOrdenados = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
+  const realizado = arredondarMacros(macrosDaRefeicao(refeicao));
+
+  async function handleRemove(itemId: string) {
+    const result = await removerItemDoPlanoAction(itemId, planoId);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    if (result.success) refresh();
+  }
+
+  async function handleReorder(itens: PlanoItemComDados[]) {
+    const result = await reordenarItensAction(
+      planoId,
+      itens.map((i) => i.id),
+    );
+    if (result.success) refresh();
+  }
+
+  async function handleSalvarMeta() {
+    setSavingMeta(true);
+    const result = await updateMetaRefeicaoAction(refeicao.id, planoId, {
+      meta_kcal: metaKcal ? Number(metaKcal) : undefined,
+      meta_proteina_g: metaProteina ? Number(metaProteina) : undefined,
+      meta_carboidrato_g: metaCarboidrato ? Number(metaCarboidrato) : undefined,
+      meta_gordura_g: metaGordura ? Number(metaGordura) : undefined,
+    });
+    setSavingMeta(false);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    if (result.success) {
+      setEditandoMeta(false);
+      refresh();
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-bg-alt-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <MacroSummary
+          compact
+          realizado={realizado}
+          meta={{
+            kcal: refeicao.meta_kcal ?? undefined,
+            proteina_g: refeicao.meta_proteina_g ?? undefined,
+            carboidrato_g: refeicao.meta_carboidrato_g ?? undefined,
+            gordura_g: refeicao.meta_gordura_g ?? undefined,
+          }}
+          className="flex-1"
+        />
+        {editavel && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => setEditandoMeta((v) => !v)}>
+            {editandoMeta ? "Fechar" : "Editar meta"}
+          </Button>
+        )}
+      </div>
+
+      {editandoMeta && (
+        <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-3 sm:grid-cols-4">
+          <FieldGroup>
+            <Label>Kcal</Label>
+            <Input type="number" value={metaKcal} onChange={(e) => setMetaKcal(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup>
+            <Label>Proteína (g)</Label>
+            <Input type="number" value={metaProteina} onChange={(e) => setMetaProteina(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup>
+            <Label>Carboidrato (g)</Label>
+            <Input type="number" value={metaCarboidrato} onChange={(e) => setMetaCarboidrato(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup>
+            <Label>Gordura (g)</Label>
+            <Input type="number" value={metaGordura} onChange={(e) => setMetaGordura(e.target.value)} />
+          </FieldGroup>
+          <div className="col-span-2 flex items-end sm:col-span-4">
+            <Button type="button" size="sm" loading={savingMeta} onClick={handleSalvarMeta}>
+              Salvar meta
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {itensOrdenados.length === 0 ? (
+        <EmptyState icon={ChefHat} title="Nenhum item nesta refeição" description="Adicione uma receita ou um alimento avulso." />
+      ) : (
+        <DragList
+          items={itensOrdenados}
+          keyFor={(i) => i.id}
+          onReorder={editavel ? handleReorder : () => {}}
+          renderItem={(item) => <ItemRow item={item} editavel={editavel} onRemove={() => handleRemove(item.id)} />}
+        />
+      )}
+
+      {editavel && (
+        <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)} className="w-fit">
+          <Plus className="size-4" /> Adicionar receita ou alimento
+        </Button>
+      )}
+
+      <AddItemModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} planoRefeicaoId={refeicao.id} planoId={planoId} />
+    </div>
+  );
+}
