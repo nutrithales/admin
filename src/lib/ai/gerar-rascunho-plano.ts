@@ -91,7 +91,7 @@ Receitas disponíveis na biblioteca (escolha só destas, pelo id exato):
 ${params.receitas.map((r) => `- id: ${r.id} | nome: ${r.nome} | tags: ${r.tags.join(", ") || "sem tags"}`).join("\n")}`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.6-flash",
     contents: userPrompt,
     config: {
       systemInstruction: SYSTEM_PROMPT,

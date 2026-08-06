@@ -42,7 +42,7 @@ export async function buscarAlimentoComIA(nomeAlimento: string): Promise<Aliment
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.6-flash",
     contents: `Estime a composição nutricional de: ${nomeAlimento}`,
     config: {
       systemInstruction: SYSTEM_PROMPT,

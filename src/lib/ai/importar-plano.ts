@@ -65,7 +65,7 @@ Alimentos já cadastrados na biblioteca (escolha "alimento_id" só entre estes, 
 ${params.alimentos.map((a) => `- id: ${a.id} | nome: ${a.nome}`).join("\n") || "(nenhum alimento cadastrado ainda)"}`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.6-flash",
     contents: [
       {
         role: "user",
