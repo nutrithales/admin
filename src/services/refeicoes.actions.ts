@@ -24,8 +24,7 @@ async function inserirOpcoes(
   refeicaoModeloId: string,
   opcoes: RefeicaoModeloFormValues["opcoes"],
 ) {
-  for (let i = 0; i < opcoes.length; i++) {
-    const opcao = opcoes[i];
+  for (const [i, opcao] of opcoes.entries()) {
     const { data: opcaoRow, error: opcaoError } = await supabase
       .from("refeicao_modelo_opcoes")
       .insert({ refeicao_modelo_id: refeicaoModeloId, nome: opcao.nome, ordem: opcao.ordem ?? i })

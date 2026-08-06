@@ -9,8 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 
 async function inserirDetalhes(supabase: SupabaseClient<Database>, protocoloId: string, data: ProtocoloFormValues) {
-  for (let i = 0; i < data.refeicoes.length; i++) {
-    const refeicao = data.refeicoes[i];
+  for (const [i, refeicao] of data.refeicoes.entries()) {
     const { data: refeicaoRow, error: refeicaoError } = await supabase
       .from("protocolo_refeicoes")
       .insert({

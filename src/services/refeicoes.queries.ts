@@ -4,7 +4,7 @@ import type { Tables } from "@/types/database.types";
 
 type AlimentoResumo = Pick<
   Tables<"alimentos">,
-  "id" | "nome" | "kcal_100g" | "proteina_100g" | "carboidrato_100g" | "gordura_100g" | "porcao_padrao_g"
+  "id" | "nome" | "origem" | "kcal_100g" | "proteina_100g" | "carboidrato_100g" | "gordura_100g" | "porcao_padrao_g"
 >;
 
 export type ReceitaComItensResumo = Tables<"receitas"> & {
@@ -28,8 +28,8 @@ const SELECT_COMPLETO = `*, opcoes:refeicao_modelo_opcoes(
   *,
   itens:refeicao_modelo_opcao_itens(
     *,
-    alimento:alimentos(id, nome, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g),
-    receita:receitas(*, itens:receita_itens(*, alimento:alimentos(id, nome, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g)))
+    alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g),
+    receita:receitas(*, itens:receita_itens(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g)))
   )
 )`;
 
