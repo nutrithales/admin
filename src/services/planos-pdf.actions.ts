@@ -9,6 +9,12 @@ import { getPlanoEstruturado } from "@/services/planos-estruturados.queries";
 import { PlanoAlimentarPdf, type PlanoPdfData } from "@/lib/pdf/plano-alimentar";
 import type { ActionResult } from "@/services/pacientes.actions";
 
+// Deriva o tipo esperado diretamente da assinatura de `renderToBuffer`, em
+// vez de importar `DocumentProps` (que pode não estar exportado conforme a
+// versão) — evita depender de um nome de tipo que não dá pra confirmar sem
+// rodar o build.
+type PdfDocumentElement = Parameters<typeof renderToBuffer>[0];
+
 const BUCKET = "planos";
 
 /** Reaproveita literalmente o padrão de upload + limpeza compensatória de
@@ -59,7 +65,12 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
 
   let buffer: Buffer;
   try {
-    buffer = await renderToBuffer(createElement(PlanoAlimentarPdf, { data: dadosPdf }));
+    // `PlanoAlimentarPdf` internamente sempre renderiza um `<Document>` — o
+    // React-PDF só tipa `renderToBuffer` pra aceitar o elemento Document
+    // diretamente, daí a asserção (o componente wrapper é 100% compatível
+    // em runtime, só o wrapper de props é que confunde o TS).
+    const documentElement = createElement(PlanoAlimentarPdf, { data: dadosPdf }) as unknown as PdfDocumentElement;
+    buffer = await renderToBuffer(documentElement);
   } catch (err) {
     return { success: false, message: `Erro ao gerar PDF: ${err instanceof Error ? err.message : "erro desconhecido"}` };
   }

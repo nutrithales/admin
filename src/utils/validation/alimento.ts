@@ -29,3 +29,10 @@ export function origemPrioridade(origem: string): number {
   const idx = ORIGEM_PRIORIDADE.indexOf(origem as (typeof ORIGEM_PRIORIDADE)[number]);
   return idx === -1 ? ORIGEM_PRIORIDADE.length : idx;
 }
+
+/** Alimentos deste grupo sempre entram por porção (1, 2, 3...) em vez de
+ * gramas — é assim que fruta é prescrita na prática ("1 banana", "2
+ * maçãs"). Fica aqui (não em `alimentos.queries.ts`, que é `server-only`)
+ * porque componentes de cliente (Combobox de alimento) precisam importar
+ * esse valor. */
+export const GRUPO_ALIMENTAR_FRUTA = "fruta";

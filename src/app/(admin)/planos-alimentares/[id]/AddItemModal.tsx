@@ -9,7 +9,8 @@ import { addReceitaAoPlanoAction, addAlimentoAvulsoAoPlanoAction } from "@/servi
 import { searchReceitasAction } from "@/services/receitas.actions";
 import { searchAlimentosAction } from "@/services/alimentos.actions";
 import type { ReceitaOption } from "@/services/receitas.queries";
-import { GRUPO_ALIMENTAR_FRUTA, type AlimentoOption } from "@/services/alimentos.queries";
+import type { AlimentoOption } from "@/services/alimentos.queries";
+import { GRUPO_ALIMENTAR_FRUTA } from "@/utils/validation/alimento";
 import { useToast } from "@/contexts/ToastContext";
 
 export function AddItemModal({
@@ -59,9 +60,7 @@ export function AddItemModal({
 
     if (result.success) {
       toast({ kind: "success", title: result.message });
-      if ("avisos" in result && result.avisos?.length) {
-        for (const aviso of result.avisos) toast({ kind: "warning", title: aviso });
-      }
+      for (const aviso of result.avisos ?? []) toast({ kind: "warning", title: aviso });
       onAdded();
       fechar();
     } else {

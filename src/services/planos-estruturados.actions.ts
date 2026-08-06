@@ -245,7 +245,7 @@ export async function addAlimentoAvulsoAoPlanoAction(
   planoId: string,
   alimentoId: string,
   quantidadeG: number,
-): Promise<ActionResult> {
+): Promise<AdicionarReceitaResult> {
   await assertAdmin();
   const supabase = await createClient();
 

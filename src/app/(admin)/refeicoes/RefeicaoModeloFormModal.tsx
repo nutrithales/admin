@@ -12,7 +12,8 @@ import { refeicaoModeloSchema, type RefeicaoModeloFormValues } from "@/utils/val
 import { createRefeicaoModeloAction, updateRefeicaoModeloAction } from "@/services/refeicoes.actions";
 import { searchAlimentosAction } from "@/services/alimentos.actions";
 import { searchReceitasAction } from "@/services/receitas.actions";
-import { GRUPO_ALIMENTAR_FRUTA, type AlimentoOption } from "@/services/alimentos.queries";
+import type { AlimentoOption } from "@/services/alimentos.queries";
+import { GRUPO_ALIMENTAR_FRUTA } from "@/utils/validation/alimento";
 import type { ReceitaOption } from "@/services/receitas.queries";
 import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
 import { useToast } from "@/contexts/ToastContext";

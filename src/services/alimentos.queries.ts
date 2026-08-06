@@ -29,11 +29,6 @@ export interface AlimentoOption {
   grupo_alimentar: string | null;
 }
 
-/** Foods tagged as this group always default to unit/portion quantity
- * picking (1, 2, 3...) instead of grams — matches how fruit is actually
- * prescribed in practice ("1 banana", "2 maçãs"). */
-export const GRUPO_ALIMENTAR_FRUTA = "fruta";
-
 /** Busca usada pelo Combobox de alimentos — server-side (`.ilike()`,
  * `limit`) porque a base pode ter milhares de linhas entre as fontes. */
 export async function searchAlimentos(query: string, limit = 20): Promise<AlimentoOption[]> {
