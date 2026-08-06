@@ -379,7 +379,12 @@ export async function montarRefeicaoTextoLivreAction(
         id: item.alimento_id!,
         quantidade_base_g: alimento.porcao_padrao_g ?? 100,
         papel_macro: item.papel_macro as ItemParaEscalar["papel_macro"],
-        alimento,
+        alimento: {
+          kcal_100g: alimento.kcal_100g,
+          proteina_100g: alimento.proteina_100g,
+          carboidrato_100g: alimento.carboidrato_100g,
+          gordura_100g: alimento.gordura_100g,
+        },
       };
     })
     .filter((i): i is ItemParaEscalar => i !== null);
