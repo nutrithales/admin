@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Label, FieldGroup, Input } from "@/components/ui/Input";
+import { Label, FieldGroup, Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { createPlanoEstruturadoAction } from "@/services/planos-estruturados.actions";
 import { useToast } from "@/contexts/ToastContext";
@@ -29,6 +29,7 @@ export function NovoPlanoEstruturadoModal({
   const [metaProteina, setMetaProteina] = useState("");
   const [metaCarboidrato, setMetaCarboidrato] = useState("");
   const [metaGordura, setMetaGordura] = useState("");
+  const [instrucoesIA, setInstrucoesIA] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function NovoPlanoEstruturadoModal({
     setMetaProteina("");
     setMetaCarboidrato("");
     setMetaGordura("");
+    setInstrucoesIA("");
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,6 +54,7 @@ export function NovoPlanoEstruturadoModal({
     setSaving(true);
     const result = await createPlanoEstruturadoAction(pacienteId, protocoloId, {
       titulo: titulo || undefined,
+      instrucoes_ia: instrucoesIA || undefined,
       meta_kcal: metaKcal ? Number(metaKcal) : undefined,
       meta_proteina_g: metaProteina ? Number(metaProteina) : undefined,
       meta_carboidrato_g: metaCarboidrato ? Number(metaCarboidrato) : undefined,
@@ -119,6 +122,19 @@ export function NovoPlanoEstruturadoModal({
             <Input type="number" value={metaGordura} onChange={(e) => setMetaGordura(e.target.value)} />
           </FieldGroup>
         </div>
+
+        <FieldGroup>
+          <Label htmlFor="instrucoes_ia">Instruções extras para a IA (opcional)</Label>
+          <Textarea
+            id="instrucoes_ia"
+            value={instrucoesIA}
+            onChange={(e) => setInstrucoesIA(e.target.value)}
+            placeholder="ex.: paciente treina em jejum, prefere refeições práticas, evitar peixe..."
+          />
+          <p className="mt-1.5 text-xs text-muted-light">
+            Fica salvo com o plano pra quando você usar o gerador de rascunho por IA — a IA nunca decide sozinha, só usa isso como contexto.
+          </p>
+        </FieldGroup>
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>

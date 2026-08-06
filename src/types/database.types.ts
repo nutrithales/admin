@@ -776,6 +776,7 @@ export type Database = {
           created_at: string
           gerado_por_ia: boolean
           id: string
+          instrucoes_ia: string | null
           meta_carboidrato_g: number | null
           meta_gordura_g: number | null
           meta_kcal: number | null
@@ -791,6 +792,7 @@ export type Database = {
           created_at?: string
           gerado_por_ia?: boolean
           id?: string
+          instrucoes_ia?: string | null
           meta_carboidrato_g?: number | null
           meta_gordura_g?: number | null
           meta_kcal?: number | null
@@ -806,6 +808,7 @@ export type Database = {
           created_at?: string
           gerado_por_ia?: boolean
           id?: string
+          instrucoes_ia?: string | null
           meta_carboidrato_g?: number | null
           meta_gordura_g?: number | null
           meta_kcal?: number | null

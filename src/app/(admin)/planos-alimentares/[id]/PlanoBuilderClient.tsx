@@ -25,6 +25,7 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
   const [tab, setTab] = useState(refeicoesOrdenadas[0]?.id ?? "");
   const [titulo, setTitulo] = useState(plano.titulo ?? "");
   const [observacoes, setObservacoes] = useState(plano.observacoes ?? "");
+  const [instrucoesIA, setInstrucoesIA] = useState(plano.instrucoes_ia ?? "");
   const [metaKcal, setMetaKcal] = useState(plano.meta_kcal?.toString() ?? "");
   const [metaProteina, setMetaProteina] = useState(plano.meta_proteina_g?.toString() ?? "");
   const [metaCarboidrato, setMetaCarboidrato] = useState(plano.meta_carboidrato_g?.toString() ?? "");
@@ -62,6 +63,7 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
     const result = await updatePlanoMetasAction(plano.id, {
       titulo,
       observacoes,
+      instrucoes_ia: instrucoesIA,
       meta_kcal: metaKcal ? Number(metaKcal) : undefined,
       meta_proteina_g: metaProteina ? Number(metaProteina) : undefined,
       meta_carboidrato_g: metaCarboidrato ? Number(metaCarboidrato) : undefined,
@@ -152,6 +154,16 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
               onChange={(e) => setObservacoes(e.target.value)}
               disabled={!editavel}
               placeholder="Orientações finais do plano — entram no PDF exportado."
+            />
+          </FieldGroup>
+          <FieldGroup>
+            <Label htmlFor="instrucoes_ia">Instruções extras para a IA</Label>
+            <Textarea
+              id="instrucoes_ia"
+              value={instrucoesIA}
+              onChange={(e) => setInstrucoesIA(e.target.value)}
+              disabled={!editavel}
+              placeholder="ex.: paciente treina em jejum, prefere refeições práticas, evitar peixe..."
             />
           </FieldGroup>
           {editavel && (

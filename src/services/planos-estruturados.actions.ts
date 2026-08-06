@@ -10,6 +10,10 @@ import { calcularMacrosTotais } from "@/lib/nutrition/calcular-macros";
 export interface PlanoMetasValues {
   titulo?: string;
   observacoes?: string;
+  /** Contexto/instruções livres pro nutricionista deixar pronto pra Fase 4
+   * (geração de rascunho por IA) — a IA nunca decide sozinha, mas usa isso
+   * como uma das entradas junto do perfil do paciente e do protocolo. */
+  instrucoes_ia?: string;
   meta_kcal?: number;
   meta_proteina_g?: number;
   meta_carboidrato_g?: number;
@@ -50,6 +54,7 @@ export async function createPlanoEstruturadoAction(
       auth_id: authId,
       protocolo_id: protocoloId,
       titulo: metas.titulo || null,
+      instrucoes_ia: metas.instrucoes_ia || null,
       meta_kcal: metas.meta_kcal ?? null,
       meta_proteina_g: metas.meta_proteina_g ?? null,
       meta_carboidrato_g: metas.meta_carboidrato_g ?? null,
@@ -93,6 +98,7 @@ export async function updatePlanoMetasAction(id: string, metas: PlanoMetasValues
     .update({
       titulo: metas.titulo || null,
       observacoes: metas.observacoes || null,
+      instrucoes_ia: metas.instrucoes_ia || null,
       meta_kcal: metas.meta_kcal ?? null,
       meta_proteina_g: metas.meta_proteina_g ?? null,
       meta_carboidrato_g: metas.meta_carboidrato_g ?? null,
