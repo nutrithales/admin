@@ -12,6 +12,7 @@ import {
   Wallet,
   Trash2,
   Users,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -162,6 +163,9 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
             </button>
           }
         >
+          <DropdownItem onClick={() => router.push(`/pacientes/${p.id}`)}>
+            <FileText className="size-4" /> Prontuário e avaliações
+          </DropdownItem>
           <DropdownItem
             onClick={() => {
               setEditing(p);

@@ -1,12 +1,8 @@
 /**
- * Matches the real schema in the Nutri Thales Rosa Supabase project
- * (inspected directly via the Supabase MCP tools — this is NOT a guessed
- * schema). Several tables predate this admin panel and are shared with
- * other patient-facing apps (paginas_paciente, biblioteca, planos_alimentares,
- * consultas, checkins, historico_ia, diario, treino_sessions all link a
- * patient via `auth_id`/`user_id`, the Supabase Auth user id — not through
- * a `pacientes.id` foreign key). Once linked, regenerate with:
- *   supabase gen types typescript --linked > src/types/database.types.ts
+ * Gerado a partir do schema real do projeto Supabase "Nutri Thales"
+ * (`supabase gen types typescript --linked`, via Supabase MCP) — inclui
+ * as migrações 0001–0004 já aplicadas. Regenere com o mesmo comando
+ * sempre que uma nova migração for aplicada.
  */
 export type Json =
   | string
@@ -14,331 +10,1060 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       administradores: {
         Row: {
-          id: string;
-          auth_id: string;
-          nome: string | null;
-          nivel: string | null;
-          foto_url: string | null;
-        };
+          auth_id: string
+          foto_url: string | null
+          id: string
+          nivel: string | null
+          nome: string | null
+        }
         Insert: {
-          id?: string;
-          auth_id: string;
-          nome?: string | null;
-          nivel?: string | null;
-          foto_url?: string | null;
-        };
+          auth_id?: string
+          foto_url?: string | null
+          id?: string
+          nivel?: string | null
+          nome?: string | null
+        }
         Update: {
-          id?: string;
-          auth_id?: string;
-          nome?: string | null;
-          nivel?: string | null;
-          foto_url?: string | null;
-        };
-        Relationships: [];
-      };
-      pacientes: {
+          auth_id?: string
+          foto_url?: string | null
+          id?: string
+          nivel?: string | null
+          nome?: string | null
+        }
+        Relationships: []
+      }
+      alimentos: {
         Row: {
-          id: string;
-          auth_id: string;
-          nome: string | null;
-          email: string | null;
-          telefone: string | null;
-          cpf: string | null;
-          plano: string | null;
-          data_inicio: string | null;
-          status: string | null;
-          created_at: string | null;
-          last_login_at: string | null;
-          updated_at: string;
-        };
+          ativo: boolean
+          carboidrato_100g: number
+          categoria: string | null
+          created_at: string
+          gordura_100g: number
+          id: string
+          kcal_100g: number
+          nome: string
+          origem: string
+          origem_referencia: string | null
+          porcao_padrao_g: number | null
+          proteina_100g: number
+          tags_restricao: string[]
+        }
         Insert: {
-          id?: string;
-          auth_id: string;
-          nome?: string | null;
-          email?: string | null;
-          telefone?: string | null;
-          cpf?: string | null;
-          plano?: string | null;
-          data_inicio?: string | null;
-          status?: string | null;
-          created_at?: string | null;
-          last_login_at?: string | null;
-          updated_at?: string;
-        };
+          ativo?: boolean
+          carboidrato_100g?: number
+          categoria?: string | null
+          created_at?: string
+          gordura_100g?: number
+          id?: string
+          kcal_100g?: number
+          nome: string
+          origem: string
+          origem_referencia?: string | null
+          porcao_padrao_g?: number | null
+          proteina_100g?: number
+          tags_restricao?: string[]
+        }
         Update: {
-          id?: string;
-          auth_id?: string;
-          nome?: string | null;
-          email?: string | null;
-          telefone?: string | null;
-          cpf?: string | null;
-          plano?: string | null;
-          data_inicio?: string | null;
-          status?: string | null;
-          created_at?: string | null;
-          last_login_at?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      paginas_paciente: {
+          ativo?: boolean
+          carboidrato_100g?: number
+          categoria?: string | null
+          created_at?: string
+          gordura_100g?: number
+          id?: string
+          kcal_100g?: number
+          nome?: string
+          origem?: string
+          origem_referencia?: string | null
+          porcao_padrao_g?: number | null
+          proteina_100g?: number
+          tags_restricao?: string[]
+        }
+        Relationships: []
+      }
+      avaliacoes_fisicas: {
         Row: {
-          id: string;
-          user_id: string;
-          titulo: string;
-          url_pagina: string;
-          tipo: string;
-          icone: string | null;
-          ordem: number;
-          ativo: boolean;
-        };
+          altura_cm: number | null
+          auth_id: string
+          bucket: string | null
+          circunferencia_braco_cm: number | null
+          circunferencia_cintura_cm: number | null
+          circunferencia_coxa_cm: number | null
+          circunferencia_quadril_cm: number | null
+          consulta_id: string | null
+          created_at: string
+          data: string
+          disponibilizado_em: string | null
+          disponivel_paciente: boolean
+          id: string
+          interpretacao_ia: string | null
+          massa_gorda_kg: number | null
+          massa_magra_kg: number | null
+          medidas_extra: Json
+          path: string | null
+          percentual_gordura: number | null
+          peso_kg: number | null
+          resumo_paciente: string | null
+          updated_at: string
+        }
         Insert: {
-          id?: string;
-          user_id: string;
-          titulo: string;
-          url_pagina: string;
-          tipo?: string;
-          icone?: string | null;
-          ordem?: number;
-          ativo?: boolean;
-        };
+          altura_cm?: number | null
+          auth_id: string
+          bucket?: string | null
+          circunferencia_braco_cm?: number | null
+          circunferencia_cintura_cm?: number | null
+          circunferencia_coxa_cm?: number | null
+          circunferencia_quadril_cm?: number | null
+          consulta_id?: string | null
+          created_at?: string
+          data?: string
+          disponibilizado_em?: string | null
+          disponivel_paciente?: boolean
+          id?: string
+          interpretacao_ia?: string | null
+          massa_gorda_kg?: number | null
+          massa_magra_kg?: number | null
+          medidas_extra?: Json
+          path?: string | null
+          percentual_gordura?: number | null
+          peso_kg?: number | null
+          resumo_paciente?: string | null
+          updated_at?: string
+        }
         Update: {
-          id?: string;
-          user_id?: string;
-          titulo?: string;
-          url_pagina?: string;
-          tipo?: string;
-          icone?: string | null;
-          ordem?: number;
-          ativo?: boolean;
-        };
+          altura_cm?: number | null
+          auth_id?: string
+          bucket?: string | null
+          circunferencia_braco_cm?: number | null
+          circunferencia_cintura_cm?: number | null
+          circunferencia_coxa_cm?: number | null
+          circunferencia_quadril_cm?: number | null
+          consulta_id?: string | null
+          created_at?: string
+          data?: string
+          disponibilizado_em?: string | null
+          disponivel_paciente?: boolean
+          id?: string
+          interpretacao_ia?: string | null
+          massa_gorda_kg?: number | null
+          massa_magra_kg?: number | null
+          medidas_extra?: Json
+          path?: string | null
+          percentual_gordura?: number | null
+          peso_kg?: number | null
+          resumo_paciente?: string | null
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "paginas_paciente_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
+            foreignKeyName: "avaliacoes_fisicas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultas"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
+      avaliacoes_resumos_paciente: {
+        Row: {
+          auth_id: string
+          avaliacao_id: string
+          disponibilizado_em: string
+          id: string
+          resumo: string
+        }
+        Insert: {
+          auth_id: string
+          avaliacao_id: string
+          disponibilizado_em?: string
+          id?: string
+          resumo: string
+        }
+        Update: {
+          auth_id?: string
+          avaliacao_id?: string
+          disponibilizado_em?: string
+          id?: string
+          resumo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_resumos_paciente_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: true
+            referencedRelation: "avaliacoes_fisicas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       biblioteca: {
         Row: {
-          id: string;
-          titulo: string;
-          descricao: string | null;
-          categoria: string | null;
-          url: string | null;
-          ordem: number | null;
-          ativo: boolean | null;
-          created_at: string | null;
-          tipo: "pdf" | "video" | "link" | "html" | (string & {});
-          bucket: string | null;
-          path: string | null;
-          thumbnail_path: string | null;
-        };
+          ativo: boolean | null
+          bucket: string | null
+          categoria: string | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          ordem: number | null
+          path: string | null
+          thumbnail_path: string | null
+          tipo: string
+          titulo: string
+          url: string | null
+        }
         Insert: {
-          id?: string;
-          titulo: string;
-          descricao?: string | null;
-          categoria?: string | null;
-          url?: string | null;
-          ordem?: number | null;
-          ativo?: boolean | null;
-          created_at?: string | null;
-          tipo?: string;
-          bucket?: string | null;
-          path?: string | null;
-          thumbnail_path?: string | null;
-        };
+          ativo?: boolean | null
+          bucket?: string | null
+          categoria?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          ordem?: number | null
+          path?: string | null
+          thumbnail_path?: string | null
+          tipo?: string
+          titulo: string
+          url?: string | null
+        }
         Update: {
-          id?: string;
-          titulo?: string;
-          descricao?: string | null;
-          categoria?: string | null;
-          url?: string | null;
-          ordem?: number | null;
-          ativo?: boolean | null;
-          created_at?: string | null;
-          tipo?: string;
-          bucket?: string | null;
-          path?: string | null;
-          thumbnail_path?: string | null;
-        };
-        Relationships: [];
-      };
-      planos_alimentares: {
-        Row: {
-          id: string;
-          auth_id: string;
-          titulo: string | null;
-          bucket: string | null;
-          path: string | null;
-          data_envio: string | null;
-          ativo: boolean | null;
-          tipo: "pdf" | "html" | (string & {});
-          conteudo_html: string | null;
-        };
-        Insert: {
-          id?: string;
-          auth_id: string;
-          titulo?: string | null;
-          bucket?: string | null;
-          path?: string | null;
-          data_envio?: string | null;
-          ativo?: boolean | null;
-          tipo?: string;
-          conteudo_html?: string | null;
-        };
-        Update: {
-          id?: string;
-          auth_id?: string;
-          titulo?: string | null;
-          bucket?: string | null;
-          path?: string | null;
-          data_envio?: string | null;
-          ativo?: boolean | null;
-          tipo?: string;
-          conteudo_html?: string | null;
-        };
-        Relationships: [];
-      };
-      consultas: {
-        Row: {
-          id: string;
-          auth_id: string;
-          data: string | null;
-          tipo: string | null;
-          status: string | null;
-          observacoes: string | null;
-          google_event_id: string | null;
-        };
-        Insert: {
-          id?: string;
-          auth_id: string;
-          data?: string | null;
-          tipo?: string | null;
-          status?: string | null;
-          observacoes?: string | null;
-          google_event_id?: string | null;
-        };
-        Update: {
-          id?: string;
-          auth_id?: string;
-          data?: string | null;
-          tipo?: string | null;
-          status?: string | null;
-          observacoes?: string | null;
-          google_event_id?: string | null;
-        };
-        Relationships: [];
-      };
+          ativo?: boolean | null
+          bucket?: string | null
+          categoria?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          ordem?: number | null
+          path?: string | null
+          thumbnail_path?: string | null
+          tipo?: string
+          titulo?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       checkins: {
         Row: {
-          id: number;
-          auth_id: string;
-          semana: string | null;
-          resumo: string | null;
-          pontuacao: number | null;
-          created_at: string | null;
-          origem: string;
-        };
+          auth_id: string
+          created_at: string | null
+          id: number
+          origem: string
+          pontuacao: number | null
+          resumo: string | null
+          semana: string | null
+        }
         Insert: {
-          id?: number;
-          auth_id: string;
-          semana?: string | null;
-          resumo?: string | null;
-          pontuacao?: number | null;
-          created_at?: string | null;
-          origem?: string;
-        };
+          auth_id?: string
+          created_at?: string | null
+          id?: number
+          origem?: string
+          pontuacao?: number | null
+          resumo?: string | null
+          semana?: string | null
+        }
         Update: {
-          id?: number;
-          auth_id?: string;
-          semana?: string | null;
-          resumo?: string | null;
-          pontuacao?: number | null;
-          created_at?: string | null;
-          origem?: string;
-        };
-        Relationships: [];
-      };
-      historico_ia: {
-        Row: {
-          id: string;
-          auth_id: string;
-          pergunta: string | null;
-          resposta: string | null;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          auth_id: string;
-          pergunta?: string | null;
-          resposta?: string | null;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          auth_id?: string;
-          pergunta?: string | null;
-          resposta?: string | null;
-          created_at?: string | null;
-        };
-        Relationships: [];
-      };
+          auth_id?: string
+          created_at?: string | null
+          id?: number
+          origem?: string
+          pontuacao?: number | null
+          resumo?: string | null
+          semana?: string | null
+        }
+        Relationships: []
+      }
       configuracoes_consultorio: {
         Row: {
-          id: boolean;
-          nome_consultorio: string | null;
-          logo_path: string | null;
-          endereco: string | null;
-          whatsapp: string | null;
-          email: string | null;
-          redes_sociais: Json;
-          updated_at: string;
-        };
+          email: string | null
+          endereco: string | null
+          id: boolean
+          logo_path: string | null
+          nome_consultorio: string | null
+          redes_sociais: Json
+          updated_at: string
+          whatsapp: string | null
+        }
         Insert: {
-          id?: boolean;
-          nome_consultorio?: string | null;
-          logo_path?: string | null;
-          endereco?: string | null;
-          whatsapp?: string | null;
-          email?: string | null;
-          redes_sociais?: Json;
-          updated_at?: string;
-        };
+          email?: string | null
+          endereco?: string | null
+          id?: boolean
+          logo_path?: string | null
+          nome_consultorio?: string | null
+          redes_sociais?: Json
+          updated_at?: string
+          whatsapp?: string | null
+        }
         Update: {
-          id?: boolean;
-          nome_consultorio?: string | null;
-          logo_path?: string | null;
-          endereco?: string | null;
-          whatsapp?: string | null;
-          email?: string | null;
-          redes_sociais?: Json;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-    };
-    Views: Record<string, never>;
+          email?: string | null
+          endereco?: string | null
+          id?: boolean
+          logo_path?: string | null
+          nome_consultorio?: string | null
+          redes_sociais?: Json
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      consulta_prontuarios: {
+        Row: {
+          consulta_id: string
+          created_at: string
+          id: string
+          prontuario: string | null
+          resumo_granola: string | null
+          updated_at: string
+        }
+        Insert: {
+          consulta_id: string
+          created_at?: string
+          id?: string
+          prontuario?: string | null
+          resumo_granola?: string | null
+          updated_at?: string
+        }
+        Update: {
+          consulta_id?: string
+          created_at?: string
+          id?: string
+          prontuario?: string | null
+          resumo_granola?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_prontuarios_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: true
+            referencedRelation: "consultas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultas: {
+        Row: {
+          auth_id: string
+          data: string | null
+          google_event_id: string | null
+          id: string
+          observacoes: string | null
+          status: string | null
+          tipo: string | null
+        }
+        Insert: {
+          auth_id?: string
+          data?: string | null
+          google_event_id?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          auth_id?: string
+          data?: string | null
+          google_event_id?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string | null
+          tipo?: string | null
+        }
+        Relationships: []
+      }
+      diario: {
+        Row: {
+          created_at: string
+          id: string
+          valor: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          valor?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          valor?: Json | null
+        }
+        Relationships: []
+      }
+      historico_ia: {
+        Row: {
+          auth_id: string
+          created_at: string | null
+          id: string
+          pergunta: string | null
+          resposta: string | null
+        }
+        Insert: {
+          auth_id?: string
+          created_at?: string | null
+          id?: string
+          pergunta?: string | null
+          resposta?: string | null
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string | null
+          id?: string
+          pergunta?: string | null
+          resposta?: string | null
+        }
+        Relationships: []
+      }
+      pacientes: {
+        Row: {
+          altura_cm: number | null
+          auth_id: string
+          cpf: string | null
+          created_at: string | null
+          data_inicio: string | null
+          email: string | null
+          id: string
+          last_login_at: string | null
+          nivel_atividade: string | null
+          nome: string | null
+          objetivo: string | null
+          peso_kg: number | null
+          plano: string | null
+          preferencias_alimentares: string | null
+          restricoes_alimentares: string[]
+          status: string | null
+          telefone: string | null
+          treino_frequencia_semanal: number | null
+          updated_at: string
+        }
+        Insert: {
+          altura_cm?: number | null
+          auth_id?: string
+          cpf?: string | null
+          created_at?: string | null
+          data_inicio?: string | null
+          email?: string | null
+          id?: string
+          last_login_at?: string | null
+          nivel_atividade?: string | null
+          nome?: string | null
+          objetivo?: string | null
+          peso_kg?: number | null
+          plano?: string | null
+          preferencias_alimentares?: string | null
+          restricoes_alimentares?: string[]
+          status?: string | null
+          telefone?: string | null
+          treino_frequencia_semanal?: number | null
+          updated_at?: string
+        }
+        Update: {
+          altura_cm?: number | null
+          auth_id?: string
+          cpf?: string | null
+          created_at?: string | null
+          data_inicio?: string | null
+          email?: string | null
+          id?: string
+          last_login_at?: string | null
+          nivel_atividade?: string | null
+          nome?: string | null
+          objetivo?: string | null
+          peso_kg?: number | null
+          plano?: string | null
+          preferencias_alimentares?: string | null
+          restricoes_alimentares?: string[]
+          status?: string | null
+          telefone?: string | null
+          treino_frequencia_semanal?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      paginas_paciente: {
+        Row: {
+          ativo: boolean
+          icone: string | null
+          id: string
+          ordem: number
+          tipo: string
+          titulo: string
+          url_pagina: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          icone?: string | null
+          id?: string
+          ordem?: number
+          tipo?: string
+          titulo: string
+          url_pagina: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          icone?: string | null
+          id?: string
+          ordem?: number
+          tipo?: string
+          titulo?: string
+          url_pagina?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planos_alimentares: {
+        Row: {
+          ativo: boolean | null
+          auth_id: string
+          bucket: string | null
+          conteudo_html: string | null
+          data_envio: string | null
+          id: string
+          path: string | null
+          tipo: string
+          titulo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          auth_id?: string
+          bucket?: string | null
+          conteudo_html?: string | null
+          data_envio?: string | null
+          id?: string
+          path?: string | null
+          tipo?: string
+          titulo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          auth_id?: string
+          bucket?: string | null
+          conteudo_html?: string | null
+          data_envio?: string | null
+          id?: string
+          path?: string | null
+          tipo?: string
+          titulo?: string | null
+        }
+        Relationships: []
+      }
+      protocolo_receitas_preferidas: {
+        Row: {
+          id: string
+          ordem: number
+          protocolo_id: string
+          receita_id: string
+        }
+        Insert: {
+          id?: string
+          ordem?: number
+          protocolo_id: string
+          receita_id: string
+        }
+        Update: {
+          id?: string
+          ordem?: number
+          protocolo_id?: string
+          receita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_receitas_preferidas_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_receitas_preferidas_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "receitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolo_refeicoes: {
+        Row: {
+          horario_sugerido: string | null
+          id: string
+          nome: string
+          ordem: number
+          percentual_kcal: number | null
+          protocolo_id: string
+        }
+        Insert: {
+          horario_sugerido?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          percentual_kcal?: number | null
+          protocolo_id: string
+        }
+        Update: {
+          horario_sugerido?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          percentual_kcal?: number | null
+          protocolo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_refeicoes_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolo_refeicoes_preferidas: {
+        Row: {
+          id: string
+          ordem: number
+          protocolo_refeicao_id: string
+          refeicao_modelo_id: string
+        }
+        Insert: {
+          id?: string
+          ordem?: number
+          protocolo_refeicao_id: string
+          refeicao_modelo_id: string
+        }
+        Update: {
+          id?: string
+          ordem?: number
+          protocolo_refeicao_id?: string
+          refeicao_modelo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_refeicoes_preferidas_protocolo_refeicao_id_fkey"
+            columns: ["protocolo_refeicao_id"]
+            isOneToOne: false
+            referencedRelation: "protocolo_refeicoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_refeicoes_preferidas_refeicao_modelo_id_fkey"
+            columns: ["refeicao_modelo_id"]
+            isOneToOne: false
+            referencedRelation: "refeicoes_modelo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolo_regras_macro: {
+        Row: {
+          gordura_percentual_kcal_max: number | null
+          gordura_percentual_kcal_min: number | null
+          id: string
+          proteina_g_por_kg_max: number | null
+          proteina_g_por_kg_min: number | null
+          protocolo_id: string
+        }
+        Insert: {
+          gordura_percentual_kcal_max?: number | null
+          gordura_percentual_kcal_min?: number | null
+          id?: string
+          proteina_g_por_kg_max?: number | null
+          proteina_g_por_kg_min?: number | null
+          protocolo_id: string
+        }
+        Update: {
+          gordura_percentual_kcal_max?: number | null
+          gordura_percentual_kcal_min?: number | null
+          id?: string
+          proteina_g_por_kg_max?: number | null
+          proteina_g_por_kg_min?: number | null
+          protocolo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_regras_macro_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      receita_itens: {
+        Row: {
+          alimento_id: string
+          componente: string | null
+          id: string
+          ordem: number
+          papel_macro: string
+          quantidade_base_g: number
+          receita_id: string
+        }
+        Insert: {
+          alimento_id: string
+          componente?: string | null
+          id?: string
+          ordem?: number
+          papel_macro?: string
+          quantidade_base_g: number
+          receita_id: string
+        }
+        Update: {
+          alimento_id?: string
+          componente?: string | null
+          id?: string
+          ordem?: number
+          papel_macro?: string
+          quantidade_base_g?: number
+          receita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receita_itens_alimento_id_fkey"
+            columns: ["alimento_id"]
+            isOneToOne: false
+            referencedRelation: "alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receita_itens_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "receitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receitas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          modo_preparo: string | null
+          nome: string
+          origem_receita_id: string | null
+          tags: string[]
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          modo_preparo?: string | null
+          nome: string
+          origem_receita_id?: string | null
+          tags?: string[]
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          modo_preparo?: string | null
+          nome?: string
+          origem_receita_id?: string | null
+          tags?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receitas_origem_receita_id_fkey"
+            columns: ["origem_receita_id"]
+            isOneToOne: false
+            referencedRelation: "receitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refeicao_modelo_opcao_itens: {
+        Row: {
+          alimento_id: string | null
+          id: string
+          opcao_id: string
+          ordem: number
+          quantidade_g: number | null
+          receita_id: string | null
+        }
+        Insert: {
+          alimento_id?: string | null
+          id?: string
+          opcao_id: string
+          ordem?: number
+          quantidade_g?: number | null
+          receita_id?: string | null
+        }
+        Update: {
+          alimento_id?: string | null
+          id?: string
+          opcao_id?: string
+          ordem?: number
+          quantidade_g?: number | null
+          receita_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refeicao_modelo_opcao_itens_alimento_id_fkey"
+            columns: ["alimento_id"]
+            isOneToOne: false
+            referencedRelation: "alimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refeicao_modelo_opcao_itens_opcao_id_fkey"
+            columns: ["opcao_id"]
+            isOneToOne: false
+            referencedRelation: "refeicao_modelo_opcoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refeicao_modelo_opcao_itens_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "receitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refeicao_modelo_opcoes: {
+        Row: {
+          id: string
+          nome: string
+          ordem: number
+          refeicao_modelo_id: string
+        }
+        Insert: {
+          id?: string
+          nome?: string
+          ordem?: number
+          refeicao_modelo_id: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          ordem?: number
+          refeicao_modelo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refeicao_modelo_opcoes_refeicao_modelo_id_fkey"
+            columns: ["refeicao_modelo_id"]
+            isOneToOne: false
+            referencedRelation: "refeicoes_modelo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refeicoes_modelo: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          tags: string[]
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          tags?: string[]
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          tags?: string[]
+        }
+        Relationships: []
+      }
+      treino_sessions: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          data: Json
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
-      is_admin: {
-        Args: Record<PropertyKey, never>;
-        Returns: boolean;
-      };
-    };
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
+      is_admin: { Args: never; Returns: boolean }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

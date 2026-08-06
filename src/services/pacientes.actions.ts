@@ -51,6 +51,13 @@ export async function createPacienteAction(values: PacienteFormValues): Promise<
     plano: data.plano || null,
     status: data.status,
     data_inicio: data.data_inicio || null,
+    peso_kg: data.peso_kg ?? null,
+    altura_cm: data.altura_cm ?? null,
+    objetivo: data.objetivo || null,
+    nivel_atividade: data.nivel_atividade || null,
+    treino_frequencia_semanal: data.treino_frequencia_semanal ?? null,
+    restricoes_alimentares: data.restricoes_alimentares,
+    preferencias_alimentares: data.preferencias_alimentares || null,
   });
 
   if (insertError) {
@@ -103,6 +110,13 @@ export async function updatePacienteAction(
       plano: data.plano || null,
       status: data.status,
       data_inicio: data.data_inicio || null,
+      peso_kg: data.peso_kg ?? null,
+      altura_cm: data.altura_cm ?? null,
+      objetivo: data.objetivo || null,
+      nivel_atividade: data.nivel_atividade || null,
+      treino_frequencia_semanal: data.treino_frequencia_semanal ?? null,
+      restricoes_alimentares: data.restricoes_alimentares,
+      preferencias_alimentares: data.preferencias_alimentares || null,
     })
     .eq("id", id);
 

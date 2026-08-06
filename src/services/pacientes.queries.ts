@@ -13,6 +13,13 @@ export async function listPacientes(): Promise<Tables<"pacientes">[]> {
   return data ?? [];
 }
 
+export async function getPaciente(id: string): Promise<Tables<"pacientes"> | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("pacientes").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Erro ao carregar paciente: ${error.message}`);
+  return data;
+}
+
 export async function getPacienteStats() {
   const supabase = await createClient();
   const [{ count: ativos }, { count: inativos }] = await Promise.all([

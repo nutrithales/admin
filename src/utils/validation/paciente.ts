@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Formulários enviam número vazio como "" — trata como ausente em vez de
+// falhar o coerce (que transformaria "" em NaN).
+const optionalNumber = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? undefined : v),
+  z.coerce.number().optional(),
+);
+
 export const pacienteSchema = z.object({
   nome: z.string().trim().min(3, "Informe o nome completo."),
   email: z.string().trim().email("E-mail inválido."),
@@ -8,6 +15,17 @@ export const pacienteSchema = z.object({
   plano: z.string().trim().optional().or(z.literal("")),
   status: z.enum(["ativo", "inativo", "pendente"]),
   data_inicio: z.string().trim().optional().or(z.literal("")),
+  // Campos que influenciam a dieta (Módulo 1 do construtor de planos).
+  peso_kg: optionalNumber,
+  altura_cm: optionalNumber,
+  objetivo: z.string().trim().optional().or(z.literal("")),
+  nivel_atividade: z.string().trim().optional().or(z.literal("")),
+  treino_frequencia_semanal: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : v),
+    z.coerce.number().int().min(0).max(14).optional(),
+  ),
+  restricoes_alimentares: z.array(z.string()).default([]),
+  preferencias_alimentares: z.string().trim().optional().or(z.literal("")),
 });
 
 export type PacienteFormValues = z.infer<typeof pacienteSchema>;

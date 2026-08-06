@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Input, Label, FieldGroup } from "@/components/ui/Input";
+import { Input, Label, FieldGroup, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paciente";
 import { createPacienteAction, updatePacienteAction } from "@/services/pacientes.actions";
@@ -19,6 +19,13 @@ const emptyForm: PacienteFormValues = {
   plano: "",
   status: "ativo",
   data_inicio: "",
+  peso_kg: undefined,
+  altura_cm: undefined,
+  objetivo: "",
+  nivel_atividade: "",
+  treino_frequencia_semanal: undefined,
+  restricoes_alimentares: [],
+  preferencias_alimentares: "",
 };
 
 export interface PacienteFormModalProps {
@@ -34,6 +41,7 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
   const [errors, setErrors] = useState<Partial<Record<keyof PacienteFormValues, string>>>({});
   const [saving, setSaving] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [restricoesInput, setRestricoesInput] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -51,9 +59,18 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
             ? paciente.status
             : "ativo",
         data_inicio: paciente.data_inicio ?? "",
+        peso_kg: paciente.peso_kg ?? undefined,
+        altura_cm: paciente.altura_cm ?? undefined,
+        objetivo: paciente.objetivo ?? "",
+        nivel_atividade: paciente.nivel_atividade ?? "",
+        treino_frequencia_semanal: paciente.treino_frequencia_semanal ?? undefined,
+        restricoes_alimentares: paciente.restricoes_alimentares ?? [],
+        preferencias_alimentares: paciente.preferencias_alimentares ?? "",
       });
+      setRestricoesInput((paciente.restricoes_alimentares ?? []).join(", "));
     } else {
       setValues(emptyForm);
+      setRestricoesInput("");
     }
   }, [open, paciente]);
 
@@ -63,7 +80,14 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = pacienteSchema.safeParse(values);
+    const payload: PacienteFormValues = {
+      ...values,
+      restricoes_alimentares: restricoesInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    };
+    const parsed = pacienteSchema.safeParse(payload);
     if (!parsed.success) {
       const fieldErrors: typeof errors = {};
       for (const issue of parsed.error.issues) {
@@ -76,8 +100,8 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
 
     setSaving(true);
     const result = paciente
-      ? await updatePacienteAction(paciente.id, values)
-      : await createPacienteAction(values);
+      ? await updatePacienteAction(paciente.id, parsed.data)
+      : await createPacienteAction(parsed.data);
     setSaving(false);
 
     if (result.success) {
@@ -183,6 +207,85 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
             type="date"
             value={values.data_inicio}
             onChange={(e) => setField("data_inicio", e.target.value)}
+          />
+        </FieldGroup>
+
+        <p className="text-sm font-semibold text-ink">Dados que influenciam a dieta</p>
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <FieldGroup>
+            <Label htmlFor="peso_kg">Peso (kg)</Label>
+            <Input
+              id="peso_kg"
+              type="number"
+              step="0.1"
+              value={values.peso_kg ?? ""}
+              onChange={(e) => setField("peso_kg", e.target.value === "" ? undefined : Number(e.target.value))}
+            />
+          </FieldGroup>
+          <FieldGroup>
+            <Label htmlFor="altura_cm">Altura (cm)</Label>
+            <Input
+              id="altura_cm"
+              type="number"
+              step="0.1"
+              value={values.altura_cm ?? ""}
+              onChange={(e) => setField("altura_cm", e.target.value === "" ? undefined : Number(e.target.value))}
+            />
+          </FieldGroup>
+          <FieldGroup className="col-span-2 sm:col-span-1">
+            <Label htmlFor="nivel_atividade">Nível de atividade</Label>
+            <Select id="nivel_atividade" value={values.nivel_atividade} onChange={(e) => setField("nivel_atividade", e.target.value)}>
+              <option value="">Selecione</option>
+              <option value="sedentario">Sedentário</option>
+              <option value="leve">Leve</option>
+              <option value="moderado">Moderado</option>
+              <option value="intenso">Intenso</option>
+            </Select>
+          </FieldGroup>
+          <FieldGroup>
+            <Label htmlFor="treino_frequencia_semanal">Treinos/semana</Label>
+            <Input
+              id="treino_frequencia_semanal"
+              type="number"
+              min={0}
+              max={14}
+              value={values.treino_frequencia_semanal ?? ""}
+              onChange={(e) =>
+                setField("treino_frequencia_semanal", e.target.value === "" ? undefined : Number(e.target.value))
+              }
+            />
+          </FieldGroup>
+        </div>
+
+        <FieldGroup>
+          <Label htmlFor="objetivo">Objetivo</Label>
+          <Select id="objetivo" value={values.objetivo} onChange={(e) => setField("objetivo", e.target.value)}>
+            <option value="">Selecione</option>
+            <option value="emagrecimento">Emagrecimento</option>
+            <option value="hipertrofia">Hipertrofia</option>
+            <option value="manutencao">Manutenção</option>
+            <option value="saude_geral">Saúde geral</option>
+          </Select>
+        </FieldGroup>
+
+        <FieldGroup>
+          <Label htmlFor="restricoes_alimentares">Restrições alimentares (separadas por vírgula)</Label>
+          <Input
+            id="restricoes_alimentares"
+            placeholder="ex.: vegetariano, sem_lactose, sem_gluten"
+            value={restricoesInput}
+            onChange={(e) => setRestricoesInput(e.target.value)}
+          />
+        </FieldGroup>
+
+        <FieldGroup>
+          <Label htmlFor="preferencias_alimentares">Preferências e rotina</Label>
+          <Textarea
+            id="preferencias_alimentares"
+            placeholder="ex.: não gosta de peixe, prefere refeições práticas, come fora no almoço..."
+            value={values.preferencias_alimentares}
+            onChange={(e) => setField("preferencias_alimentares", e.target.value)}
           />
         </FieldGroup>
 
