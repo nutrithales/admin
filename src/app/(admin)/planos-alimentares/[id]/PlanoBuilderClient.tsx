@@ -219,7 +219,7 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
             onChange={setTab}
             items={refeicoesOrdenadas.map((r) => ({ key: r.id, label: r.nome }))}
           />
-          {refeicaoAtiva && <RefeicaoTab refeicao={refeicaoAtiva} planoId={plano.id} editavel={editavel} />}
+          {refeicaoAtiva && <RefeicaoTab key={refeicaoAtiva.id} refeicao={refeicaoAtiva} planoId={plano.id} editavel={editavel} />}
         </>
       )}
 

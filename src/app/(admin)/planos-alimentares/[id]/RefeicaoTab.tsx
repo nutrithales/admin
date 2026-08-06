@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ChefHat, Apple, Repeat } from "lucide-react";
+import { Plus, Trash2, ChefHat, Apple, Repeat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Label, FieldGroup, Textarea } from "@/components/ui/Input";
@@ -21,6 +21,7 @@ import {
 import type { PlanoRefeicaoComItens, PlanoItemComDados, IngredienteComAlimento } from "@/services/planos-estruturados.queries";
 import { AddItemModal } from "./AddItemModal";
 import { SubstituirModal } from "./SubstituirModal";
+import { MontarTextoLivreModal } from "./MontarTextoLivreModal";
 
 export function macrosDoItem(item: PlanoItemComDados) {
   if (item.alimento && item.quantidade_g) {
@@ -136,6 +137,7 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
   const router = useRouter();
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
+  const [textoLivreOpen, setTextoLivreOpen] = useState(false);
   const [editandoMeta, setEditandoMeta] = useState(false);
   const [metaKcal, setMetaKcal] = useState(refeicao.meta_kcal?.toString() ?? "");
   const [metaProteina, setMetaProteina] = useState(refeicao.meta_proteina_g?.toString() ?? "");
@@ -145,6 +147,11 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
   const [savingMeta, setSavingMeta] = useState(false);
   const [savingObservacoes, setSavingObservacoes] = useState(false);
   const [alvoSubstituicao, setAlvoSubstituicao] = useState<AlvoSubstituicao | null>(null);
+
+  // "Montar por texto (IA)" escreve a observação direto no servidor; sem
+  // isso, o textarea (que só lê o valor inicial do estado local) ficaria
+  // mostrando o texto antigo até trocar de aba e voltar.
+  useEffect(() => setObservacoes(refeicao.observacoes ?? ""), [refeicao.observacoes]);
 
   function refresh() {
     router.refresh();
@@ -311,12 +318,26 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
       )}
 
       {editavel && (
-        <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)} className="w-fit">
-          <Plus className="size-4" /> Adicionar receita ou alimento
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)} className="w-fit">
+            <Plus className="size-4" /> Adicionar receita ou alimento
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setTextoLivreOpen(true)} className="w-fit">
+            <Sparkles className="size-4" /> Montar por texto (IA)
+          </Button>
+        </div>
       )}
 
       <AddItemModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} planoRefeicaoId={refeicao.id} planoId={planoId} />
+
+      <MontarTextoLivreModal
+        open={textoLivreOpen}
+        onClose={() => setTextoLivreOpen(false)}
+        onMontado={refresh}
+        planoRefeicaoId={refeicao.id}
+        planoId={planoId}
+        nomeRefeicao={refeicao.nome}
+      />
 
       {alvoSubstituicao && (
         <SubstituirModal

@@ -8,6 +8,7 @@ import { scaleRecipe, type ItemParaEscalar, type MetaEscala } from "@/lib/nutrit
 import { calcularMacrosTotais } from "@/lib/nutrition/calcular-macros";
 import { gerarRascunhoPlano } from "@/lib/ai/gerar-rascunho-plano";
 import { importarPlano } from "@/lib/ai/importar-plano";
+import { montarRefeicaoTextoLivre } from "@/lib/ai/montar-refeicao-texto-livre";
 
 export interface PlanoMetasValues {
   titulo?: string;
@@ -304,6 +305,122 @@ export async function addAlimentoAvulsoAoPlanoAction(
 
   revalidatePlano(planoId);
   return { success: true, message: "Alimento adicionado." };
+}
+
+export interface MontarRefeicaoTextoLivreResult extends ActionResult {
+  naoEncontrados?: string[];
+  avisos?: string[];
+}
+
+/** Reconhece uma lista de alimentos escrita livremente pelo nutricionista
+ * pra uma refeição específica: a IA só identifica QUAIS alimentos (contra
+ * a biblioteca já cadastrada, nunca inventa um novo) e QUAL papel de macro
+ * cada um tem; o QUANTO é sempre calculado depois pelo `scaleRecipe`
+ * determinístico contra o que falta pra bater a meta da refeição, mesmo
+ * caminho já usado por `adicionarReceitaInterna`. Também gera a observação
+ * (dica de preparo) daquela refeição. */
+export async function montarRefeicaoTextoLivreAction(
+  planoRefeicaoId: string,
+  planoId: string,
+  texto: string,
+): Promise<MontarRefeicaoTextoLivreResult> {
+  await assertAdmin();
+  if (!texto.trim()) return { success: false, message: "Escreva os alimentos dessa refeição primeiro." };
+  const supabase = await createClient();
+
+  const [{ data: slot, error: slotError }, { data: alimentosCatalogo }] = await Promise.all([
+    supabase
+      .from("plano_refeicoes")
+      .select("nome, meta_kcal, meta_proteina_g, meta_carboidrato_g, meta_gordura_g")
+      .eq("id", planoRefeicaoId)
+      .single(),
+    supabase.from("alimentos").select("id, nome, sinonimos").eq("ativo", true),
+  ]);
+  if (slotError || !slot) return { success: false, message: "Refeição do plano não encontrada." };
+
+  let montagem;
+  try {
+    montagem = await montarRefeicaoTextoLivre({ texto, nomeRefeicao: slot.nome, alimentos: alimentosCatalogo ?? [] });
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : "Erro ao montar a refeição." };
+  }
+
+  const idsValidos = new Set((alimentosCatalogo ?? []).map((a) => a.id));
+  const naoEncontrados: string[] = [];
+  const itensReconhecidos = montagem.itens.filter((item) => {
+    if (item.alimento_id && idsValidos.has(item.alimento_id)) return true;
+    naoEncontrados.push(item.nome_original);
+    return false;
+  });
+
+  if (itensReconhecidos.length === 0) {
+    return {
+      success: false,
+      message: "Nenhum dos alimentos escritos foi reconhecido na biblioteca. Cadastre-os primeiro (ou use 'Buscar com IA' em /alimentos) e tente de novo.",
+      naoEncontrados,
+    };
+  }
+
+  const { data: alimentosDados } = await supabase
+    .from("alimentos")
+    .select("id, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g")
+    .in(
+      "id",
+      itensReconhecidos.map((i) => i.alimento_id!),
+    );
+
+  const alimentoPorId = new Map((alimentosDados ?? []).map((a) => [a.id, a]));
+
+  const itensParaEscalar: ItemParaEscalar[] = itensReconhecidos
+    .map((item) => {
+      const alimento = alimentoPorId.get(item.alimento_id!);
+      if (!alimento) return null;
+      return {
+        id: item.alimento_id!,
+        quantidade_base_g: alimento.porcao_padrao_g ?? 100,
+        papel_macro: item.papel_macro as ItemParaEscalar["papel_macro"],
+        alimento,
+      };
+    })
+    .filter((i): i is ItemParaEscalar => i !== null);
+
+  if (itensParaEscalar.length === 0) {
+    return { success: false, message: "Não consegui montar os alimentos reconhecidos.", naoEncontrados };
+  }
+
+  const realizado = await calcularRealizadoRefeicao(supabase, planoRefeicaoId);
+  const meta: MetaEscala = {
+    proteina_g: slot.meta_proteina_g != null ? Math.max(0, slot.meta_proteina_g - realizado.proteina_g) : undefined,
+    carboidrato_g: slot.meta_carboidrato_g != null ? Math.max(0, slot.meta_carboidrato_g - realizado.carboidrato_g) : undefined,
+    gordura_g: slot.meta_gordura_g != null ? Math.max(0, slot.meta_gordura_g - realizado.gordura_g) : undefined,
+  };
+
+  const resultado = scaleRecipe(itensParaEscalar, meta);
+
+  const { count: ordemAtual } = await supabase
+    .from("plano_refeicao_itens")
+    .select("id", { count: "exact", head: true })
+    .eq("plano_refeicao_id", planoRefeicaoId);
+  let ordem = ordemAtual ?? 0;
+
+  const { error: insertError } = await supabase.from("plano_refeicao_itens").insert(
+    resultado.itens.map((ie) => ({ plano_refeicao_id: planoRefeicaoId, alimento_id: ie.id, quantidade_g: ie.quantidade_final_g, ordem: ordem++ })),
+  );
+  if (insertError) return { success: false, message: `Erro ao adicionar itens: ${insertError.message}` };
+
+  await supabase.from("plano_refeicoes").update({ observacoes: montagem.observacao }).eq("id", planoRefeicaoId);
+
+  revalidatePlano(planoId);
+
+  return {
+    success: true,
+    message:
+      naoEncontrados.length > 0
+        ? `Refeição montada. ${naoEncontrados.length} item(ns) não reconhecido(s), veja abaixo.`
+        : "Refeição montada com IA.",
+    naoEncontrados,
+    avisos: resultado.avisos,
+  };
 }
 
 /** Troca o alimento de um item avulso (plano_refeicao_itens.alimento_id)
