@@ -25,7 +25,7 @@ export async function createReceitaAction(values: ReceitaFormValues): Promise<Ac
 
   const { data: receita, error: receitaError } = await supabase
     .from("receitas")
-    .insert({ nome: data.nome, modo_preparo: data.modo_preparo || null, tags: data.tags, ativo: data.ativo })
+    .insert({ nome: data.nome, modo_preparo: data.modo_preparo || null, tags: data.tags, ativo: data.ativo, revisado_manualmente: true })
     .select("id")
     .single();
 
@@ -65,7 +65,7 @@ export async function updateReceitaAction(id: string, values: ReceitaFormValues)
 
   const { error: updateError } = await supabase
     .from("receitas")
-    .update({ nome: data.nome, modo_preparo: data.modo_preparo || null, tags: data.tags, ativo: data.ativo })
+    .update({ nome: data.nome, modo_preparo: data.modo_preparo || null, tags: data.tags, ativo: data.ativo, revisado_manualmente: true })
     .eq("id", id);
 
   if (updateError) return { success: false, message: `Erro ao atualizar receita: ${updateError.message}` };

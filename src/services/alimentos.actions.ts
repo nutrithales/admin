@@ -134,6 +134,9 @@ function toRow(data: AlimentoFormValues) {
     alergenos: data.alergenos,
     observacoes: data.observacoes || null,
     ativo: data.ativo,
+    // edição manual pelo formulário conta como revisão, mesmo que o
+    // alimento tenha sido criado automaticamente por importação de IA.
+    revisado_manualmente: true,
   };
 }
 

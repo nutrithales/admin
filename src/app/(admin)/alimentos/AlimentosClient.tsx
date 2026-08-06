@@ -67,7 +67,10 @@ export function AlimentosClient({ initialAlimentos }: { initialAlimentos: Tables
       sortValue: (a) => a.nome.toLowerCase(),
       render: (a) => (
         <div>
-          <p className="font-semibold">{a.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold">{a.nome}</p>
+            {!a.revisado_manualmente && <Badge tone="warning">Não revisado</Badge>}
+          </div>
           {a.categoria && <p className="text-xs text-muted-light">{a.categoria}</p>}
         </div>
       ),

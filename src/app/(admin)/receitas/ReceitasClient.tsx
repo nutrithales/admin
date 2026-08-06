@@ -45,7 +45,10 @@ export function ReceitasClient({ initialReceitas }: { initialReceitas: ReceitaCo
       sortValue: (r) => r.nome.toLowerCase(),
       render: (r) => (
         <div>
-          <p className="font-semibold">{r.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold">{r.nome}</p>
+            {!r.revisado_manualmente && <Badge tone="warning">Não revisada</Badge>}
+          </div>
           {r.origem_receita_id && <p className="text-xs text-muted-light">Variante de outra receita</p>}
         </div>
       ),

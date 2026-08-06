@@ -55,7 +55,7 @@ export type MedidaCaseira = z.infer<typeof medidaCaseiraSchema>;
 /** Ordem de prioridade entre fontes — usada para desempate quando o mesmo
  * alimento existe em mais de uma base (ex.: ordenar resultados do
  * Combobox), nunca para descartar dados. */
-export const ORIGEM_PRIORIDADE = ["tbca_7_3", "fabricante", "tucunduva", "usda", "fao", "web", "manual"] as const;
+export const ORIGEM_PRIORIDADE = ["tbca_7_3", "fabricante", "tucunduva", "usda", "fao", "web", "manual", "ia_extracao"] as const;
 
 export function origemPrioridade(origem: string): number {
   const idx = ORIGEM_PRIORIDADE.indexOf(origem as (typeof ORIGEM_PRIORIDADE)[number]);

@@ -74,6 +74,8 @@ export type Database = {
           porcao_padrao_g: number | null
           potassio_100g: number | null
           proteina_100g: number
+          revisado_manualmente: boolean
+          sinonimos: string[]
           sodio_100g: number | null
           tags_restricao: string[]
           unidade_padrao: string | null
@@ -109,6 +111,8 @@ export type Database = {
           porcao_padrao_g?: number | null
           potassio_100g?: number | null
           proteina_100g?: number
+          revisado_manualmente?: boolean
+          sinonimos?: string[]
           sodio_100g?: number | null
           tags_restricao?: string[]
           unidade_padrao?: string | null
@@ -144,6 +148,8 @@ export type Database = {
           porcao_padrao_g?: number | null
           potassio_100g?: number | null
           proteina_100g?: number
+          revisado_manualmente?: boolean
+          sinonimos?: string[]
           sodio_100g?: number | null
           tags_restricao?: string[]
           unidade_padrao?: string | null
@@ -455,6 +461,45 @@ export type Database = {
           created_at?: string
           id?: string
           valor?: Json | null
+        }
+        Relationships: []
+      }
+      documentos_biblioteca: {
+        Row: {
+          auth_id: string | null
+          bucket: string
+          created_at: string
+          erro_mensagem: string | null
+          id: string
+          nome_arquivo: string
+          path: string | null
+          resumo_extracao: Json
+          status: string
+          tipo_arquivo: string
+        }
+        Insert: {
+          auth_id?: string | null
+          bucket?: string
+          created_at?: string
+          erro_mensagem?: string | null
+          id?: string
+          nome_arquivo: string
+          path?: string | null
+          resumo_extracao?: Json
+          status?: string
+          tipo_arquivo: string
+        }
+        Update: {
+          auth_id?: string | null
+          bucket?: string
+          created_at?: string
+          erro_mensagem?: string | null
+          id?: string
+          nome_arquivo?: string
+          path?: string | null
+          resumo_extracao?: Json
+          status?: string
+          tipo_arquivo?: string
         }
         Relationships: []
       }
@@ -1053,6 +1098,7 @@ export type Database = {
           origem_receita_id: string | null
           peso_final_g: number | null
           rendimento_porcoes: number | null
+          revisado_manualmente: boolean
           tags: string[]
           tempo_preparo_min: number | null
         }
@@ -1065,6 +1111,7 @@ export type Database = {
           origem_receita_id?: string | null
           peso_final_g?: number | null
           rendimento_porcoes?: number | null
+          revisado_manualmente?: boolean
           tags?: string[]
           tempo_preparo_min?: number | null
         }
@@ -1077,6 +1124,7 @@ export type Database = {
           origem_receita_id?: string | null
           peso_final_g?: number | null
           rendimento_porcoes?: number | null
+          revisado_manualmente?: boolean
           tags?: string[]
           tempo_preparo_min?: number | null
         }
