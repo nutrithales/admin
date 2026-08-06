@@ -9,12 +9,20 @@ export interface QuantityStepperProps {
   value: number;
   onChange: (value: number) => void;
   step?: number;
+  /** Passo no modo unidade/porção — inteiro por padrão (1, 2, 3...), já
+   * que é assim que porções (ex. fruta) são prescritas na prática. */
+  stepUnidade?: number;
   min?: number;
   max?: number;
   /** Peso de 1 unidade/porção (ex. `alimentos.porcao_padrao_g`) — quando
    * informado, mostra um alternador g/unidade; o valor emitido continua
    * sempre em gramas. */
   unidadeGramas?: number;
+  /** Modo inicial — alimentos do grupo "fruta" começam em "un" (o
+   * nutricionista escolhe 1, 2, 3... porções, não gramas). Para reagir a
+   * uma troca de alimento depois da montagem inicial, passe `key` no
+   * componente (ex. `key={alimento?.id}`). */
+  modoInicial?: "g" | "un";
   disabled?: boolean;
   className?: string;
 }
@@ -23,16 +31,18 @@ export function QuantityStepper({
   value,
   onChange,
   step = 5,
+  stepUnidade = 1,
   min = 0,
   max,
   unidadeGramas,
+  modoInicial = "g",
   disabled,
   className,
 }: QuantityStepperProps) {
-  const [modo, setModo] = useState<"g" | "un">("g");
+  const [modo, setModo] = useState<"g" | "un">(modoInicial);
   const emUnidade = modo === "un" && !!unidadeGramas;
   const displayValue = emUnidade ? +(value / unidadeGramas!).toFixed(2) : value;
-  const displayStep = emUnidade ? +(step / unidadeGramas!).toFixed(2) || 0.5 : step;
+  const displayStep = emUnidade ? stepUnidade : step;
 
   function clamp(g: number) {
     let v = g;

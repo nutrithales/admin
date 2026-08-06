@@ -46,49 +46,109 @@ export type Database = {
       }
       alimentos: {
         Row: {
+          acucares_100g: number | null
+          alergenos: string[]
           ativo: boolean
+          calcio_100g: number | null
           carboidrato_100g: number
+          carga_glicemica: number | null
           categoria: string | null
           created_at: string
+          fator_coccao: number | null
+          fator_correcao: number | null
+          ferro_100g: number | null
+          fibra_100g: number | null
           gordura_100g: number
+          grupo_alimentar: string | null
           id: string
+          indice_glicemico: number | null
+          ingredientes: string | null
           kcal_100g: number
+          magnesio_100g: number | null
+          marca: string | null
+          medidas_caseiras: Json
           nome: string
+          observacoes: string | null
           origem: string
           origem_referencia: string | null
           porcao_padrao_g: number | null
+          potassio_100g: number | null
           proteina_100g: number
+          sodio_100g: number | null
           tags_restricao: string[]
+          unidade_padrao: string | null
+          vitamina_a_100g: number | null
+          vitamina_c_100g: number | null
         }
         Insert: {
+          acucares_100g?: number | null
+          alergenos?: string[]
           ativo?: boolean
+          calcio_100g?: number | null
           carboidrato_100g?: number
+          carga_glicemica?: number | null
           categoria?: string | null
           created_at?: string
+          fator_coccao?: number | null
+          fator_correcao?: number | null
+          ferro_100g?: number | null
+          fibra_100g?: number | null
           gordura_100g?: number
+          grupo_alimentar?: string | null
           id?: string
+          indice_glicemico?: number | null
+          ingredientes?: string | null
           kcal_100g?: number
+          magnesio_100g?: number | null
+          marca?: string | null
+          medidas_caseiras?: Json
           nome: string
+          observacoes?: string | null
           origem: string
           origem_referencia?: string | null
           porcao_padrao_g?: number | null
+          potassio_100g?: number | null
           proteina_100g?: number
+          sodio_100g?: number | null
           tags_restricao?: string[]
+          unidade_padrao?: string | null
+          vitamina_a_100g?: number | null
+          vitamina_c_100g?: number | null
         }
         Update: {
+          acucares_100g?: number | null
+          alergenos?: string[]
           ativo?: boolean
+          calcio_100g?: number | null
           carboidrato_100g?: number
+          carga_glicemica?: number | null
           categoria?: string | null
           created_at?: string
+          fator_coccao?: number | null
+          fator_correcao?: number | null
+          ferro_100g?: number | null
+          fibra_100g?: number | null
           gordura_100g?: number
+          grupo_alimentar?: string | null
           id?: string
+          indice_glicemico?: number | null
+          ingredientes?: string | null
           kcal_100g?: number
+          magnesio_100g?: number | null
+          marca?: string | null
+          medidas_caseiras?: Json
           nome?: string
+          observacoes?: string | null
           origem?: string
           origem_referencia?: string | null
           porcao_padrao_g?: number | null
+          potassio_100g?: number | null
           proteina_100g?: number
+          sodio_100g?: number | null
           tags_restricao?: string[]
+          unidade_padrao?: string | null
+          vitamina_a_100g?: number | null
+          vitamina_c_100g?: number | null
         }
         Relationships: []
       }
@@ -985,7 +1045,10 @@ export type Database = {
           modo_preparo: string | null
           nome: string
           origem_receita_id: string | null
+          peso_final_g: number | null
+          rendimento_porcoes: number | null
           tags: string[]
+          tempo_preparo_min: number | null
         }
         Insert: {
           ativo?: boolean
@@ -994,7 +1057,10 @@ export type Database = {
           modo_preparo?: string | null
           nome: string
           origem_receita_id?: string | null
+          peso_final_g?: number | null
+          rendimento_porcoes?: number | null
           tags?: string[]
+          tempo_preparo_min?: number | null
         }
         Update: {
           ativo?: boolean
@@ -1003,7 +1069,10 @@ export type Database = {
           modo_preparo?: string | null
           nome?: string
           origem_receita_id?: string | null
+          peso_final_g?: number | null
+          rendimento_porcoes?: number | null
           tags?: string[]
+          tempo_preparo_min?: number | null
         }
         Relationships: [
           {
@@ -1068,20 +1137,29 @@ export type Database = {
         Row: {
           id: string
           nome: string
+          observacoes: string | null
           ordem: number
+          peso_total_g: number | null
           refeicao_modelo_id: string
+          tags: string[]
         }
         Insert: {
           id?: string
           nome?: string
+          observacoes?: string | null
           ordem?: number
+          peso_total_g?: number | null
           refeicao_modelo_id: string
+          tags?: string[]
         }
         Update: {
           id?: string
           nome?: string
+          observacoes?: string | null
           ordem?: number
+          peso_total_g?: number | null
           refeicao_modelo_id?: string
+          tags?: string[]
         }
         Relationships: [
           {
@@ -1098,21 +1176,36 @@ export type Database = {
           ativo: boolean
           created_at: string
           id: string
+          meta_carboidrato_g: number | null
+          meta_gordura_g: number | null
+          meta_kcal: number | null
+          meta_proteina_g: number | null
           nome: string
+          observacoes: string | null
           tags: string[]
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           id?: string
+          meta_carboidrato_g?: number | null
+          meta_gordura_g?: number | null
+          meta_kcal?: number | null
+          meta_proteina_g?: number | null
           nome: string
+          observacoes?: string | null
           tags?: string[]
         }
         Update: {
           ativo?: boolean
           created_at?: string
           id?: string
+          meta_carboidrato_g?: number | null
+          meta_gordura_g?: number | null
+          meta_kcal?: number | null
+          meta_proteina_g?: number | null
           nome?: string
+          observacoes?: string | null
           tags?: string[]
         }
         Relationships: []

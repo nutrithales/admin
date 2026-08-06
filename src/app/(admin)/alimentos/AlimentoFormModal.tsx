@@ -20,6 +20,21 @@ const ORIGENS = [
   { value: "manual", label: "Cadastro manual" },
 ] as const;
 
+const GRUPOS_ALIMENTARES = [
+  "fruta",
+  "vegetal_a",
+  "vegetal_b",
+  "cereal",
+  "tuberculo",
+  "leguminosa",
+  "proteina_animal",
+  "laticinio",
+  "gordura",
+  "acucar_doce",
+  "bebida",
+  "suplemento",
+] as const;
+
 const emptyForm: AlimentoFormValues = {
   nome: "",
   origem: "manual",
@@ -30,6 +45,7 @@ const emptyForm: AlimentoFormValues = {
   gordura_100g: 0,
   porcao_padrao_g: undefined,
   categoria: "",
+  grupo_alimentar: "",
   tags_restricao: [],
   ativo: true,
 };
@@ -65,6 +81,7 @@ export function AlimentoFormModal({
         gordura_100g: alimento.gordura_100g,
         porcao_padrao_g: alimento.porcao_padrao_g ?? undefined,
         categoria: alimento.categoria ?? "",
+        grupo_alimentar: alimento.grupo_alimentar ?? "",
         tags_restricao: alimento.tags_restricao ?? [],
         ativo: alimento.ativo,
       });
@@ -213,6 +230,21 @@ export function AlimentoFormModal({
             />
           </FieldGroup>
         </div>
+
+        <FieldGroup>
+          <Label htmlFor="grupo_alimentar">Grupo alimentar</Label>
+          <Select id="grupo_alimentar" value={values.grupo_alimentar} onChange={(e) => setField("grupo_alimentar", e.target.value)}>
+            <option value="">Sem grupo definido</option>
+            {GRUPOS_ALIMENTARES.map((g) => (
+              <option key={g} value={g}>
+                {g.replace(/_/g, " ")}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1.5 text-xs text-muted-light">
+            Alimentos do grupo &quot;fruta&quot; entram nas telas de montagem sempre por porção (1, 2, 3...), não em gramas.
+          </p>
+        </FieldGroup>
 
         <FieldGroup>
           <Label htmlFor="tags_restricao">Restrições/tags (separadas por vírgula)</Label>

@@ -26,7 +26,13 @@ export interface AlimentoOption {
   carboidrato_100g: number;
   gordura_100g: number;
   porcao_padrao_g: number | null;
+  grupo_alimentar: string | null;
 }
+
+/** Foods tagged as this group always default to unit/portion quantity
+ * picking (1, 2, 3...) instead of grams — matches how fruit is actually
+ * prescribed in practice ("1 banana", "2 maçãs"). */
+export const GRUPO_ALIMENTAR_FRUTA = "fruta";
 
 /** Busca usada pelo Combobox de alimentos — server-side (`.ilike()`,
  * `limit`) porque a base pode ter milhares de linhas entre as fontes. */
@@ -34,7 +40,7 @@ export async function searchAlimentos(query: string, limit = 20): Promise<Alimen
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("alimentos")
-    .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g")
+    .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar")
     .eq("ativo", true)
     .ilike("nome", `%${query}%`)
     .order("nome", { ascending: true })

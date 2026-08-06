@@ -34,6 +34,7 @@ export async function createAlimentoAction(values: AlimentoFormValues): Promise<
     gordura_100g: data.gordura_100g,
     porcao_padrao_g: data.porcao_padrao_g ?? null,
     categoria: data.categoria || null,
+    grupo_alimentar: data.grupo_alimentar || null,
     tags_restricao: data.tags_restricao,
     ativo: data.ativo,
   });
@@ -65,6 +66,7 @@ export async function updateAlimentoAction(id: string, values: AlimentoFormValue
       gordura_100g: data.gordura_100g,
       porcao_padrao_g: data.porcao_padrao_g ?? null,
       categoria: data.categoria || null,
+      grupo_alimentar: data.grupo_alimentar || null,
       tags_restricao: data.tags_restricao,
       ativo: data.ativo,
     })

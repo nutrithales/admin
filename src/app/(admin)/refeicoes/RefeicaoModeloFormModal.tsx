@@ -12,7 +12,7 @@ import { refeicaoModeloSchema, type RefeicaoModeloFormValues } from "@/utils/val
 import { createRefeicaoModeloAction, updateRefeicaoModeloAction } from "@/services/refeicoes.actions";
 import { searchAlimentosAction } from "@/services/alimentos.actions";
 import { searchReceitasAction } from "@/services/receitas.actions";
-import type { AlimentoOption } from "@/services/alimentos.queries";
+import { GRUPO_ALIMENTAR_FRUTA, type AlimentoOption } from "@/services/alimentos.queries";
 import type { ReceitaOption } from "@/services/receitas.queries";
 import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
 import { useToast } from "@/contexts/ToastContext";
@@ -260,15 +260,25 @@ export function RefeicaoModeloFormModal({
                         onQueryChange={async (q) =>
                           (await searchAlimentosAction(q)).map((a) => ({ value: a.id, label: a.nome, data: a }))
                         }
-                        onChange={(_, option) => updateItem(opcao.tempId, item.tempId, { alimento: option.data ?? null })}
+                        onChange={(_, option) =>
+                          updateItem(opcao.tempId, item.tempId, {
+                            alimento: option.data ?? null,
+                            quantidade_g:
+                              option.data?.grupo_alimentar === GRUPO_ALIMENTAR_FRUTA && option.data.porcao_padrao_g
+                                ? option.data.porcao_padrao_g
+                                : item.quantidade_g,
+                          })
+                        }
                       />
                     )}
 
                     {item.tipo === "alimento" ? (
                       <QuantityStepper
+                        key={item.alimento?.id}
                         value={item.quantidade_g}
                         onChange={(v) => updateItem(opcao.tempId, item.tempId, { quantidade_g: v })}
                         unidadeGramas={item.alimento?.porcao_padrao_g ?? undefined}
+                        modoInicial={item.alimento?.grupo_alimentar === GRUPO_ALIMENTAR_FRUTA ? "un" : "g"}
                       />
                     ) : (
                       <span className="text-xs text-muted-light">quantidade da receita</span>

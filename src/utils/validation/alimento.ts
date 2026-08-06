@@ -13,6 +13,7 @@ export const alimentoSchema = z.object({
     z.coerce.number().positive().optional(),
   ),
   categoria: z.string().trim().optional().or(z.literal("")),
+  grupo_alimentar: z.string().trim().optional().or(z.literal("")),
   tags_restricao: z.array(z.string()).default([]),
   ativo: z.boolean().default(true),
 });

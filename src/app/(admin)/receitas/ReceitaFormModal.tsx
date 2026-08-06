@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { receitaSchema, PAPEL_MACRO, type ReceitaFormValues } from "@/utils/validation/receita";
 import { createReceitaAction, updateReceitaAction } from "@/services/receitas.actions";
 import { searchAlimentosAction } from "@/services/alimentos.actions";
-import type { AlimentoOption } from "@/services/alimentos.queries";
+import { GRUPO_ALIMENTAR_FRUTA, type AlimentoOption } from "@/services/alimentos.queries";
 import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
 import { useToast } from "@/contexts/ToastContext";
 import type { ReceitaComItens } from "@/services/receitas.queries";
@@ -190,12 +190,22 @@ export function ReceitaFormModal({
                       data: a,
                     }))
                   }
-                  onChange={(_, option) => updateItem(item.tempId, { alimento: option.data ?? null })}
+                  onChange={(_, option) =>
+                    updateItem(item.tempId, {
+                      alimento: option.data ?? null,
+                      quantidade_base_g:
+                        option.data?.grupo_alimentar === GRUPO_ALIMENTAR_FRUTA && option.data.porcao_padrao_g
+                          ? option.data.porcao_padrao_g
+                          : item.quantidade_base_g,
+                    })
+                  }
                 />
                 <QuantityStepper
+                  key={item.alimento?.id}
                   value={item.quantidade_base_g}
                   onChange={(v) => updateItem(item.tempId, { quantidade_base_g: v })}
                   unidadeGramas={item.alimento?.porcao_padrao_g ?? undefined}
+                  modoInicial={item.alimento?.grupo_alimentar === GRUPO_ALIMENTAR_FRUTA ? "un" : "g"}
                 />
                 <Select
                   value={item.papel_macro}

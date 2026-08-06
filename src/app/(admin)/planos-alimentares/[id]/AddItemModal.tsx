@@ -9,7 +9,7 @@ import { addReceitaAoPlanoAction, addAlimentoAvulsoAoPlanoAction } from "@/servi
 import { searchReceitasAction } from "@/services/receitas.actions";
 import { searchAlimentosAction } from "@/services/alimentos.actions";
 import type { ReceitaOption } from "@/services/receitas.queries";
-import type { AlimentoOption } from "@/services/alimentos.queries";
+import { GRUPO_ALIMENTAR_FRUTA, type AlimentoOption } from "@/services/alimentos.queries";
 import { useToast } from "@/contexts/ToastContext";
 
 export function AddItemModal({
@@ -104,9 +104,20 @@ export function AddItemModal({
               selectedLabel={alimento?.nome}
               value={alimento?.id}
               onQueryChange={async (q) => (await searchAlimentosAction(q)).map((a) => ({ value: a.id, label: a.nome, data: a }))}
-              onChange={(_, option) => setAlimento(option.data ?? null)}
+              onChange={(_, option) => {
+                setAlimento(option.data ?? null);
+                if (option.data?.grupo_alimentar === GRUPO_ALIMENTAR_FRUTA && option.data.porcao_padrao_g) {
+                  setQuantidade(option.data.porcao_padrao_g);
+                }
+              }}
             />
-            <QuantityStepper value={quantidade} onChange={setQuantidade} unidadeGramas={alimento?.porcao_padrao_g ?? undefined} />
+            <QuantityStepper
+              key={alimento?.id}
+              value={quantidade}
+              onChange={setQuantidade}
+              unidadeGramas={alimento?.porcao_padrao_g ?? undefined}
+              modoInicial={alimento?.grupo_alimentar === GRUPO_ALIMENTAR_FRUTA ? "un" : "g"}
+            />
           </>
         )}
 

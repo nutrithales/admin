@@ -5,7 +5,7 @@ import type { Tables } from "@/types/database.types";
 export type ReceitaItemComAlimento = Tables<"receita_itens"> & {
   alimento: Pick<
     Tables<"alimentos">,
-    "id" | "nome" | "origem" | "kcal_100g" | "proteina_100g" | "carboidrato_100g" | "gordura_100g" | "porcao_padrao_g"
+    "id" | "nome" | "origem" | "kcal_100g" | "proteina_100g" | "carboidrato_100g" | "gordura_100g" | "porcao_padrao_g" | "grupo_alimentar"
   >;
 };
 
@@ -18,7 +18,7 @@ export async function listReceitas(): Promise<ReceitaComItens[]> {
   const { data, error } = await supabase
     .from("receitas")
     .select(
-      "*, itens:receita_itens(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g))",
+      "*, itens:receita_itens(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar))",
     )
     .order("nome", { ascending: true });
 
@@ -31,7 +31,7 @@ export async function getReceita(id: string): Promise<ReceitaComItens | null> {
   const { data, error } = await supabase
     .from("receitas")
     .select(
-      "*, itens:receita_itens(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g))",
+      "*, itens:receita_itens(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar))",
     )
     .eq("id", id)
     .maybeSingle();
