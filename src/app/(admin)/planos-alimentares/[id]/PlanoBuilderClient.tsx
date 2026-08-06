@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, CheckCircle2, RotateCcw } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -12,7 +12,12 @@ import { MacroSummary } from "@/components/ui/MacroSummary";
 import { Label, FieldGroup, Input, Textarea } from "@/components/ui/Input";
 import { useToast } from "@/contexts/ToastContext";
 import { arredondarMacros } from "@/lib/nutrition/calcular-macros";
-import { updatePlanoMetasAction, finalizarPlanoAction, reabrirPlanoAction } from "@/services/planos-estruturados.actions";
+import {
+  updatePlanoMetasAction,
+  finalizarPlanoAction,
+  reabrirPlanoAction,
+  gerarRascunhoPlanoAction,
+} from "@/services/planos-estruturados.actions";
 import { exportarPlanoPdfAction } from "@/services/planos-pdf.actions";
 import type { PlanoEstruturadoCompleto } from "@/services/planos-estruturados.queries";
 import { RefeicaoTab, macrosDaRefeicao } from "./RefeicaoTab";
@@ -33,6 +38,9 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
   const [savingMetas, setSavingMetas] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [gerandoRascunho, setGerandoRascunho] = useState(false);
+
+  const totalItens = useMemo(() => refeicoesOrdenadas.reduce((acc, r) => acc + r.itens.length, 0), [refeicoesOrdenadas]);
 
   function refresh() {
     router.refresh();
@@ -90,6 +98,14 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
     if (result.success) refresh();
   }
 
+  async function handleGerarRascunho() {
+    setGerandoRascunho(true);
+    const result = await gerarRascunhoPlanoAction(plano.id);
+    setGerandoRascunho(false);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    if (result.success) refresh();
+  }
+
   return (
     <div>
       <Link href="/planos-alimentares" className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
@@ -104,6 +120,11 @@ export function PlanoBuilderClient({ plano }: { plano: PlanoEstruturadoCompleto 
             <Badge tone={plano.status === "finalizado" ? "success" : "brand"}>
               {plano.status === "finalizado" ? "Finalizado" : "Rascunho"}
             </Badge>
+            {editavel && totalItens === 0 && (
+              <Button variant="outline" loading={gerandoRascunho} onClick={handleGerarRascunho} title="Só disponível enquanto o plano está vazio">
+                <Sparkles className="size-4" /> Gerar rascunho com IA
+              </Button>
+            )}
             <Button variant="outline" loading={exportando} onClick={handleExportar}>
               <Download className="size-4" /> Exportar PDF
             </Button>

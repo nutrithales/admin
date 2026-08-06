@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/services/pacientes.actions";
 import { scaleRecipe, type ItemParaEscalar, type MetaEscala } from "@/lib/nutrition/scale-recipe";
 import { calcularMacrosTotais } from "@/lib/nutrition/calcular-macros";
+import { gerarRascunhoPlano } from "@/lib/ai/gerar-rascunho-plano";
 
 export interface PlanoMetasValues {
   titulo?: string;
@@ -181,10 +182,18 @@ interface ReceitaItemParaEscala {
   alimento: { kcal_100g: number; proteina_100g: number; carboidrato_100g: number; gordura_100g: number };
 }
 
-export async function addReceitaAoPlanoAction(planoRefeicaoId: string, planoId: string, receitaId: string): Promise<AdicionarReceitaResult> {
-  await assertAdmin();
-  const supabase = await createClient();
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+/** Núcleo compartilhado por `addReceitaAoPlanoAction` (ação manual) e pelo
+ * gerador de rascunho por IA (Fase 4) — escala a receita contra o que
+ * ainda falta pra bater a meta do slot e materializa os ingredientes.
+ * A IA nunca chama isso diretamente: ela só decide QUAL receita, essa
+ * função sempre decide QUANTO (via scaleRecipe determinístico). */
+async function adicionarReceitaInterna(
+  supabase: SupabaseServerClient,
+  planoRefeicaoId: string,
+  receitaId: string,
+): Promise<{ success: true; avisos: string[] } | { success: false; message: string }> {
   const [{ data: slot, error: slotError }, { data: receita, error: receitaError }, { count: ordemAtual }] = await Promise.all([
     supabase.from("plano_refeicoes").select("meta_proteina_g, meta_carboidrato_g, meta_gordura_g").eq("id", planoRefeicaoId).single(),
     supabase
@@ -241,6 +250,16 @@ export async function addReceitaAoPlanoAction(planoRefeicaoId: string, planoId: 
     await supabase.from("plano_refeicao_itens").delete().eq("id", itemRow.id);
     return { success: false, message: `Erro ao montar ingredientes: ${ingredientesError.message}` };
   }
+
+  return { success: true, avisos: resultado.avisos };
+}
+
+export async function addReceitaAoPlanoAction(planoRefeicaoId: string, planoId: string, receitaId: string): Promise<AdicionarReceitaResult> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const resultado = await adicionarReceitaInterna(supabase, planoRefeicaoId, receitaId);
+  if (!resultado.success) return resultado;
 
   revalidatePlano(planoId);
   return { success: true, message: "Receita adicionada e escalada.", avisos: resultado.avisos };
@@ -355,6 +374,117 @@ export async function reabrirPlanoAction(id: string): Promise<ActionResult> {
 
   revalidatePlano(id);
   return { success: true, message: "Plano reaberto para edição." };
+}
+
+/** Gera o primeiro rascunho completo do plano por IA — só habilitado
+ * quando o plano ainda não tem nenhum item (pra nunca sobrescrever
+ * trabalho manual). A IA escolhe quais receitas da biblioteca já
+ * cadastrada entram em cada horário; cada id retornado é revalidado
+ * contra o banco (ids alucinados são descartados, não travam tudo), e a
+ * materialização/escalonamento sempre passa pelo mesmo caminho
+ * determinístico usado quando o nutricionista adiciona manualmente. */
+export async function gerarRascunhoPlanoAction(planoId: string): Promise<ActionResult> {
+  await assertAdmin();
+  const supabase = await createClient();
+
+  const { data: plano, error: planoError } = await supabase.from("planos_estruturados").select("*").eq("id", planoId).maybeSingle();
+  if (planoError || !plano) return { success: false, message: "Plano não encontrado." };
+
+  const { data: refeicoes, error: refeicoesError } = await supabase
+    .from("plano_refeicoes")
+    .select("id, nome, meta_kcal")
+    .eq("plano_estruturado_id", planoId)
+    .order("ordem", { ascending: true });
+
+  if (refeicoesError || !refeicoes || refeicoes.length === 0) {
+    return { success: false, message: "Este plano não tem horários configurados." };
+  }
+
+  const { count: itensCount } = await supabase
+    .from("plano_refeicao_itens")
+    .select("id", { count: "exact", head: true })
+    .in(
+      "plano_refeicao_id",
+      refeicoes.map((r) => r.id),
+    );
+
+  if ((itensCount ?? 0) > 0) {
+    return { success: false, message: "Este plano já tem itens montados — o rascunho por IA só funciona em planos vazios, pra nunca sobrescrever seu trabalho." };
+  }
+
+  const [{ data: paciente }, { data: receitasCatalogo }] = await Promise.all([
+    supabase
+      .from("pacientes")
+      .select("nome, peso_kg, altura_cm, objetivo, nivel_atividade, restricoes_alimentares, preferencias_alimentares")
+      .eq("auth_id", plano.auth_id)
+      .maybeSingle(),
+    supabase.from("receitas").select("id, nome, tags").eq("ativo", true),
+  ]);
+
+  if (!receitasCatalogo || receitasCatalogo.length === 0) {
+    return { success: false, message: "Cadastre receitas em /receitas antes de gerar um rascunho por IA." };
+  }
+
+  let rascunho;
+  try {
+    rascunho = await gerarRascunhoPlano({
+      paciente: {
+        nome: paciente?.nome ?? "Paciente",
+        peso_kg: paciente?.peso_kg ?? null,
+        altura_cm: paciente?.altura_cm ?? null,
+        objetivo: paciente?.objetivo ?? null,
+        nivel_atividade: paciente?.nivel_atividade ?? null,
+        restricoes_alimentares: paciente?.restricoes_alimentares ?? [],
+        preferencias_alimentares: paciente?.preferencias_alimentares ?? null,
+      },
+      slots: refeicoes.map((r) => ({ nome: r.nome, meta_kcal: r.meta_kcal })),
+      receitas: receitasCatalogo,
+      metas: {
+        kcal: plano.meta_kcal,
+        proteina_g: plano.meta_proteina_g,
+        carboidrato_g: plano.meta_carboidrato_g,
+        gordura_g: plano.meta_gordura_g,
+      },
+      instrucoesExtras: plano.instrucoes_ia,
+    });
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : "Erro ao gerar rascunho." };
+  }
+
+  const idsValidos = new Set(receitasCatalogo.map((r) => r.id));
+  const slotIdPorNome = new Map(refeicoes.map((r) => [r.nome, r.id]));
+
+  let algumaAdicionada = false;
+  let algumAvisoDeEscala = false;
+
+  for (const refeicaoIA of rascunho.refeicoes) {
+    const slotId = slotIdPorNome.get(refeicaoIA.nome_slot);
+    if (!slotId) continue; // nome não bate com nenhum horário real — ignora essa entrada
+
+    for (const receitaId of refeicaoIA.receita_ids) {
+      if (!idsValidos.has(receitaId)) continue; // id alucinado — descarta em vez de falhar tudo
+
+      const resultado = await adicionarReceitaInterna(supabase, slotId, receitaId);
+      if (resultado.success) {
+        algumaAdicionada = true;
+        if (resultado.avisos.length > 0) algumAvisoDeEscala = true;
+      }
+    }
+  }
+
+  if (!algumaAdicionada) {
+    return { success: false, message: "A IA não conseguiu montar nenhum item válido — tente novamente ou monte manualmente." };
+  }
+
+  await supabase.from("planos_estruturados").update({ gerado_por_ia: true }).eq("id", planoId);
+
+  revalidatePlano(planoId);
+  return {
+    success: true,
+    message: algumAvisoDeEscala
+      ? "Rascunho gerado — revise os itens, algumas quantidades ficaram fora da faixa ideal e podem precisar de ajuste manual."
+      : "Rascunho gerado pela IA — revise antes de finalizar o plano.",
+  };
 }
 
 export async function deletePlanoEstruturadoAction(id: string): Promise<ActionResult> {
