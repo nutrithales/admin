@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ClipboardList,
   MessageSquareText,
+  MessageCircle,
   ArrowRightLeft,
   RefreshCcw,
   ExternalLink,
@@ -32,7 +33,15 @@ import type { TarefaComPaciente } from "@/services/tarefas.queries";
 import { resolverPendenciaAction } from "@/services/pendencias.actions";
 import { concluirTarefaAction } from "@/services/tarefas.actions";
 import { updateConsultaStatusAction } from "@/services/consultas.actions";
-import { PENDENCIA_TIPO_LABEL, type PendenciaTipo } from "@/lib/clara/pendencias-engine";
+import { prepararMensagemAction } from "@/services/clara.actions";
+import { enviarCheckinAction } from "@/services/checkins.actions";
+import { onlyDigits } from "@/lib/agenda/parse-description";
+import {
+  PENDENCIA_TIPO_LABEL,
+  PENDENCIA_MENSAGEM_SUGERIDA,
+  PENDENCIA_ACAO_DIRETA,
+  type PendenciaTipo,
+} from "@/lib/clara/pendencias-engine";
 import { CONSULTA_STATUS_LABEL, CONSULTA_STATUS_TONE, type ConsultaStatus } from "@/lib/clara/consultas";
 import { ComandosBox } from "./ComandosBox";
 import { AdiarPendenciaModal } from "./AdiarPendenciaModal";
@@ -78,6 +87,7 @@ export function ClaraClient({
   const { toast } = useToast();
   const [modalAberto, setModalAberto] = useState<ModalAberto>(null);
   const [adiando, setAdiando] = useState<string | null>(null);
+  const [enviandoWhatsapp, setEnviandoWhatsapp] = useState<string | null>(null);
 
   function refresh() {
     router.refresh();
@@ -99,6 +109,38 @@ export function ClaraClient({
     const result = await updateConsultaStatusAction(id, status);
     toast({ kind: result.success ? "success" : "error", title: result.message });
     refresh();
+  }
+
+  /** Abre o WhatsApp do paciente com a mensagem sugerida para o tipo de
+   * pendência já preenchida — a Clara nunca envia sozinha, só prepara e
+   * abre para revisão antes de mandar. Para "check-in a enviar", também
+   * marca o check-in como enviado, já que mandar a mensagem é a própria
+   * resolução dessa pendência. */
+  async function abrirWhatsappDaPendencia(p: PendenciaComPaciente) {
+    const chave = PENDENCIA_MENSAGEM_SUGERIDA[p.tipo as PendenciaTipo];
+    if (!chave || !p.paciente) return;
+
+    const digitos = onlyDigits(p.paciente.telefone);
+    if (!digitos) {
+      toast({ kind: "error", title: "Paciente sem telefone/WhatsApp cadastrado." });
+      return;
+    }
+
+    setEnviandoWhatsapp(p.id);
+    const resultado = await prepararMensagemAction(p.paciente.id, chave);
+    setEnviandoWhatsapp(null);
+    if (resultado.erro) {
+      toast({ kind: "error", title: resultado.erro });
+      return;
+    }
+
+    const numero = digitos.startsWith("55") ? digitos : `55${digitos}`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(resultado.corpo)}`, "_blank");
+
+    if (PENDENCIA_ACAO_DIRETA[p.tipo as PendenciaTipo] === "enviar_checkin" && p.paciente.auth_id) {
+      await enviarCheckinAction(p.paciente.auth_id);
+      refresh();
+    }
   }
 
   const naoConfirmadas = pendencias.filter((p) => p.tipo === "consulta_nao_confirmada").length;
@@ -201,13 +243,28 @@ export function ClaraClient({
                           <p className="text-sm text-muted">{p.motivo}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {p.tipo === "consulta_nao_confirmada" && p.consulta_id && (
+                          {PENDENCIA_ACAO_DIRETA[p.tipo as PendenciaTipo] === "confirmar_consulta" && p.consulta_id && (
                             <Button
                               variant="primary"
                               size="sm"
                               onClick={() => void mudarStatusConsulta(p.consulta_id!, "confirmada")}
                             >
                               Confirmar consulta
+                            </Button>
+                          )}
+                          {PENDENCIA_ACAO_DIRETA[p.tipo as PendenciaTipo] === "concluir_tarefa" && p.tarefa_id && (
+                            <Button variant="primary" size="sm" onClick={() => void concluirTarefa(p.tarefa_id!)}>
+                              Concluir tarefa
+                            </Button>
+                          )}
+                          {PENDENCIA_MENSAGEM_SUGERIDA[p.tipo as PendenciaTipo] && p.paciente && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              loading={enviandoWhatsapp === p.id}
+                              onClick={() => void abrirWhatsappDaPendencia(p)}
+                            >
+                              <MessageCircle className="size-3.5" /> WhatsApp
                             </Button>
                           )}
                           {p.paciente && (
