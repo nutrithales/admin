@@ -104,6 +104,8 @@ export async function POST(request: NextRequest) {
         consultas_realizadas_iniciais: 0,
         status: "pendente",
         data_inicio: new Date().toISOString().slice(0, 10),
+        fluxo_etapa: "04_agendado",
+        fluxo_updated_at: new Date().toISOString(),
       })
       .select("id, auth_id, cpf, email, telefone")
       .single();
@@ -133,6 +135,12 @@ export async function POST(request: NextRequest) {
   if (consultationError) {
     return NextResponse.json({ success: false, message: consultationError.message }, { status: 503 });
   }
+
+  const isReturn = /reconsulta|retorno|acompanhamento/i.test(booking.serviceTitle);
+  await admin.from("pacientes").update({
+    fluxo_etapa: isReturn ? "04_1_agendado_reconsulta" : "04_agendado",
+    fluxo_updated_at: new Date().toISOString(),
+  }).eq("id", patient.id);
 
   return NextResponse.json({ success: true, patientId: patient.id, createdPatient }, { status: 201 });
 }
