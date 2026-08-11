@@ -42,6 +42,31 @@ export const PENDENCIA_TIPO_LABEL: Record<PendenciaTipo, string> = {
   tarefa_vencida: "Tarefa vencida",
 };
 
+/** Modelo de mensagem (chave em `mensagens_modelos`) sugerido para cada
+ * tipo de pendência, quando fizer sentido resolver mandando uma
+ * mensagem pronta pelo WhatsApp. A Clara só prepara e abre o WhatsApp
+ * com o texto preenchido — quem revisa e manda é sempre uma pessoa. */
+export const PENDENCIA_MENSAGEM_SUGERIDA: Partial<Record<PendenciaTipo, string>> = {
+  consulta_nao_confirmada: "confirmacao_consulta",
+  sem_proxima_consulta: "novo_link_agendamento",
+  checkin_pendente_envio: "envio_checkin",
+  checkin_nao_respondido: "lembrete_checkin",
+  plano_proximo_fim: "renovacao_plano",
+  plano_finalizado: "renovacao_plano",
+  pagamento_pendente: "cobranca_pagamento",
+  contato_necessario: "reativacao_paciente",
+};
+
+/** Ação direta (sem mensagem) que já resolve o motivo da pendência de
+ * verdade — em vez de só marcar a pendência como resolvida por fora. */
+export type PendenciaAcaoDireta = "confirmar_consulta" | "enviar_checkin" | "concluir_tarefa";
+
+export const PENDENCIA_ACAO_DIRETA: Partial<Record<PendenciaTipo, PendenciaAcaoDireta>> = {
+  consulta_nao_confirmada: "confirmar_consulta",
+  checkin_pendente_envio: "enviar_checkin",
+  tarefa_vencida: "concluir_tarefa",
+};
+
 export interface PendenciaCandidata {
   tipo: PendenciaTipo;
   pacienteId: string | null;

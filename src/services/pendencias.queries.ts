@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database.types";
 
 export type PendenciaComPaciente = Tables<"pendencias"> & {
-  paciente: Pick<Tables<"pacientes">, "id" | "nome" | "telefone"> | null;
+  paciente: Pick<Tables<"pacientes">, "id" | "auth_id" | "nome" | "telefone"> | null;
   tarefa: Pick<Tables<"tarefas">, "id" | "titulo"> | null;
 };
 
@@ -17,7 +17,7 @@ export async function listPendenciasAtivas(): Promise<PendenciaComPaciente[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pendencias")
-    .select("*, paciente:pacientes(id, nome, telefone), tarefa:tarefas(id, titulo)")
+    .select("*, paciente:pacientes(id, auth_id, nome, telefone), tarefa:tarefas(id, titulo)")
     .neq("status", "resolvida")
     .order("prazo", { ascending: true, nullsFirst: false });
 

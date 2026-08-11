@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CONSULTA_STATUS } from "@/lib/clara/consultas";
+import { parseAgendaDescription, onlyDigits } from "@/lib/agenda/parse-description";
 
 export const dynamic = "force-dynamic";
 
@@ -117,26 +118,71 @@ export async function PATCH(request: NextRequest) {
     }
 
     const admin = createAdminClient();
-    const { error } = await admin
+    const confirmadaEm = body.status === "confirmada" ? new Date().toISOString() : undefined;
+
+    const { data: updated, error } = await admin
       .from("consultas")
-      .update({
-        status: body.status,
-        confirmada_em: body.status === "confirmada" ? new Date().toISOString() : undefined,
-      })
-      .eq("google_event_id", id);
+      .update({ status: body.status, confirmada_em: confirmadaEm })
+      .eq("google_event_id", id)
+      .select("auth_id")
+      .maybeSingle();
     if (error) throw error;
-    if (body.status === "realizada") {
-      const { data: consultation } = await admin
-        .from("consultas")
-        .select("auth_id")
-        .eq("google_event_id", id)
-        .maybeSingle();
-      if (consultation?.auth_id) {
-        await admin.from("pacientes").update({
-          fluxo_etapa: "06_consulta_realizada",
-          fluxo_updated_at: new Date().toISOString(),
-        }).eq("auth_id", consultation.auth_id);
+
+    let authId = updated?.auth_id ?? null;
+
+    // Evento sem consulta correspondente ainda (agendamento antigo, ou o
+    // webhook da agenda pública não sincronizou este evento). Em vez de
+    // deixar a ação sem efeito, tenta localizar o paciente pelos dados do
+    // próprio evento e cria o vínculo agora.
+    if (!updated) {
+      const info = parseAgendaDescription(body.description ?? "");
+      const email = info.email?.toLowerCase();
+      const phone = onlyDigits(info.whatsapp);
+
+      if (!email && !phone) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Este evento ainda não está vinculado a um paciente (sem e-mail/WhatsApp no agendamento). Cadastre ou vincule o paciente manualmente.",
+          },
+          { status: 404 },
+        );
       }
+
+      const { data: patients } = await admin.from("pacientes").select("id, auth_id, email, telefone");
+      const patient = (patients ?? []).find((p) => email && p.email?.toLowerCase() === email)
+        ?? (patients ?? []).find((p) => phone && onlyDigits(p.telefone).slice(-11) === phone.slice(-11));
+
+      if (!patient) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Nenhum paciente cadastrado corresponde a este agendamento. Cadastre o paciente manualmente e tente novamente.",
+          },
+          { status: 404 },
+        );
+      }
+
+      const { error: insertError } = await admin.from("consultas").insert({
+        auth_id: patient.auth_id,
+        data: body.start ?? null,
+        tipo: body.title ?? null,
+        status: body.status,
+        modalidade: info.modalidade ?? null,
+        google_event_id: id,
+        origem: "agenda_site",
+        confirmada_em: confirmadaEm ?? null,
+      });
+      if (insertError) throw insertError;
+      authId = patient.auth_id;
+    }
+
+    if (body.status === "realizada" && authId) {
+      await admin.from("pacientes").update({
+        fluxo_etapa: "06_consulta_realizada",
+        fluxo_updated_at: new Date().toISOString(),
+      }).eq("auth_id", authId);
     }
     return NextResponse.json({ success: true });
   } catch (error) {
