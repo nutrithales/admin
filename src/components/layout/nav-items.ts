@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   Sparkles,
   Settings,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Pacientes", href: "/pacientes", icon: Users },
+  { label: "Fluxo", href: "/fluxo", icon: Workflow },
   { label: "Páginas Personalizadas", href: "/paginas-personalizadas", icon: AppWindow },
   { label: "Planos Alimentares", href: "/planos-alimentares", icon: UtensilsCrossed },
   { label: "Alimentos", href: "/alimentos", icon: Apple },
