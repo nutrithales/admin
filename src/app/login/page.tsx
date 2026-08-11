@@ -1,14 +1,13 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Lock, Mail, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";
   const urlError = searchParams.get("error");
@@ -36,8 +35,9 @@ function LoginForm() {
       return;
     }
 
-    router.push(redirectTo);
-    router.refresh();
+    // A full navigation guarantees that the auth cookie written by Supabase
+    // is available before the protected dashboard routes are requested.
+    window.location.assign(redirectTo.startsWith("/") ? redirectTo : "/");
   }
 
   return (
