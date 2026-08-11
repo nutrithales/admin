@@ -11,6 +11,9 @@ const PUBLIC_PATHS = [
   // including the CORS preflight OPTIONS request.
   "/api/pacientes/self-register",
   "/api/pacientes/forgot-password",
+  // Server-to-server booking sync. The route validates AGENDA_SYNC_SECRET
+  // itself, so it must not be redirected to the interactive admin login.
+  "/api/agenda/webhook",
 ];
 
 function isPublicPath(pathname: string) {
