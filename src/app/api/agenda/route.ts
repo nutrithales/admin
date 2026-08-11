@@ -179,8 +179,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.status === "realizada" && authId) {
+      // Consulta concluída avança direto para "montar plano" — é a
+      // próxima ação de verdade, e gera pendência automática pra Clara.
       await admin.from("pacientes").update({
-        fluxo_etapa: "06_consulta_realizada",
+        fluxo_etapa: "06_1_montar_plano",
         fluxo_updated_at: new Date().toISOString(),
       }).eq("auth_id", authId);
     }

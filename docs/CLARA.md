@@ -109,20 +109,25 @@ e `src/services/fluxo.queries.ts`/`fluxo.actions.ts`
 esse sistema, não o substitui.
 
 `pacientes.fluxo_etapa` **não é texto livre**: tem uma CHECK constraint
-fixa no banco com 24 etapas específicas (funil numerado — `01_lead_recebido`
-→ `16_renovado`, mais alguns estados utilitários como `nada_agora`,
-`mandar_mensagem`, `pausa_acompanhamento`), agrupadas em captação /
-atendimento / acompanhamento / renovação / outros. Se a constraint mudar
-em banco, atualize `FLOW_STAGES` junto.
+fixa no banco com as etapas específicas do funil numerado
+(`01_lead_recebido` → `16_renovado`, mais `06_1_montar_plano` entre
+"consulta realizada" e "pós-consulta enviado" — adicionada pela Clara
+em `20260811220000_fluxo_montar_plano.sql` — e alguns estados
+utilitários como `nada_agora`, `mandar_mensagem`,
+`pausa_acompanhamento`), agrupadas em captação / atendimento /
+acompanhamento / renovação / outros. Se a constraint mudar em banco,
+atualize `FLOW_STAGES` junto.
 
 Colunas do Fluxo, todas em `pacientes`: `fluxo_etapa`, `fluxo_urgente`,
 `fluxo_observacoes` (a Clara reaproveita esse campo na aba
 "Administrativo" do perfil do paciente — não criou um campo de
 observações administrativas separado, para não duplicar),
 `fluxo_proxima_acao_em`, `fluxo_updated_at`. O webhook de agendamento
-(`src/app/api/agenda/webhook/route.ts`) e o `PATCH` da agenda
-(`src/app/api/agenda/route.ts`) já avançam `fluxo_etapa` automaticamente
-(novo lead → `04_agendado`; consulta concluída → `06_consulta_realizada`).
+(`src/app/api/agenda/webhook/route.ts`), o `PATCH` da agenda
+(`src/app/api/agenda/route.ts`) e `updateConsultaStatusAction`
+(cadastro manual de consultas) já avançam `fluxo_etapa` automaticamente
+(novo lead → `04_agendado`; consulta concluída → `06_1_montar_plano`,
+que já entra como pendência "Aguardando plano alimentar" pra Clara).
 
 O que a Clara **adicionou** por cima (aditivo — nenhuma coluna existente
 foi tocada): a tabela `fluxo_movimentacoes`, que não existia — histórico

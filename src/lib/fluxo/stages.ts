@@ -9,6 +9,7 @@ export const FLOW_STAGES = [
   { key: "04_1_agendado_reconsulta", label: "04.1 — Agendado (reconsulta)", group: "atendimento", color: "rose" },
   { key: "05_formulario_materiais", label: "05 — Formulário e materiais enviados", group: "atendimento", color: "sky" },
   { key: "06_consulta_realizada", label: "06 — Consulta realizada", group: "acompanhamento", color: "green" },
+  { key: "06_1_montar_plano", label: "06.1 — Montar plano", group: "acompanhamento", color: "amber" },
   { key: "07_pos_consulta_enviado", label: "07 — Pós-consulta enviado", group: "acompanhamento", color: "green" },
   { key: "08_plano_entregue", label: "08 — Plano entregue", group: "acompanhamento", color: "green" },
   { key: "09_checkin_3_dias", label: "09 — Check-in 3 dias", group: "acompanhamento", color: "green" },
