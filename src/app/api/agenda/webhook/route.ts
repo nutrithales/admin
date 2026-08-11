@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { includedConsultations, normalizePlan } from "@/lib/agenda/plans";
+import { sendPreConsultationEmail } from "@/lib/email/pre-consultation";
 
 const bookingSchema = z.object({
   eventId: z.string().min(1),
@@ -24,6 +25,12 @@ function digits(value?: string | null) {
 function authorized(request: NextRequest) {
   const secret = process.env.AGENDA_SYNC_SECRET;
   return Boolean(secret && request.headers.get("authorization") === `Bearer ${secret}`);
+}
+
+function preConsultationRedirectUrl(request: NextRequest) {
+  const configuredUrl = process.env.NEXT_PUBLIC_PATIENT_LOGIN_URL;
+  const baseUrl = configuredUrl ? new URL(configuredUrl) : request.nextUrl;
+  return new URL("/paciente/pre-consulta", baseUrl.origin).toString();
 }
 
 export async function POST(request: NextRequest) {
@@ -138,6 +145,7 @@ export async function POST(request: NextRequest) {
 
   const isReturn = /reconsulta|retorno|acompanhamento/i.test(booking.serviceTitle);
   let preConsultationEmailSent = false;
+  let preConsultationEmailProvider: "resend" | "supabase" | null = null;
   if (!isReturn) {
     await admin.from("formularios_pre_consulta").upsert(
       {
@@ -149,12 +157,41 @@ export async function POST(request: NextRequest) {
       { onConflict: "paciente_id", ignoreDuplicates: true },
     );
 
-    const redirectTo = new URL("/paciente/pre-consulta", request.nextUrl.origin).toString();
-    const { error: emailError } = await admin.auth.signInWithOtp({
+    const redirectTo = preConsultationRedirectUrl(request);
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: "magiclink",
       email,
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+      options: { redirectTo },
     });
-    preConsultationEmailSent = !emailError;
+
+    if (!linkError && linkData.properties.action_link) {
+      const resendResult = await sendPreConsultationEmail({
+        to: email,
+        nome: booking.name,
+        accessUrl: linkData.properties.action_link,
+      });
+
+      if (resendResult.ok) {
+        preConsultationEmailSent = true;
+        preConsultationEmailProvider = "resend";
+      } else {
+        console.error("[agenda/webhook] Falha no e-mail pré-consulta via Resend:", resendResult.error);
+      }
+    } else {
+      console.error("[agenda/webhook] Falha ao gerar link de pré-consulta:", linkError?.message);
+    }
+
+    if (!preConsultationEmailSent) {
+      const { error: fallbackError } = await admin.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+      });
+      preConsultationEmailSent = !fallbackError;
+      preConsultationEmailProvider = fallbackError ? null : "supabase";
+      if (fallbackError) {
+        console.error("[agenda/webhook] Falha no e-mail pré-consulta via Supabase:", fallbackError.message);
+      }
+    }
   }
   await admin.from("pacientes").update({
     fluxo_etapa: isReturn ? "04_1_agendado_reconsulta" : "04_agendado",
@@ -162,7 +199,13 @@ export async function POST(request: NextRequest) {
   }).eq("id", patient.id);
 
   return NextResponse.json(
-    { success: true, patientId: patient.id, createdPatient, preConsultationEmailSent },
+    {
+      success: true,
+      patientId: patient.id,
+      createdPatient,
+      preConsultationEmailSent,
+      preConsultationEmailProvider,
+    },
     { status: 201 },
   );
 }
