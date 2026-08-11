@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/contexts/ToastContext";
 import { CONSULTA_STATUS_LABEL, CONSULTA_STATUS_TONE, type ConsultaStatus } from "@/lib/clara/consultas";
+import { parseAgendaDescription } from "@/lib/agenda/parse-description";
 
 interface AgendaEvent {
   id: string;
@@ -32,37 +33,6 @@ interface AgendaEvent {
   status?: ConsultaStatus;
   consultationId?: string | null;
   patientId?: string | null;
-}
-
-interface PatientInfo {
-  paciente?: string;
-  whatsapp?: string;
-  email?: string;
-  plano?: string;
-  modalidade?: string;
-}
-
-function parseDescription(description = ""): PatientInfo {
-  const aliases: Record<string, keyof PatientInfo> = {
-    paciente: "paciente",
-    whatsapp: "whatsapp",
-    "whats app": "whatsapp",
-    email: "email",
-    "e-mail": "email",
-    plano: "plano",
-    modalidade: "modalidade",
-  };
-  const info: PatientInfo = {};
-
-  for (const line of description.split("\n")) {
-    const separator = line.indexOf(":");
-    if (separator < 0) continue;
-    const label = line.slice(0, separator).trim().toLowerCase();
-    const key = aliases[label];
-    if (key) info[key] = line.slice(separator + 1).trim();
-  }
-
-  return info;
 }
 
 function whatsappHref(phone?: string) {
@@ -122,7 +92,7 @@ export function AgendaClient() {
     const response = await fetch(`/api/agenda?id=${encodeURIComponent(event.id)}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, title: event.title, start: event.start, description: event.description }),
     });
     const data = await response.json();
     toast({
@@ -177,7 +147,7 @@ export function AgendaClient() {
           {upcoming.map((event) => {
             const start = new Date(event.start);
             const end = event.end ? new Date(event.end) : null;
-            const info = parseDescription(event.description);
+            const info = parseAgendaDescription(event.description);
             const patient = info.paciente || event.title?.replace(/^Consulta\s*[-–—:]?\s*/i, "") || "Paciente";
             const whatsapp = whatsappHref(info.whatsapp);
             return (
@@ -194,8 +164,8 @@ export function AgendaClient() {
                   <div className="flex flex-wrap gap-2">
                     {whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer"><Button variant="ghost" size="sm"><MessageCircle className="size-4" /> WhatsApp</Button></a>}
                     {event.patientId && <a href={`/pacientes/${event.patientId}`}><Button variant="ghost" size="sm"><UserRound className="size-4" /> Perfil</Button></a>}
-                    {event.consultationId && event.status === "agendada" && <Button variant="outline" size="sm" onClick={() => void updateStatus(event, "confirmada", "Consulta confirmada.")}><CalendarCheck2 className="size-4" /> Confirmar</Button>}
-                    {event.consultationId && event.status !== "realizada" && <Button variant="secondary" size="sm" onClick={() => void updateStatus(event, "realizada", "Consulta marcada como realizada.")}><CalendarCheck2 className="size-4" /> Marcar realizada</Button>}
+                    {(!event.status || event.status === "agendada") && <Button variant="outline" size="sm" onClick={() => void updateStatus(event, "confirmada", "Consulta confirmada.")}><CalendarCheck2 className="size-4" /> Confirmar</Button>}
+                    {event.status !== "realizada" && <Button variant="secondary" size="sm" onClick={() => void updateStatus(event, "realizada", "Consulta marcada como realizada.")}><CalendarCheck2 className="size-4" /> Marcar realizada</Button>}
                     <Button variant="danger" size="sm" onClick={() => setCancelling(event)}><Trash2 className="size-4" /> Cancelar</Button>
                   </div>
                 </CardContent>
