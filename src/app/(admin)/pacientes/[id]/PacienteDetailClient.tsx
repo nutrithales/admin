@@ -66,7 +66,7 @@ export function PacienteDetailClient({
       ) : tab === "avaliacoes" ? (
         <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
       ) : (
-        <PreConsultaTab formulario={preConsulta} />
+        <PreConsultaTab formulario={preConsulta} paciente={paciente} />
       )}
     </div>
   );

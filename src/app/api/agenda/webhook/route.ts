@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
   }
 
   const isReturn = /reconsulta|retorno|acompanhamento/i.test(booking.serviceTitle);
+  let preConsultationEmailSent = false;
   if (!isReturn) {
     await admin.from("formularios_pre_consulta").upsert(
       {
@@ -147,11 +148,21 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: "paciente_id", ignoreDuplicates: true },
     );
+
+    const redirectTo = new URL("/paciente/pre-consulta", request.nextUrl.origin).toString();
+    const { error: emailError } = await admin.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+    });
+    preConsultationEmailSent = !emailError;
   }
   await admin.from("pacientes").update({
     fluxo_etapa: isReturn ? "04_1_agendado_reconsulta" : "04_agendado",
     fluxo_updated_at: new Date().toISOString(),
   }).eq("id", patient.id);
 
-  return NextResponse.json({ success: true, patientId: patient.id, createdPatient }, { status: 201 });
+  return NextResponse.json(
+    { success: true, patientId: patient.id, createdPatient, preConsultationEmailSent },
+    { status: 201 },
+  );
 }
