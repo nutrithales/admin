@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,37 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(body, { headers: { "Cache-Control": "no-store" } });
+    const eventIds = (body.events ?? []).map((event: { id: string }) => event.id);
+    const admin = createAdminClient();
+    const { data: consultations } = eventIds.length
+      ? await admin
+          .from("consultas")
+          .select("id, google_event_id, status, auth_id")
+          .in("google_event_id", eventIds)
+      : { data: [] };
+    const authIds = [...new Set((consultations ?? []).map((item) => item.auth_id))];
+    const { data: patients } = authIds.length
+      ? await admin.from("pacientes").select("id, auth_id, nome").in("auth_id", authIds)
+      : { data: [] };
+    const consultationByEvent = new Map((consultations ?? []).map((item) => [item.google_event_id, item]));
+    const patientByAuth = new Map((patients ?? []).map((item) => [item.auth_id, item]));
+
+    return NextResponse.json(
+      {
+        ...body,
+        events: (body.events ?? []).map((event: { id: string }) => {
+          const consultation = consultationByEvent.get(event.id);
+          const patient = consultation ? patientByAuth.get(consultation.auth_id) : undefined;
+          return {
+            ...event,
+            consultationId: consultation?.id ?? null,
+            status: consultation?.status ?? "agendada",
+            patientId: patient?.id ?? null,
+          };
+        }),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     return errorResponse(error);
   }
@@ -66,7 +97,32 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const admin = createAdminClient();
+    await admin.from("consultas").update({ status: "cancelada" }).eq("google_event_id", id);
+
     return NextResponse.json({ success: true, ...body });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    await assertAdmin();
+    const id = request.nextUrl.searchParams.get("id");
+    const body = await request.json().catch(() => ({}));
+    const allowed = ["agendada", "realizada", "falta", "cancelada"];
+    if (!id || !allowed.includes(body.status)) {
+      return NextResponse.json({ success: false, message: "Atualização inválida." }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("consultas")
+      .update({ status: body.status })
+      .eq("google_event_id", id);
+    if (error) throw error;
+    return NextResponse.json({ success: true });
   } catch (error) {
     return errorResponse(error);
   }

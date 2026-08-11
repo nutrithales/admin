@@ -419,28 +419,37 @@ export type Database = {
       consultas: {
         Row: {
           auth_id: string
+          created_at: string
           data: string | null
           google_event_id: string | null
           id: string
+          modalidade: string | null
           observacoes: string | null
+          origem: string
           status: string | null
           tipo: string | null
         }
         Insert: {
           auth_id?: string
+          created_at?: string
           data?: string | null
           google_event_id?: string | null
           id?: string
+          modalidade?: string | null
           observacoes?: string | null
+          origem?: string
           status?: string | null
           tipo?: string | null
         }
         Update: {
           auth_id?: string
+          created_at?: string
           data?: string | null
           google_event_id?: string | null
           id?: string
+          modalidade?: string | null
           observacoes?: string | null
+          origem?: string
           status?: string | null
           tipo?: string | null
         }
@@ -532,6 +541,8 @@ export type Database = {
           altura_cm: number | null
           auth_id: string
           cpf: string | null
+          consultas_incluidas: number
+          consultas_realizadas_iniciais: number
           created_at: string | null
           data_inicio: string | null
           email: string | null
@@ -553,6 +564,8 @@ export type Database = {
           altura_cm?: number | null
           auth_id?: string
           cpf?: string | null
+          consultas_incluidas?: number
+          consultas_realizadas_iniciais?: number
           created_at?: string | null
           data_inicio?: string | null
           email?: string | null
@@ -574,6 +587,8 @@ export type Database = {
           altura_cm?: number | null
           auth_id?: string
           cpf?: string | null
+          consultas_incluidas?: number
+          consultas_realizadas_iniciais?: number
           created_at?: string | null
           data_inicio?: string | null
           email?: string | null

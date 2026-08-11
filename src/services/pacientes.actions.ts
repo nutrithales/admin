@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paciente";
 import { generateTemporaryPassword } from "@/utils/generate-password";
 import { sendPatientCredentialsEmail } from "@/lib/email/patient-credentials";
+import { includedConsultations, normalizePlan } from "@/lib/agenda/plans";
 
 export interface ActionResult {
   success: boolean;
@@ -48,7 +49,8 @@ export async function createPacienteAction(values: PacienteFormValues): Promise<
     email: data.email,
     telefone: data.telefone || null,
     cpf: data.cpf || null,
-    plano: data.plano || null,
+    plano: data.plano ? normalizePlan(data.plano) : null,
+    consultas_incluidas: includedConsultations(data.plano),
     status: data.status,
     data_inicio: data.data_inicio || null,
     peso_kg: data.peso_kg ?? null,
@@ -107,7 +109,7 @@ export async function updatePacienteAction(
       email: data.email,
       telefone: data.telefone || null,
       cpf: data.cpf || null,
-      plano: data.plano || null,
+      plano: data.plano ? normalizePlan(data.plano) : null,
       status: data.status,
       data_inicio: data.data_inicio || null,
       peso_kg: data.peso_kg ?? null,
@@ -222,11 +224,30 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
   };
 }
 
-export async function changePacientePlanoAction(id: string, plano: string): Promise<ActionResult> {
+export async function changePacientePlanoAction(
+  id: string,
+  plano: string,
+  consultasIncluidas: number,
+  consultasRealizadasIniciais: number,
+): Promise<ActionResult> {
   await assertAdmin();
   const supabase = await createClient();
 
-  const { error } = await supabase.from("pacientes").update({ plano }).eq("id", id);
+  if (!Number.isInteger(consultasIncluidas) || consultasIncluidas < 1) {
+    return { success: false, message: "Informe uma quantidade válida de consultas incluídas." };
+  }
+  if (!Number.isInteger(consultasRealizadasIniciais) || consultasRealizadasIniciais < 0) {
+    return { success: false, message: "Informe uma quantidade válida de consultas realizadas." };
+  }
+
+  const { error } = await supabase
+    .from("pacientes")
+    .update({
+      plano,
+      consultas_incluidas: consultasIncluidas,
+      consultas_realizadas_iniciais: consultasRealizadasIniciais,
+    })
+    .eq("id", id);
   if (error) return { success: false, message: `Erro ao alterar plano: ${error.message}` };
 
   revalidatePath("/pacientes");

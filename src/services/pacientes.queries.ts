@@ -2,15 +2,28 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database.types";
 
-export async function listPacientes(): Promise<Tables<"pacientes">[]> {
+export type PacienteComConsultas = Tables<"pacientes"> & {
+  consultas_realizadas: number;
+  consultas_agendadas: number;
+};
+
+export async function listPacientes(): Promise<PacienteComConsultas[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("pacientes")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: consultations }] = await Promise.all([
+    supabase.from("pacientes").select("*").order("created_at", { ascending: false }),
+    supabase.from("consultas").select("auth_id, status"),
+  ]);
 
   if (error) throw new Error(`Erro ao carregar pacientes: ${error.message}`);
-  return data ?? [];
+  return (data ?? []).map((patient) => ({
+    ...patient,
+    consultas_realizadas:
+      patient.consultas_realizadas_iniciais
+      + (consultations ?? []).filter((item) => item.auth_id === patient.auth_id && item.status === "realizada").length,
+    consultas_agendadas: (consultations ?? []).filter(
+      (item) => item.auth_id === patient.auth_id && item.status === "agendada",
+    ).length,
+  }));
 }
 
 export async function getPaciente(id: string): Promise<Tables<"pacientes"> | null> {

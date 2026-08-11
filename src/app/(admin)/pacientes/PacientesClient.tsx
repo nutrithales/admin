@@ -22,7 +22,7 @@ import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
-import type { Tables } from "@/types/database.types";
+import type { PacienteComConsultas } from "@/services/pacientes.queries";
 import {
   deletePacienteAction,
   resetPacientePasswordAction,
@@ -32,7 +32,7 @@ import { PacienteFormModal } from "./PacienteFormModal";
 import { PlanoQuickEditModal } from "./PlanoQuickEditModal";
 import { PasswordRevealModal } from "@/components/ui/PasswordRevealModal";
 
-type Paciente = Tables<"pacientes">;
+type Paciente = PacienteComConsultas;
 
 export function PacientesClient({ initialPacientes }: { initialPacientes: Paciente[] }) {
   const router = useRouter();
@@ -132,6 +132,17 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
         >
           {p.status === "ativo" ? "Ativo" : p.status === "pendente" ? "Pendente" : "Inativo"}
         </Badge>
+      ),
+    },
+    {
+      key: "consultas",
+      header: "Consultas",
+      sortValue: (p) => p.consultas_realizadas,
+      render: (p) => (
+        <div>
+          <p className="font-semibold">{p.consultas_realizadas} de {p.consultas_incluidas} realizadas</p>
+          <p className="text-xs text-muted">{p.consultas_agendadas} agendada(s)</p>
+        </div>
       ),
     },
     {
