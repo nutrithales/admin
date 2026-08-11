@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Lock, Mail, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Lock, Mail, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -15,9 +15,17 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [message, setMessage] = useState<string | null>(
+    searchParams.get("password") === "updated"
+      ? "Senha alterada com sucesso. Entre com a nova senha."
+      : null,
+  );
   const [error, setError] = useState<string | null>(
     urlError === "not-admin"
       ? "Esta conta não tem acesso ao painel administrativo."
+      : urlError === "recovery-link"
+        ? "O link de recuperação é inválido ou expirou. Solicite um novo link."
       : null,
   );
 
@@ -40,6 +48,28 @@ function LoginForm() {
     window.location.assign(redirectTo.startsWith("/") ? redirectTo : "/");
   }
 
+  async function handleRecovery() {
+    setError(null);
+    setMessage(null);
+    if (!email) {
+      setError("Digite o seu e-mail para receber o link de recuperação.");
+      return;
+    }
+
+    setRecovering(true);
+    const supabase = createClient();
+    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+    });
+
+    if (recoveryError) {
+      setError("Não foi possível enviar o e-mail agora. Aguarde um minuto e tente novamente.");
+    } else {
+      setMessage("Enviamos um link para você criar uma nova senha. Confira também a caixa de spam.");
+    }
+    setRecovering(false);
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-sm">
@@ -59,6 +89,12 @@ function LoginForm() {
             <div className="flex items-start gap-2 rounded-md bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger">
               <ShieldAlert className="mt-0.5 size-4 shrink-0" />
               {error}
+            </div>
+          )}
+          {message && (
+            <div className="flex items-start gap-2 rounded-md bg-green-50 px-3.5 py-2.5 text-sm font-medium text-green-800">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+              {message}
             </div>
           )}
 
@@ -103,6 +139,14 @@ function LoginForm() {
           <Button type="submit" size="lg" className="mt-2 w-full" loading={loading}>
             Entrar
           </Button>
+          <button
+            type="button"
+            onClick={handleRecovery}
+            disabled={recovering}
+            className="text-sm font-semibold text-ink underline-offset-4 hover:underline disabled:opacity-60"
+          >
+            {recovering ? "Enviando..." : "Esqueci minha senha"}
+          </button>
         </form>
 
         <p className="mt-6 text-center text-xs text-muted">
