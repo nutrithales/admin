@@ -126,16 +126,32 @@ export function ClaraClient({
       return;
     }
 
+    // Abre a aba já no clique (síncrono) — se esperarmos a mensagem vir do
+    // servidor antes de chamar window.open, o navegador não reconhece mais
+    // como resposta direta ao clique e bloqueia o popup sem avisar nada.
+    const aba = window.open("", "_blank");
+
     setEnviandoWhatsapp(p.id);
     const resultado = await prepararMensagemAction(p.paciente.id, chave);
     setEnviandoWhatsapp(null);
     if (resultado.erro) {
       toast({ kind: "error", title: resultado.erro });
+      aba?.close();
       return;
     }
 
     const numero = digitos.startsWith("55") ? digitos : `55${digitos}`;
-    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(resultado.corpo)}`, "_blank");
+    const link = `https://wa.me/${numero}?text=${encodeURIComponent(resultado.corpo)}`;
+    if (aba) {
+      aba.location.href = link;
+    } else {
+      toast({
+        kind: "error",
+        title: "O navegador bloqueou a aba do WhatsApp.",
+        description: "Permita pop-ups para este site e tente de novo.",
+      });
+      return;
+    }
 
     if (PENDENCIA_ACAO_DIRETA[p.tipo as PendenciaTipo] === "enviar_checkin" && p.paciente.auth_id) {
       await enviarCheckinAction(p.paciente.auth_id);
