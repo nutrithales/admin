@@ -89,14 +89,25 @@ export async function updateConsultaStatusAction(
   await assertAdmin();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("consultas")
     .update({
       status,
       confirmada_em: status === "confirmada" ? new Date().toISOString() : undefined,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("auth_id")
+    .maybeSingle();
   if (error) return { success: false, message: `Erro ao atualizar consulta: ${error.message}` };
+
+  // Consulta concluída avança automaticamente para "montar plano" no
+  // Fluxo — é a próxima ação de verdade, e gera pendência pra Clara.
+  if (status === "realizada" && updated?.auth_id) {
+    await supabase.from("pacientes").update({
+      fluxo_etapa: "06_1_montar_plano",
+      fluxo_updated_at: new Date().toISOString(),
+    }).eq("auth_id", updated.auth_id);
+  }
 
   await syncPendencias();
   revalidatePath("/consultas");

@@ -4,8 +4,14 @@ import { checkinSituacao, diasDesde } from "@/lib/clara/checkins";
 import { getFlowStage, type FlowStageKey } from "@/lib/fluxo/stages";
 
 /** Etapas em que a consulta já aconteceu mas o plano ainda não foi
- * marcado como entregue — usado pela central de pendências. */
-const ETAPAS_AGUARDANDO_PLANO: readonly FlowStageKey[] = ["06_consulta_realizada", "07_pos_consulta_enviado"];
+ * marcado como entregue — usado pela central de pendências. Uma
+ * consulta concluída avança automaticamente para "06_1_montar_plano"
+ * (ver PATCH /api/agenda e updateConsultaStatusAction). */
+const ETAPAS_AGUARDANDO_PLANO: readonly FlowStageKey[] = [
+  "06_consulta_realizada",
+  "06_1_montar_plano",
+  "07_pos_consulta_enviado",
+];
 
 export type PendenciaTipo =
   | "consulta_nao_confirmada"
@@ -236,7 +242,10 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
         candidatas.push({
           tipo: "aguardando_plano_alimentar",
           pacienteId: paciente.id,
-          motivo: "Paciente aguardando entrega do plano alimentar.",
+          motivo:
+            paciente.fluxo_etapa === "06_1_montar_plano"
+              ? "Consulta realizada — plano alimentar precisa ser montado."
+              : "Paciente aguardando entrega do plano alimentar.",
           prioridade: "media",
         });
       }
