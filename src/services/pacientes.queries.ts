@@ -37,7 +37,7 @@ export async function listPacientesResumo() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("pacientes")
-    .select("id, auth_id, nome, status, fluxo_estagio")
+    .select("id, auth_id, nome, status, fluxo_etapa, fluxo_urgente, fluxo_proxima_acao_em")
     .order("nome", { ascending: true });
   return data ?? [];
 }

@@ -5,7 +5,9 @@
 --   1) unificação do vocabulário de status de `consultas` (hoje havia dois
 --      vocabulários incompatíveis convivendo no projeto — ver nota abaixo);
 --   2) rastreio de envio/resposta de check-in;
---   3) módulo Fluxo (estágio do paciente + histórico de movimentações);
+--   3) histórico de movimentações para o Fluxo de pacientes já existente
+--      (`pacientes.fluxo_etapa` e colunas relacionadas não são tocadas —
+--      só ganham uma tabela de histórico nova);
 --   4) tarefas, pendências, pagamentos, modelos de mensagem e log de
 --      auditoria administrativos — nenhum dado clínico;
 --   5) uso da coluna `administradores.nivel`, já existente e ociosa, para
@@ -54,37 +56,22 @@ alter table public.checkins
   add constraint checkins_status_check check (status in ('pendente', 'enviado', 'respondido'));
 
 -- =========================================================================
--- 3) Fluxo de pacientes — estágio atual + histórico de movimentações
+-- 3) Fluxo de pacientes — histórico de movimentações
 --
--- `fluxo_estagio` é texto livre por design, seguindo o mesmo padrão já
--- usado no projeto para campos extensíveis (`biblioteca.tipo`,
--- `checkins.origem`): a lista de estágios vive em código
--- (src/lib/clara/fluxo.ts), não em constraint de banco, para não exigir
--- migration a cada novo estágio.
+-- IMPORTANTE: o Fluxo em si (`pacientes.fluxo_etapa`, `fluxo_urgente`,
+-- `fluxo_observacoes`, `fluxo_proxima_acao_em`, `fluxo_updated_at`) **já
+-- existe** neste banco — foi aplicado por fora deste repositório antes da
+-- Clara, com uma CHECK constraint fixa enumerando as etapas do funil. A
+-- Clara não recria nada disso; ela só ADICIONA uma tabela de histórico de
+-- movimentações, que ainda não existia, reaproveitando o `fluxo_etapa`
+-- real (ver `src/lib/clara/fluxo.ts` para a lista de etapas espelhada a
+-- partir da constraint do banco).
 -- =========================================================================
-alter table public.pacientes add column if not exists fluxo_estagio text;
-
--- Observações administrativas (recados de secretaria/agenda) — nunca
--- misturadas com prontuário ou anotações clínicas, que ficam em
--- `consulta_prontuarios`/`avaliacoes_fisicas`.
-alter table public.pacientes add column if not exists observacoes_administrativas text;
-
-update public.pacientes
-set fluxo_estagio = case
-  when status = 'ativo' then 'acompanhamento_ativo'
-  when status = 'pendente' then 'novo_lead'
-  else 'alta_inativo'
-end
-where fluxo_estagio is null;
-
-alter table public.pacientes alter column fluxo_estagio set default 'novo_lead';
-alter table public.pacientes alter column fluxo_estagio set not null;
-
 create table if not exists public.fluxo_movimentacoes (
   id uuid primary key default gen_random_uuid(),
   paciente_id uuid not null references public.pacientes (id) on delete cascade,
-  de_estagio text,
-  para_estagio text not null,
+  de_etapa text,
+  para_etapa text not null,
   observacao text,
   admin_id uuid references public.administradores (id) on delete set null,
   created_at timestamptz not null default now()
@@ -92,8 +79,10 @@ create table if not exists public.fluxo_movimentacoes (
 
 create index if not exists fluxo_movimentacoes_paciente_idx on public.fluxo_movimentacoes (paciente_id, created_at desc);
 
-insert into public.fluxo_movimentacoes (paciente_id, de_estagio, para_estagio, observacao)
-select id, null, fluxo_estagio, 'Estágio inicial definido automaticamente pela migração da Clara'
+-- Semeia um registro inicial por paciente com a etapa atual, para o
+-- histórico já começar coerente com o estado real do Fluxo.
+insert into public.fluxo_movimentacoes (paciente_id, de_etapa, para_etapa, observacao)
+select id, null, fluxo_etapa, 'Etapa inicial registrada automaticamente pela migração da Clara'
 from public.pacientes
 where not exists (select 1 from public.fluxo_movimentacoes where paciente_id = pacientes.id);
 

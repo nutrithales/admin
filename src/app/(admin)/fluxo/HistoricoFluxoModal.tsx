@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { getHistoricoFluxoAction } from "@/services/fluxo.actions";
-import { fluxoEstagioLabel } from "@/lib/clara/fluxo";
+import { fluxoEtapaLabel } from "@/lib/clara/fluxo";
 import type { Tables } from "@/types/database.types";
 
 export function HistoricoFluxoModal({
@@ -37,7 +37,7 @@ export function HistoricoFluxoModal({
           {historico.map((mov) => (
             <li key={mov.id} className="border-l-2 border-brand pl-3">
               <p className="text-sm font-semibold text-ink">
-                {mov.de_estagio ? fluxoEstagioLabel(mov.de_estagio) : "Início"} → {fluxoEstagioLabel(mov.para_estagio)}
+                {mov.de_etapa ? fluxoEtapaLabel(mov.de_etapa) : "Início"} → {fluxoEtapaLabel(mov.para_etapa)}
               </p>
               <p className="text-xs text-muted">{new Date(mov.created_at).toLocaleString("pt-BR")}</p>
               {mov.observacao && <p className="mt-1 text-sm text-muted">{mov.observacao}</p>}

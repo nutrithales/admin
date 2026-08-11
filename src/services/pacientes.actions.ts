@@ -225,9 +225,11 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
   };
 }
 
-/** Observações administrativas (recados de agenda/secretaria) — nunca
- * misturadas com prontuário clínico, que fica em telas separadas. */
-export async function updateObservacoesAdministrativasAction(
+/** Observações do Fluxo (recados de agenda/secretaria ligados ao estágio
+ * atual do paciente no funil já existente) — nunca misturadas com
+ * prontuário clínico, que fica em telas separadas. Reaproveita
+ * `pacientes.fluxo_observacoes`, que já existe no sistema de Fluxo. */
+export async function updateFluxoObservacoesAction(
   id: string,
   observacoes: string,
 ): Promise<ActionResult> {
@@ -235,12 +237,12 @@ export async function updateObservacoesAdministrativasAction(
   const supabase = await createClient();
   const { error } = await supabase
     .from("pacientes")
-    .update({ observacoes_administrativas: observacoes || null })
+    .update({ fluxo_observacoes: observacoes || null, fluxo_updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { success: false, message: `Erro ao salvar observação: ${error.message}` };
 
   revalidatePath(`/pacientes/${id}`);
-  return { success: true, message: "Observação administrativa salva." };
+  return { success: true, message: "Observação salva." };
 }
 
 export async function changePacientePlanoAction(

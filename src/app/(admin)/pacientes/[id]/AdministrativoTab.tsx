@@ -2,32 +2,36 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
+import { Save, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { useToast } from "@/contexts/ToastContext";
 import type { Tables } from "@/types/database.types";
-import { updateObservacoesAdministrativasAction } from "@/services/pacientes.actions";
+import { updateFluxoObservacoesAction } from "@/services/pacientes.actions";
 import { resolverPendenciaAction } from "@/services/pendencias.actions";
 import { marcarPagamentoAction } from "@/services/pagamentos.actions";
 import { PENDENCIA_TIPO_LABEL, type PendenciaTipo } from "@/lib/clara/pendencias-engine";
-import { fluxoEstagioLabel } from "@/lib/clara/fluxo";
+import { fluxoEtapaLabel } from "@/lib/clara/fluxo";
 
 const PRIORIDADE_TONE = { alta: "danger", media: "warning", baixa: "muted" } as const;
 const PAGAMENTO_TONE = { pago: "success", pendente: "warning", atrasado: "danger", cancelado: "muted" } as const;
 
 export function AdministrativoTab({
   pacienteId,
-  fluxoEstagio,
+  fluxoEtapa,
+  fluxoUrgente,
+  fluxoProximaAcaoEm,
   observacoes,
   pendencias,
   pagamentos,
   historicoFluxo,
 }: {
   pacienteId: string;
-  fluxoEstagio: string;
+  fluxoEtapa: string;
+  fluxoUrgente: boolean;
+  fluxoProximaAcaoEm: string | null;
   observacoes: string | null;
   pendencias: Tables<"pendencias">[];
   pagamentos: Tables<"pagamentos">[];
@@ -40,7 +44,7 @@ export function AdministrativoTab({
 
   async function salvarObservacoes() {
     setSaving(true);
-    const result = await updateObservacoesAdministrativasAction(pacienteId, texto);
+    const result = await updateFluxoObservacoesAction(pacienteId, texto);
     setSaving(false);
     toast({ kind: result.success ? "success" : "error", title: result.message });
     router.refresh();
@@ -67,12 +71,22 @@ export function AdministrativoTab({
           <h2 className="text-base font-bold text-ink">Fluxo</h2>
         </div>
         <div className="px-6 pb-6">
-          <Badge tone="brand">{fluxoEstagioLabel(fluxoEstagio)}</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="brand">{fluxoEtapaLabel(fluxoEtapa)}</Badge>
+            {fluxoUrgente && (
+              <Badge tone="danger">
+                <AlertTriangle className="size-3" /> Urgente
+              </Badge>
+            )}
+            {fluxoProximaAcaoEm && (
+              <Badge tone="muted">Próxima ação: {new Date(fluxoProximaAcaoEm).toLocaleDateString("pt-BR")}</Badge>
+            )}
+          </div>
           {historicoFluxo.length > 0 && (
             <ul className="mt-4 flex flex-col gap-2 border-l-2 border-border pl-3">
               {historicoFluxo.slice(0, 5).map((mov) => (
                 <li key={mov.id} className="text-sm text-muted">
-                  {mov.de_estagio ? fluxoEstagioLabel(mov.de_estagio) : "Início"} → {fluxoEstagioLabel(mov.para_estagio)}
+                  {mov.de_etapa ? fluxoEtapaLabel(mov.de_etapa) : "Início"} → {fluxoEtapaLabel(mov.para_etapa)}
                   <span className="ml-2 text-xs text-muted-light">{new Date(mov.created_at).toLocaleDateString("pt-BR")}</span>
                 </li>
               ))}
@@ -145,8 +159,8 @@ export function AdministrativoTab({
 
       <Card>
         <div className="p-6 pb-4">
-          <h2 className="text-base font-bold text-ink">Observações administrativas</h2>
-          <p className="mt-1 text-sm text-muted">Recados de agenda/secretaria — nunca prontuário clínico.</p>
+          <h2 className="text-base font-bold text-ink">Observações do Fluxo</h2>
+          <p className="mt-1 text-sm text-muted">Recados de agenda/secretaria ligados ao funil — nunca prontuário clínico.</p>
         </div>
         <div className="flex flex-col gap-3 px-6 pb-6">
           <Textarea value={texto} onChange={(e) => setTexto(e.target.value)} className="min-h-28" />

@@ -74,8 +74,10 @@ export function PacienteDetailClient({
       ) : (
         <AdministrativoTab
           pacienteId={paciente.id}
-          fluxoEstagio={paciente.fluxo_estagio}
-          observacoes={paciente.observacoes_administrativas}
+          fluxoEtapa={paciente.fluxo_etapa}
+          fluxoUrgente={paciente.fluxo_urgente}
+          fluxoProximaAcaoEm={paciente.fluxo_proxima_acao_em}
+          observacoes={paciente.fluxo_observacoes}
           pendencias={pendencias}
           pagamentos={pagamentos}
           historicoFluxo={historicoFluxo}

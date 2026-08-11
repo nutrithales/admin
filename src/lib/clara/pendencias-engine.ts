@@ -1,6 +1,7 @@
 import type { Tables } from "@/types/database.types";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 import { checkinSituacao, diasDesde } from "@/lib/clara/checkins";
+import { ETAPAS_AGUARDANDO_PLANO, fluxoEtapaLabel, type FluxoEtapa } from "@/lib/clara/fluxo";
 
 export type PendenciaTipo =
   | "consulta_nao_confirmada"
@@ -15,6 +16,7 @@ export type PendenciaTipo =
   | "cadastro_incompleto"
   | "nascimento_ausente"
   | "contato_necessario"
+  | "fluxo_urgente"
   | "tarefa_vencida";
 
 export type PendenciaPrioridade = "baixa" | "media" | "alta";
@@ -31,7 +33,8 @@ export const PENDENCIA_TIPO_LABEL: Record<PendenciaTipo, string> = {
   sem_movimentacao: "Sem movimentação no Fluxo",
   cadastro_incompleto: "Cadastro incompleto",
   nascimento_ausente: "Data de nascimento ausente",
-  contato_necessario: "Contato necessário",
+  contato_necessario: "Ação do Fluxo atrasada",
+  fluxo_urgente: "Marcado como urgente no Fluxo",
   tarefa_vencida: "Tarefa vencida",
 };
 
@@ -56,7 +59,6 @@ export interface DetectarPendenciasInput {
 }
 
 const SEM_MOVIMENTACAO_DIAS = 30;
-const CONTATO_NECESSARIO_DIAS = 14;
 
 function horasAteConsulta(dataIso: string | null, hoje: Date): number | null {
   if (!dataIso) return null;
@@ -166,31 +168,42 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
         });
       }
 
-      // Fluxo parado.
-      const ultimaMovimentacao = input.ultimaMovimentacaoPorPaciente.get(paciente.id);
-      const diasParado = diasDesde(ultimaMovimentacao, hoje);
-      if (diasParado !== null && diasParado >= SEM_MOVIMENTACAO_DIAS) {
+      // Fluxo (sistema já existente: fluxo_etapa / fluxo_urgente / fluxo_proxima_acao_em).
+      if (paciente.fluxo_urgente) {
         candidatas.push({
-          tipo: "sem_movimentacao",
+          tipo: "fluxo_urgente",
           pacienteId: paciente.id,
-          motivo: `Sem movimentação no Fluxo há ${diasParado} dias.`,
-          prioridade: "baixa",
-        });
-      }
-      if (
-        (paciente.fluxo_estagio === "pausado" || paciente.fluxo_estagio === "aguardando_retorno") &&
-        diasParado !== null &&
-        diasParado >= CONTATO_NECESSARIO_DIAS
-      ) {
-        candidatas.push({
-          tipo: "contato_necessario",
-          pacienteId: paciente.id,
-          motivo: "Paciente parado no Fluxo há mais de 2 semanas — recomenda-se contato.",
-          prioridade: "media",
+          motivo: paciente.fluxo_observacoes || "Paciente marcado como urgente no Fluxo.",
+          prioridade: "alta",
         });
       }
 
-      if (paciente.fluxo_estagio === "aguardando_plano_alimentar") {
+      if (paciente.fluxo_proxima_acao_em) {
+        const proximaAcao = new Date(paciente.fluxo_proxima_acao_em);
+        if (proximaAcao <= hoje) {
+          candidatas.push({
+            tipo: "contato_necessario",
+            pacienteId: paciente.id,
+            motivo: `Próxima ação do Fluxo (${fluxoEtapaLabel(paciente.fluxo_etapa)}) estava marcada para ${proximaAcao.toLocaleDateString("pt-BR")}.`,
+            prioridade: "media",
+          });
+        }
+      } else {
+        // Sem próxima ação marcada: cai no fallback de "sem movimentação"
+        // usando o histórico registrado pela Clara (fluxo_movimentacoes).
+        const ultimaMovimentacao = input.ultimaMovimentacaoPorPaciente.get(paciente.id);
+        const diasParado = diasDesde(ultimaMovimentacao ?? paciente.fluxo_updated_at, hoje);
+        if (diasParado !== null && diasParado >= SEM_MOVIMENTACAO_DIAS) {
+          candidatas.push({
+            tipo: "sem_movimentacao",
+            pacienteId: paciente.id,
+            motivo: `Sem movimentação no Fluxo há ${diasParado} dias (etapa: ${fluxoEtapaLabel(paciente.fluxo_etapa)}).`,
+            prioridade: "baixa",
+          });
+        }
+      }
+
+      if (ETAPAS_AGUARDANDO_PLANO.includes(paciente.fluxo_etapa as FluxoEtapa)) {
         candidatas.push({
           tipo: "aguardando_plano_alimentar",
           pacienteId: paciente.id,

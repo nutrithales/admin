@@ -49,7 +49,7 @@ export interface ClaraClientProps {
   consultasHoje: ConsultaDoDia[];
   pendencias: PendenciaComPaciente[];
   tarefas: TarefaComPaciente[];
-  pacientesResumo: { id: string; auth_id: string; nome: string | null; fluxo_estagio: string }[];
+  pacientesResumo: { id: string; auth_id: string; nome: string | null; fluxo_etapa: string }[];
   pacientesParaConsulta: { id: string; nome: string }[];
   mensagens: Tables<"mensagens_modelos">[];
 }

@@ -562,13 +562,16 @@ export type Database = {
           data_inicio: string | null
           data_nascimento: string | null
           email: string | null
-          fluxo_estagio: string
+          fluxo_etapa: string
+          fluxo_observacoes: string | null
+          fluxo_proxima_acao_em: string | null
+          fluxo_updated_at: string
+          fluxo_urgente: boolean
           id: string
           last_login_at: string | null
           nivel_atividade: string | null
           nome: string | null
           objetivo: string | null
-          observacoes_administrativas: string | null
           peso_kg: number | null
           plano: string | null
           preferencias_alimentares: string | null
@@ -588,13 +591,16 @@ export type Database = {
           data_inicio?: string | null
           data_nascimento?: string | null
           email?: string | null
-          fluxo_estagio?: string
+          fluxo_etapa?: string
+          fluxo_observacoes?: string | null
+          fluxo_proxima_acao_em?: string | null
+          fluxo_updated_at?: string
+          fluxo_urgente?: boolean
           id?: string
           last_login_at?: string | null
           nivel_atividade?: string | null
           nome?: string | null
           objetivo?: string | null
-          observacoes_administrativas?: string | null
           peso_kg?: number | null
           plano?: string | null
           preferencias_alimentares?: string | null
@@ -614,13 +620,16 @@ export type Database = {
           data_inicio?: string | null
           data_nascimento?: string | null
           email?: string | null
-          fluxo_estagio?: string
+          fluxo_etapa?: string
+          fluxo_observacoes?: string | null
+          fluxo_proxima_acao_em?: string | null
+          fluxo_updated_at?: string
+          fluxo_urgente?: boolean
           id?: string
           last_login_at?: string | null
           nivel_atividade?: string | null
           nome?: string | null
           objetivo?: string | null
-          observacoes_administrativas?: string | null
           peso_kg?: number | null
           plano?: string | null
           preferencias_alimentares?: string | null
@@ -1328,29 +1337,29 @@ export type Database = {
         Row: {
           admin_id: string | null
           created_at: string
-          de_estagio: string | null
+          de_etapa: string | null
           id: string
           observacao: string | null
           paciente_id: string
-          para_estagio: string
+          para_etapa: string
         }
         Insert: {
           admin_id?: string | null
           created_at?: string
-          de_estagio?: string | null
+          de_etapa?: string | null
           id?: string
           observacao?: string | null
           paciente_id: string
-          para_estagio: string
+          para_etapa: string
         }
         Update: {
           admin_id?: string | null
           created_at?: string
-          de_estagio?: string | null
+          de_etapa?: string | null
           id?: string
           observacao?: string | null
           paciente_id?: string
-          para_estagio?: string
+          para_etapa?: string
         }
         Relationships: [
           {

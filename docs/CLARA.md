@@ -12,6 +12,16 @@ preparada para revisão humana e cópia manual. Ações destrutivas (excluir
 paciente, por exemplo) exigem confirmação explícita na tela e são
 restritas ao nível "admin" — nunca à secretária.
 
+> **Atenção — schema drift conhecido:** ao aplicar a migration da Clara,
+> descobrimos que o banco Supabase real já tinha colunas/tabelas que não
+> existiam nos arquivos de `supabase/migrations/` deste repositório (o
+> Fluxo descrito abaixo, e uma tabela `formularios_pre_consulta` de
+> formulário pré-consulta). Ou seja, os arquivos de migration commitados
+> não são a fonte de verdade completa do schema em produção. Antes de
+> escrever uma migration nova, rode `list_tables`/`list_migrations` contra
+> o projeto real (MCP do Supabase) em vez de confiar só no que está no
+> git.
+
 ## Onde fica
 
 - Página principal: `/clara` (fora do grupo de rotas `(admin)`, que já
@@ -20,8 +30,8 @@ restritas ao nível "admin" — nunca à secretária.
 - Fluxo de pacientes: `/fluxo`.
 - Modelos de mensagem: aba "Modelos de mensagem (Clara)" em `/configuracoes`.
 - Aba "Administrativo (Clara)" dentro do perfil de cada paciente
-  (`/pacientes/[id]`) — pendências, pagamentos, Fluxo e observações
-  administrativas daquele paciente, sempre separado do prontuário clínico.
+  (`/pacientes/[id]`) — pendências, pagamentos, etapa atual do Fluxo e
+  observações daquele paciente, sempre separado do prontuário clínico.
 
 ## Arquitetura
 
@@ -87,11 +97,40 @@ migrou os dados existentes e unificou tudo em:
 
 ## Fluxo de pacientes
 
-`pacientes.fluxo_estagio` é texto livre no banco (mesmo padrão de
-`biblioteca.tipo`) — a lista canônica de etapas vive em código
-(`src/lib/clara/fluxo.ts`), então adicionar/renomear uma etapa não exige
-migration. Toda movimentação é registrada em `fluxo_movimentacoes`
-(histórico, nunca sobrescrito).
+**O Fluxo já existia antes da Clara** — foi construído e é operado por
+fora deste repositório (as colunas já estavam em produção quando a Clara
+foi criada; a migration da Clara só descobriu isso ao inspecionar o
+banco real, que tinha divergido dos arquivos de migration commitados).
+`pacientes.fluxo_etapa` **não é texto livre**: tem uma CHECK constraint
+fixa no banco com 24 etapas específicas (funil numerado — `01_lead_recebido`
+→ `16_renovado`, mais alguns estados utilitários como `nada_agora`,
+`mandar_mensagem`, `pausa_acompanhamento`). A lista em
+`src/lib/clara/fluxo.ts` (`FLUXO_ETAPAS`) espelha exatamente essa
+constraint — se a constraint mudar em banco, atualize a lista aqui junto.
+
+Colunas do sistema já existente, todas em `pacientes`:
+
+- `fluxo_etapa` — etapa atual (enum fechado, ver acima).
+- `fluxo_urgente` — sinalizador booleano.
+- `fluxo_observacoes` — recado livre ligado à etapa atual (a Clara
+  reaproveita esse campo na aba "Administrativo" do perfil do paciente —
+  não criou um campo de observações administrativas separado, para não
+  duplicar).
+- `fluxo_proxima_acao_em` — data da próxima ação combinada.
+- `fluxo_updated_at` — última atualização do Fluxo.
+
+O que a Clara **adicionou** (aditivo, não mexeu em nenhuma dessas
+colunas): a tabela `fluxo_movimentacoes`, que não existia — histórico de
+toda mudança de etapa, com `de_etapa`/`para_etapa`/`observacao`/`admin_id`.
+`moverPacienteFluxoAction` (`src/services/fluxo.actions.ts`) atualiza a
+etapa (e, opcionalmente, urgente/observações/próxima ação) e grava o
+histórico na mesma chamada.
+
+A central de pendências usa os campos reais do Fluxo: `fluxo_urgente =
+true` vira pendência de prioridade alta; `fluxo_proxima_acao_em` vencida
+vira pendência "Ação do Fluxo atrasada"; só cai no fallback de "sem
+movimentação" (baseado no histórico da Clara) quando não há
+`fluxo_proxima_acao_em` definida.
 
 ## Central de pendências
 
