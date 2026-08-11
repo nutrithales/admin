@@ -52,7 +52,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPatientArea = pathname.startsWith("/paciente") && pathname !== "/paciente/login";
+  // Match only the patient portal route boundary. `/pacientes` is the
+  // administrative patient-management page and must remain in the admin area.
+  const isPatientArea =
+    (pathname === "/paciente" || pathname.startsWith("/paciente/")) &&
+    pathname !== "/paciente/login";
 
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
