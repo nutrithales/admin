@@ -547,6 +547,11 @@ export type Database = {
           data_inicio: string | null
           data_nascimento: string | null
           email: string | null
+          fluxo_etapa: string
+          fluxo_observacoes: string | null
+          fluxo_proxima_acao_em: string | null
+          fluxo_updated_at: string
+          fluxo_urgente: boolean
           id: string
           last_login_at: string | null
           nivel_atividade: string | null
@@ -571,6 +576,11 @@ export type Database = {
           data_inicio?: string | null
           data_nascimento?: string | null
           email?: string | null
+          fluxo_etapa?: string
+          fluxo_observacoes?: string | null
+          fluxo_proxima_acao_em?: string | null
+          fluxo_updated_at?: string
+          fluxo_urgente?: boolean
           id?: string
           last_login_at?: string | null
           nivel_atividade?: string | null
@@ -595,6 +605,11 @@ export type Database = {
           data_inicio?: string | null
           data_nascimento?: string | null
           email?: string | null
+          fluxo_etapa?: string
+          fluxo_observacoes?: string | null
+          fluxo_proxima_acao_em?: string | null
+          fluxo_updated_at?: string
+          fluxo_urgente?: boolean
           id?: string
           last_login_at?: string | null
           nivel_atividade?: string | null
