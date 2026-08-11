@@ -545,6 +545,7 @@ export type Database = {
           consultas_realizadas_iniciais: number
           created_at: string | null
           data_inicio: string | null
+          data_nascimento: string | null
           email: string | null
           id: string
           last_login_at: string | null
@@ -568,6 +569,7 @@ export type Database = {
           consultas_realizadas_iniciais?: number
           created_at?: string | null
           data_inicio?: string | null
+          data_nascimento?: string | null
           email?: string | null
           id?: string
           last_login_at?: string | null
@@ -591,6 +593,7 @@ export type Database = {
           consultas_realizadas_iniciais?: number
           created_at?: string | null
           data_inicio?: string | null
+          data_nascimento?: string | null
           email?: string | null
           id?: string
           last_login_at?: string | null
