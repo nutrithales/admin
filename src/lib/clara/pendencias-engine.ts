@@ -18,6 +18,8 @@ export type PendenciaTipo =
   | "sem_proxima_consulta"
   | "checkin_pendente_envio"
   | "checkin_nao_respondido"
+  | "checkin_3_dias_pendente"
+  | "checkin_7_dias_pendente"
   | "plano_proximo_fim"
   | "plano_finalizado"
   | "pagamento_pendente"
@@ -36,6 +38,8 @@ export const PENDENCIA_TIPO_LABEL: Record<PendenciaTipo, string> = {
   sem_proxima_consulta: "Sem próxima consulta",
   checkin_pendente_envio: "Check-in a enviar",
   checkin_nao_respondido: "Check-in sem resposta",
+  checkin_3_dias_pendente: "Check-in de 3 dias (pós-plano)",
+  checkin_7_dias_pendente: "Check-in de 7 dias (pós-plano)",
   plano_proximo_fim: "Plano perto do fim",
   plano_finalizado: "Plano finalizado",
   pagamento_pendente: "Pagamento pendente",
@@ -57,6 +61,8 @@ export const PENDENCIA_MENSAGEM_SUGERIDA: Partial<Record<PendenciaTipo, string>>
   sem_proxima_consulta: "novo_link_agendamento",
   checkin_pendente_envio: "envio_checkin",
   checkin_nao_respondido: "lembrete_checkin",
+  checkin_3_dias_pendente: "checkin_3_dias",
+  checkin_7_dias_pendente: "checkin_7_dias",
   plano_proximo_fim: "renovacao_plano",
   plano_finalizado: "renovacao_plano",
   pagamento_pendente: "cobranca_pagamento",
@@ -65,12 +71,19 @@ export const PENDENCIA_MENSAGEM_SUGERIDA: Partial<Record<PendenciaTipo, string>>
 
 /** Ação direta (sem mensagem) que já resolve o motivo da pendência de
  * verdade — em vez de só marcar a pendência como resolvida por fora. */
-export type PendenciaAcaoDireta = "confirmar_consulta" | "enviar_checkin" | "concluir_tarefa";
+export type PendenciaAcaoDireta =
+  | "confirmar_consulta"
+  | "enviar_checkin"
+  | "concluir_tarefa"
+  | "avancar_checkin_3_dias"
+  | "avancar_checkin_7_dias";
 
 export const PENDENCIA_ACAO_DIRETA: Partial<Record<PendenciaTipo, PendenciaAcaoDireta>> = {
   consulta_nao_confirmada: "confirmar_consulta",
   checkin_pendente_envio: "enviar_checkin",
   tarefa_vencida: "concluir_tarefa",
+  checkin_3_dias_pendente: "avancar_checkin_3_dias",
+  checkin_7_dias_pendente: "avancar_checkin_7_dias",
 };
 
 export interface PendenciaCandidata {
@@ -94,6 +107,8 @@ export interface DetectarPendenciasInput {
 }
 
 const SEM_MOVIMENTACAO_DIAS = 30;
+const CHECKIN_3_DIAS = 3;
+const CHECKIN_7_DIAS_APOS_ETAPA_3 = 4; // + os 3 dias já passados = ~7 dias desde a entrega do plano
 
 function horasAteConsulta(dataIso: string | null, hoje: Date): number | null {
   if (!dataIso) return null;
@@ -246,6 +261,30 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
             paciente.fluxo_etapa === "06_1_montar_plano"
               ? "Consulta realizada — plano alimentar precisa ser montado."
               : "Paciente aguardando entrega do plano alimentar.",
+          prioridade: "media",
+        });
+      }
+
+      // Check-ins de acompanhamento pós-entrega do plano (3 e 7 dias).
+      // `fluxo_updated_at` marca desde quando o paciente está na etapa
+      // atual — cada envio avança a etapa e reinicia essa contagem.
+      const diasNaEtapa = diasDesde(paciente.fluxo_updated_at, hoje);
+      if (paciente.fluxo_etapa === "08_plano_entregue" && diasNaEtapa !== null && diasNaEtapa >= CHECKIN_3_DIAS) {
+        candidatas.push({
+          tipo: "checkin_3_dias_pendente",
+          pacienteId: paciente.id,
+          motivo: `Plano entregue há ${diasNaEtapa} dias — hora do check-in de 3 dias.`,
+          prioridade: "media",
+        });
+      } else if (
+        paciente.fluxo_etapa === "09_checkin_3_dias" &&
+        diasNaEtapa !== null &&
+        diasNaEtapa >= CHECKIN_7_DIAS_APOS_ETAPA_3
+      ) {
+        candidatas.push({
+          tipo: "checkin_7_dias_pendente",
+          pacienteId: paciente.id,
+          motivo: "Uma semana após a entrega do plano — hora do check-in de 7 dias.",
           prioridade: "media",
         });
       }

@@ -35,6 +35,7 @@ import { concluirTarefaAction } from "@/services/tarefas.actions";
 import { updateConsultaStatusAction } from "@/services/consultas.actions";
 import { prepararMensagemAction } from "@/services/clara.actions";
 import { enviarCheckinAction } from "@/services/checkins.actions";
+import { updateFluxoPacienteAction } from "@/services/fluxo.actions";
 import { onlyDigits } from "@/lib/agenda/parse-description";
 import {
   PENDENCIA_TIPO_LABEL,
@@ -153,8 +154,15 @@ export function ClaraClient({
       return;
     }
 
-    if (PENDENCIA_ACAO_DIRETA[p.tipo as PendenciaTipo] === "enviar_checkin" && p.paciente.auth_id) {
+    const acaoDireta = PENDENCIA_ACAO_DIRETA[p.tipo as PendenciaTipo];
+    if (acaoDireta === "enviar_checkin" && p.paciente.auth_id) {
       await enviarCheckinAction(p.paciente.auth_id);
+      refresh();
+    } else if (acaoDireta === "avancar_checkin_3_dias") {
+      await updateFluxoPacienteAction(p.paciente.id, { etapa: "09_checkin_3_dias" });
+      refresh();
+    } else if (acaoDireta === "avancar_checkin_7_dias") {
+      await updateFluxoPacienteAction(p.paciente.id, { etapa: "10_checkin_7_dias" });
       refresh();
     }
   }
