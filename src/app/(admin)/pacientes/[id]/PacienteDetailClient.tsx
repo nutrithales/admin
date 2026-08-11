@@ -11,23 +11,32 @@ import type { ConsultaComProntuario } from "@/services/prontuarios.queries";
 import { ProntuarioTab } from "./ProntuarioTab";
 import { AvaliacoesTab } from "./AvaliacoesTab";
 import { PreConsultaTab } from "./PreConsultaTab";
+import { AdministrativoTab } from "./AdministrativoTab";
 import { Card, CardContent } from "@/components/ui/Card";
+import { computeConsultasStats } from "@/lib/clara/consultas";
 
 export function PacienteDetailClient({
   paciente,
   consultas,
   avaliacoes,
   preConsulta,
+  pendencias,
+  pagamentos,
+  historicoFluxo,
 }: {
   paciente: Tables<"pacientes">;
   consultas: ConsultaComProntuario[];
   avaliacoes: Tables<"avaliacoes_fisicas">[];
   preConsulta: Tables<"formularios_pre_consulta"> | null;
+  pendencias: Tables<"pendencias">[];
+  pagamentos: Tables<"pagamentos">[];
+  historicoFluxo: Tables<"fluxo_movimentacoes">[];
 }) {
   const [tab, setTab] = useState("prontuario");
-  const completed = paciente.consultas_realizadas_iniciais + consultas.filter((item) => item.status === "realizada").length;
-  const scheduled = consultas.filter((item) => item.status === "agendada").length;
-  const remaining = Math.max(0, paciente.consultas_incluidas - completed);
+  const stats = computeConsultasStats(paciente, consultas);
+  const completed = stats.realizadas;
+  const scheduled = stats.agendadas;
+  const remaining = stats.restantes;
 
   return (
     <div>
@@ -58,6 +67,7 @@ export function PacienteDetailClient({
           { key: "prontuario", label: "Prontuário" },
           { key: "avaliacoes", label: "Avaliações físicas" },
           { key: "pre-consulta", label: "Pré-consulta" },
+          { key: "administrativo", label: "Administrativo (Clara)" },
         ]}
       />
 
@@ -65,8 +75,19 @@ export function PacienteDetailClient({
         <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
       ) : tab === "avaliacoes" ? (
         <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
-      ) : (
+      ) : tab === "pre-consulta" ? (
         <PreConsultaTab formulario={preConsulta} paciente={paciente} />
+      ) : (
+        <AdministrativoTab
+          pacienteId={paciente.id}
+          fluxoEtapa={paciente.fluxo_etapa}
+          fluxoUrgente={paciente.fluxo_urgente}
+          fluxoProximaAcaoEm={paciente.fluxo_proxima_acao_em}
+          observacoes={paciente.fluxo_observacoes}
+          pendencias={pendencias}
+          pagamentos={pagamentos}
+          historicoFluxo={historicoFluxo}
+        />
       )}
     </div>
   );

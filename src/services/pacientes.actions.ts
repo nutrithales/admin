@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
+import { assertPermission } from "@/lib/supabase/assert-permission";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paciente";
@@ -136,7 +137,7 @@ export async function updatePacienteAction(
 }
 
 export async function deletePacienteAction(id: string): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("pacientes.excluir");
   const supabase = await createClient();
 
   const { data: existing } = await supabase
@@ -222,6 +223,26 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
       : `Nova senha gerada, mas o e-mail não pôde ser enviado (${emailResult.error}). Copie e envie manualmente.`,
     password,
   };
+}
+
+/** Observações do Fluxo (recados de agenda/secretaria ligados ao estágio
+ * atual do paciente no funil já existente) — nunca misturadas com
+ * prontuário clínico, que fica em telas separadas. Reaproveita
+ * `pacientes.fluxo_observacoes`, que já existe no sistema de Fluxo. */
+export async function updateFluxoObservacoesAction(
+  id: string,
+  observacoes: string,
+): Promise<ActionResult> {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pacientes")
+    .update({ fluxo_observacoes: observacoes || null, fluxo_updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { success: false, message: `Erro ao salvar observação: ${error.message}` };
+
+  revalidatePath(`/pacientes/${id}`);
+  return { success: true, message: "Observação salva." };
 }
 
 export async function changePacientePlanoAction(

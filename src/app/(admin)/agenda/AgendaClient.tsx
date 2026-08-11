@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/contexts/ToastContext";
+import { CONSULTA_STATUS_LABEL, CONSULTA_STATUS_TONE, type ConsultaStatus } from "@/lib/clara/consultas";
 
 interface AgendaEvent {
   id: string;
@@ -28,7 +29,7 @@ interface AgendaEvent {
   end?: string;
   description?: string;
   location?: string;
-  status?: "agendada" | "realizada" | "falta" | "cancelada";
+  status?: ConsultaStatus;
   consultationId?: string | null;
   patientId?: string | null;
 }
@@ -117,16 +118,16 @@ export function AgendaClient() {
     await loadEvents();
   }
 
-  async function markCompleted(event: AgendaEvent) {
+  async function updateStatus(event: AgendaEvent, status: ConsultaStatus, successMessage: string) {
     const response = await fetch(`/api/agenda?id=${encodeURIComponent(event.id)}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: "realizada" }),
+      body: JSON.stringify({ status }),
     });
     const data = await response.json();
     toast({
       kind: response.ok ? "success" : "error",
-      title: response.ok ? "Consulta marcada como realizada." : (data.message ?? "Erro ao atualizar consulta."),
+      title: response.ok ? successMessage : (data.message ?? "Erro ao atualizar consulta."),
     });
     if (response.ok) await loadEvents();
   }
@@ -187,13 +188,14 @@ export function AgendaClient() {
                     <div className="text-sm font-semibold text-brand-dark">{start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{end ? `–${end.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div>
                   </div>
                   <div className="min-w-0 flex-1 border-border lg:border-l lg:pl-6">
-                    <div className="flex flex-wrap items-center gap-2"><UserRound className="size-4 text-muted" /><h2 className="font-bold text-ink">{patient}</h2>{info.plano && <Badge tone="brand">{info.plano}</Badge>}{info.modalidade && <Badge>{info.modalidade}</Badge>}<Badge tone={event.status === "realizada" ? "success" : event.status === "falta" ? "warning" : "info"}>{event.status === "realizada" ? "Realizada" : event.status === "falta" ? "Falta" : "Agendada"}</Badge></div>
+                    <div className="flex flex-wrap items-center gap-2"><UserRound className="size-4 text-muted" /><h2 className="font-bold text-ink">{patient}</h2>{info.plano && <Badge tone="brand">{info.plano}</Badge>}{info.modalidade && <Badge>{info.modalidade}</Badge>}<Badge tone={event.status ? CONSULTA_STATUS_TONE[event.status] : "info"}>{event.status ? CONSULTA_STATUS_LABEL[event.status] : "Agendada"}</Badge></div>
                     <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">{info.email && <span>{info.email}</span>}{info.whatsapp && <span>{info.whatsapp}</span>}{event.location && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{event.location}</span>}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer"><Button variant="ghost" size="sm"><MessageCircle className="size-4" /> WhatsApp</Button></a>}
                     {event.patientId && <a href={`/pacientes/${event.patientId}`}><Button variant="ghost" size="sm"><UserRound className="size-4" /> Perfil</Button></a>}
-                    {event.consultationId && event.status !== "realizada" && <Button variant="secondary" size="sm" onClick={() => void markCompleted(event)}><CalendarCheck2 className="size-4" /> Marcar realizada</Button>}
+                    {event.consultationId && event.status === "agendada" && <Button variant="outline" size="sm" onClick={() => void updateStatus(event, "confirmada", "Consulta confirmada.")}><CalendarCheck2 className="size-4" /> Confirmar</Button>}
+                    {event.consultationId && event.status !== "realizada" && <Button variant="secondary" size="sm" onClick={() => void updateStatus(event, "realizada", "Consulta marcada como realizada.")}><CalendarCheck2 className="size-4" /> Marcar realizada</Button>}
                     <Button variant="danger" size="sm" onClick={() => setCancelling(event)}><Trash2 className="size-4" /> Cancelar</Button>
                   </div>
                 </CardContent>

@@ -9,6 +9,7 @@ import { consultaSchema, type ConsultaFormValues } from "@/utils/validation/cons
 import { createConsultaAction, updateConsultaAction } from "@/services/consultas.actions";
 import { useToast } from "@/contexts/ToastContext";
 import type { ConsultaComPaciente } from "@/services/consultas.queries";
+import { CONSULTA_STATUS, CONSULTA_STATUS_LABEL, type ConsultaStatus } from "@/lib/clara/consultas";
 
 const emptyForm: ConsultaFormValues = {
   paciente_id: "",
@@ -50,7 +51,7 @@ export function ConsultaFormModal({
         paciente_id: consulta.auth_id,
         data_hora: toLocalInputValue(consulta.data ?? new Date().toISOString()),
         tipo: (consulta.tipo as "presencial" | "online") ?? "presencial",
-        status: (consulta.status as "agendada" | "concluida" | "cancelada") ?? "agendada",
+        status: (consulta.status as ConsultaStatus) ?? "agendada",
         observacoes: consulta.observacoes ?? "",
       });
     } else {
@@ -138,13 +139,13 @@ export function ConsultaFormModal({
             <Select
               id="status"
               value={values.status}
-              onChange={(e) =>
-                setField("status", e.target.value as "agendada" | "concluida" | "cancelada")
-              }
+              onChange={(e) => setField("status", e.target.value as ConsultaStatus)}
             >
-              <option value="agendada">Agendada</option>
-              <option value="concluida">Concluída</option>
-              <option value="cancelada">Cancelada</option>
+              {CONSULTA_STATUS.map((status) => (
+                <option key={status} value={status}>
+                  {CONSULTA_STATUS_LABEL[status]}
+                </option>
+              ))}
             </Select>
           </FieldGroup>
         </div>

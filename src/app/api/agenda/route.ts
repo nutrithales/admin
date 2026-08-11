@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CONSULTA_STATUS } from "@/lib/clara/consultas";
 
 export const dynamic = "force-dynamic";
 
@@ -111,15 +112,17 @@ export async function PATCH(request: NextRequest) {
     await assertAdmin();
     const id = request.nextUrl.searchParams.get("id");
     const body = await request.json().catch(() => ({}));
-    const allowed = ["agendada", "realizada", "falta", "cancelada"];
-    if (!id || !allowed.includes(body.status)) {
+    if (!id || !CONSULTA_STATUS.includes(body.status)) {
       return NextResponse.json({ success: false, message: "Atualização inválida." }, { status: 400 });
     }
 
     const admin = createAdminClient();
     const { error } = await admin
       .from("consultas")
-      .update({ status: body.status })
+      .update({
+        status: body.status,
+        confirmada_em: body.status === "confirmada" ? new Date().toISOString() : undefined,
+      })
       .eq("google_event_id", id);
     if (error) throw error;
     if (body.status === "realizada") {

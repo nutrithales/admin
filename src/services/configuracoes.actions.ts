@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { assertAdmin } from "@/lib/supabase/assert-admin";
+import { assertPermission } from "@/lib/supabase/assert-permission";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/services/pacientes.actions";
 import type { Database } from "@/types/database.types";
@@ -9,7 +9,7 @@ import type { Database } from "@/types/database.types";
 type ConfiguracoesUpdate = Database["public"]["Tables"]["configuracoes_consultorio"]["Update"];
 
 export async function saveConfiguracoesAction(formData: FormData): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("configuracoes.editar");
   const supabase = await createClient();
 
   const nome_consultorio = String(formData.get("nome_consultorio") || "").trim() || null;

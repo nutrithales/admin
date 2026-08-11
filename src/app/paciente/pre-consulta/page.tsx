@@ -4,6 +4,10 @@ import { PreConsultationForm } from "./PreConsultationForm";
 
 export const metadata = { title: "Formulário de pré-consulta" };
 
+function isInTheFuture(iso: string) {
+  return new Date(iso).getTime() > Date.now();
+}
+
 export default async function PreConsultationPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,7 +20,7 @@ export default async function PreConsultationPage() {
     supabase.from("consultas").select("data, tipo").eq("auth_id", user.id).order("data", { ascending: true }),
   ]);
   const firstConsultation = consultations?.find((item) => !/reconsulta|retorno|acompanhamento/i.test(item.tipo ?? ""));
-  const manualAvailable = Boolean(firstConsultation?.data && new Date(firstConsultation.data).getTime() > Date.now());
+  const manualAvailable = Boolean(firstConsultation?.data && isInTheFuture(firstConsultation.data));
 
   return (
     <main className="min-h-screen bg-bg px-4 py-8 sm:py-12">

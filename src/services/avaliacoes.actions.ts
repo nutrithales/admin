@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { assertAdmin } from "@/lib/supabase/assert-admin";
+import { assertPermission } from "@/lib/supabase/assert-permission";
 import { createClient } from "@/lib/supabase/server";
 import { avaliacaoFisicaSchema, type AvaliacaoFisicaFormValues } from "@/utils/validation/avaliacao-fisica";
 import { sendEmail } from "@/lib/email/resend";
@@ -27,7 +27,7 @@ function toRow(data: AvaliacaoFisicaFormValues) {
 }
 
 export async function createAvaliacaoFisicaAction(authId: string, values: AvaliacaoFisicaFormValues): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const parsed = avaliacaoFisicaSchema.safeParse(values);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -51,7 +51,7 @@ export async function updateAvaliacaoFisicaAction(
   authId: string,
   values: AvaliacaoFisicaFormValues,
 ): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const parsed = avaliacaoFisicaSchema.safeParse(values);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -74,7 +74,7 @@ export async function updateAvaliacaoFisicaAction(
 }
 
 export async function deleteAvaliacaoFisicaAction(id: string, authId: string): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
 
   const { data: existing } = await supabase.from("avaliacoes_fisicas").select("path").eq("id", id).single();
@@ -89,7 +89,7 @@ export async function deleteAvaliacaoFisicaAction(id: string, authId: string): P
 }
 
 export async function uploadBodymetrixPdfAction(id: string, authId: string, formData: FormData): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const file = formData.get("arquivo") as File | null;
 
   if (!file || file.size === 0) return { success: false, message: "Selecione um arquivo PDF." };
@@ -121,7 +121,7 @@ export async function uploadBodymetrixPdfAction(id: string, authId: string, form
 }
 
 export async function getBodymetrixSignedUrlAction(path: string): Promise<{ url: string | null; message?: string }> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60 * 10);
   if (error || !data) return { url: null, message: error?.message };
@@ -133,7 +133,7 @@ export async function disponibilizarAvaliacaoAction(
   authId: string,
   options: { enviarEmail: boolean },
 ): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
 
   const { data: avaliacao, error: fetchError } = await supabase
@@ -181,7 +181,7 @@ export async function disponibilizarAvaliacaoAction(
 }
 
 export async function revogarAvaliacaoAction(id: string, authId: string): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
 
   const { error: deleteError } = await supabase.from("avaliacoes_resumos_paciente").delete().eq("avaliacao_id", id);
@@ -198,7 +198,7 @@ export async function revogarAvaliacaoAction(id: string, authId: string): Promis
 }
 
 export async function interpretarBodymetrixAction(id: string, authId: string): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
 
   const { data: avaliacao, error: fetchError } = await supabase

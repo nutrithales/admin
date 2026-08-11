@@ -9,10 +9,12 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase.
    A `SUPABASE_SERVICE_ROLE_KEY` é secreta: nunca a exponha no cliente nem a
    commite.
 
-2. **Banco de dados** — aplique `supabase/migrations/0001_init.sql` no seu
-   projeto (SQL Editor do Supabase, ou `supabase db push` com a CLI). Ele
-   cria as tabelas em `create table if not exists`, então é seguro rodar
-   mesmo que algumas já existam — revise a lista de colunas nesse caso.
+2. **Banco de dados** — aplique as migrations em `supabase/migrations/` em
+   ordem (SQL Editor do Supabase, ou `supabase db push` com a CLI). São
+   todas `create table if not exists` / `add column if not exists`, então
+   é seguro rodar mesmo que algumas partes já existam. A mais recente,
+   `20260811210000_clara_secretaria_virtual.sql`, adiciona o módulo Clara
+   (ver `docs/CLARA.md`).
 
 3. **Primeiro administrador** — como o login só funciona para usuários
    presentes na tabela `administradores`, crie o primeiro manualmente:
@@ -56,3 +58,9 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase.
   futuras integrações com Google Calendar e LiveClin, mas nenhuma das duas
   está implementada ainda.
 - O módulo **IA** é só a estrutura de página, sem funcionalidade.
+- **Clara** (`/clara`) é a secretária virtual do painel — resumo do dia,
+  comandos por palavra-chave (sem depender de IA paga), ações rápidas e
+  central de pendências. Documentação completa em `docs/CLARA.md`.
+- **Fluxo** (`/fluxo`) mostra os pacientes por etapa de acompanhamento;
+  `pacientes.fluxo_estagio` é texto livre (mesmo padrão de
+  `biblioteca.tipo`) e cada movimentação fica em `fluxo_movimentacoes`.
