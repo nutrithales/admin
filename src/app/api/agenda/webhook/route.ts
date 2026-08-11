@@ -27,10 +27,8 @@ function authorized(request: NextRequest) {
   return Boolean(secret && request.headers.get("authorization") === `Bearer ${secret}`);
 }
 
-function preConsultationRedirectUrl(request: NextRequest) {
-  const configuredUrl = process.env.NEXT_PUBLIC_PATIENT_LOGIN_URL;
-  const baseUrl = configuredUrl ? new URL(configuredUrl) : request.nextUrl;
-  return new URL("/paciente/pre-consulta", baseUrl.origin).toString();
+function preConsultationRedirectUrl() {
+  return "https://admin-nutri-thales.vercel.app/paciente/pre-consulta";
 }
 
 export async function POST(request: NextRequest) {
