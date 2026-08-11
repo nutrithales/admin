@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       { onConflict: "paciente_id", ignoreDuplicates: true },
     );
 
-    const redirectTo = preConsultationRedirectUrl(request);
+    const redirectTo = preConsultationRedirectUrl();
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: "magiclink",
       email,
