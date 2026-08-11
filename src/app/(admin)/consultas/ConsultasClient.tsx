@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Plus, Pencil, Trash2, CalendarClock } from "lucide-react";
+import { MoreHorizontal, Plus, Pencil, Trash2, CalendarClock, CheckCircle2, CalendarX2, UserX } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,21 +11,10 @@ import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
-import { deleteConsultaAction } from "@/services/consultas.actions";
+import { deleteConsultaAction, updateConsultaStatusAction } from "@/services/consultas.actions";
 import type { ConsultaComPaciente } from "@/services/consultas.queries";
+import { CONSULTA_STATUS_LABEL, CONSULTA_STATUS_TONE, type ConsultaStatus } from "@/lib/clara/consultas";
 import { ConsultaFormModal } from "./ConsultaFormModal";
-
-const statusTone = {
-  agendada: "brand",
-  concluida: "success",
-  cancelada: "danger",
-} as const;
-
-const statusLabel = {
-  agendada: "Agendada",
-  concluida: "Concluída",
-  cancelada: "Cancelada",
-} as const;
 
 export function ConsultasClient({
   initialConsultas,
@@ -55,6 +44,12 @@ export function ConsultasClient({
     refresh();
   }
 
+  async function handleStatusChange(c: ConsultaComPaciente, status: ConsultaStatus) {
+    const result = await updateConsultaStatusAction(c.id, status);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    refresh();
+  }
+
   const columns: Column<ConsultaComPaciente>[] = [
     {
       key: "paciente",
@@ -81,8 +76,8 @@ export function ConsultasClient({
       header: "Status",
       sortValue: (c) => c.status,
       render: (c) => (
-        <Badge tone={statusTone[c.status as keyof typeof statusTone] ?? "muted"}>
-          {statusLabel[c.status as keyof typeof statusLabel] ?? c.status ?? "—"}
+        <Badge tone={CONSULTA_STATUS_TONE[c.status as ConsultaStatus] ?? "muted"}>
+          {CONSULTA_STATUS_LABEL[c.status as ConsultaStatus] ?? c.status ?? "—"}
         </Badge>
       ),
     },
@@ -106,6 +101,24 @@ export function ConsultasClient({
           >
             <Pencil className="size-4" /> Editar
           </DropdownItem>
+          {c.status === "agendada" && (
+            <DropdownItem onClick={() => handleStatusChange(c, "confirmada")}>
+              <CheckCircle2 className="size-4" /> Confirmar
+            </DropdownItem>
+          )}
+          {(c.status === "agendada" || c.status === "confirmada") && (
+            <>
+              <DropdownItem onClick={() => handleStatusChange(c, "realizada")}>
+                <CheckCircle2 className="size-4" /> Concluir atendimento
+              </DropdownItem>
+              <DropdownItem onClick={() => handleStatusChange(c, "nao_compareceu")}>
+                <UserX className="size-4" /> Não compareceu
+              </DropdownItem>
+              <DropdownItem onClick={() => handleStatusChange(c, "cancelada")}>
+                <CalendarX2 className="size-4" /> Cancelar
+              </DropdownItem>
+            </>
+          )}
           <DropdownItem onClick={() => setDeleting(c)} className="text-danger hover:bg-red-50">
             <Trash2 className="size-4" /> Excluir
           </DropdownItem>

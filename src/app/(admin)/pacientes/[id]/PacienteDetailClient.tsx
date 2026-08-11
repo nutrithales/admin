@@ -10,21 +10,30 @@ import type { Tables } from "@/types/database.types";
 import type { ConsultaComProntuario } from "@/services/prontuarios.queries";
 import { ProntuarioTab } from "./ProntuarioTab";
 import { AvaliacoesTab } from "./AvaliacoesTab";
+import { AdministrativoTab } from "./AdministrativoTab";
 import { Card, CardContent } from "@/components/ui/Card";
+import { computeConsultasStats } from "@/lib/clara/consultas";
 
 export function PacienteDetailClient({
   paciente,
   consultas,
   avaliacoes,
+  pendencias,
+  pagamentos,
+  historicoFluxo,
 }: {
   paciente: Tables<"pacientes">;
   consultas: ConsultaComProntuario[];
   avaliacoes: Tables<"avaliacoes_fisicas">[];
+  pendencias: Tables<"pendencias">[];
+  pagamentos: Tables<"pagamentos">[];
+  historicoFluxo: Tables<"fluxo_movimentacoes">[];
 }) {
   const [tab, setTab] = useState("prontuario");
-  const completed = paciente.consultas_realizadas_iniciais + consultas.filter((item) => item.status === "realizada").length;
-  const scheduled = consultas.filter((item) => item.status === "agendada").length;
-  const remaining = Math.max(0, paciente.consultas_incluidas - completed);
+  const stats = computeConsultasStats(paciente, consultas);
+  const completed = stats.realizadas;
+  const scheduled = stats.agendadas;
+  const remaining = stats.restantes;
 
   return (
     <div>
@@ -54,13 +63,23 @@ export function PacienteDetailClient({
         items={[
           { key: "prontuario", label: "Prontuário" },
           { key: "avaliacoes", label: "Avaliações físicas" },
+          { key: "administrativo", label: "Administrativo (Clara)" },
         ]}
       />
 
       {tab === "prontuario" ? (
         <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
-      ) : (
+      ) : tab === "avaliacoes" ? (
         <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
+      ) : (
+        <AdministrativoTab
+          pacienteId={paciente.id}
+          fluxoEstagio={paciente.fluxo_estagio}
+          observacoes={paciente.observacoes_administrativas}
+          pendencias={pendencias}
+          pagamentos={pagamentos}
+          historicoFluxo={historicoFluxo}
+        />
       )}
     </div>
   );

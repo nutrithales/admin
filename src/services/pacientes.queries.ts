@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database.types";
+import { computeConsultasStats } from "@/lib/clara/consultas";
 
 export type PacienteComConsultas = Tables<"pacientes"> & {
   consultas_realizadas: number;
@@ -15,15 +16,11 @@ export async function listPacientes(): Promise<PacienteComConsultas[]> {
   ]);
 
   if (error) throw new Error(`Erro ao carregar pacientes: ${error.message}`);
-  return (data ?? []).map((patient) => ({
-    ...patient,
-    consultas_realizadas:
-      patient.consultas_realizadas_iniciais
-      + (consultations ?? []).filter((item) => item.auth_id === patient.auth_id && item.status === "realizada").length,
-    consultas_agendadas: (consultations ?? []).filter(
-      (item) => item.auth_id === patient.auth_id && item.status === "agendada",
-    ).length,
-  }));
+  return (data ?? []).map((patient) => {
+    const consultasDoPaciente = (consultations ?? []).filter((item) => item.auth_id === patient.auth_id);
+    const stats = computeConsultasStats(patient, consultasDoPaciente);
+    return { ...patient, consultas_realizadas: stats.realizadas, consultas_agendadas: stats.agendadas };
+  });
 }
 
 export async function getPaciente(id: string): Promise<Tables<"pacientes"> | null> {
@@ -31,6 +28,18 @@ export async function getPaciente(id: string): Promise<Tables<"pacientes"> | nul
   const { data, error } = await supabase.from("pacientes").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Erro ao carregar paciente: ${error.message}`);
   return data;
+}
+
+/** Para seletores que referenciam `pacientes.id` (Fluxo, tarefas,
+ * pagamentos, pendências) — diferente de `listPacientesForSelect` em
+ * paginas.queries.ts, que devolve `auth_id` (usado por consultas/checkins). */
+export async function listPacientesResumo() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("pacientes")
+    .select("id, auth_id, nome, status, fluxo_estagio")
+    .order("nome", { ascending: true });
+  return data ?? [];
 }
 
 export async function getPacienteStats() {

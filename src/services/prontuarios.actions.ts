@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { assertAdmin } from "@/lib/supabase/assert-admin";
+import { assertPermission } from "@/lib/supabase/assert-permission";
 import { createClient } from "@/lib/supabase/server";
 import { prontuarioSchema, type ProntuarioFormValues } from "@/utils/validation/prontuario";
 import type { ActionResult } from "@/services/pacientes.actions";
@@ -14,7 +14,7 @@ export async function upsertProntuarioAction(
   pacienteId: string,
   values: ProntuarioFormValues,
 ): Promise<ActionResult> {
-  await assertAdmin();
+  await assertPermission("prontuario.editar");
   const parsed = prontuarioSchema.safeParse(values);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
