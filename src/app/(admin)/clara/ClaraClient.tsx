@@ -31,6 +31,7 @@ import type { PendenciaComPaciente } from "@/services/pendencias.queries";
 import type { TarefaComPaciente } from "@/services/tarefas.queries";
 import { resolverPendenciaAction } from "@/services/pendencias.actions";
 import { concluirTarefaAction } from "@/services/tarefas.actions";
+import { updateConsultaStatusAction } from "@/services/consultas.actions";
 import { PENDENCIA_TIPO_LABEL, type PendenciaTipo } from "@/lib/clara/pendencias-engine";
 import { CONSULTA_STATUS_LABEL, CONSULTA_STATUS_TONE, type ConsultaStatus } from "@/lib/clara/consultas";
 import { ComandosBox } from "./ComandosBox";
@@ -94,6 +95,12 @@ export function ClaraClient({
     refresh();
   }
 
+  async function mudarStatusConsulta(id: string, status: ConsultaStatus) {
+    const result = await updateConsultaStatusAction(id, status);
+    toast({ kind: result.success ? "success" : "error", title: result.message });
+    refresh();
+  }
+
   const naoConfirmadas = pendencias.filter((p) => p.tipo === "consulta_nao_confirmada").length;
   const checkinsPendentes = pendencias.filter(
     (p) => p.tipo === "checkin_nao_respondido" || p.tipo === "checkin_pendente_envio",
@@ -140,16 +147,28 @@ export function ClaraClient({
               ) : (
                 <ul className="divide-y divide-border">
                   {consultasHoje.map((c) => (
-                    <li key={c.id} className="flex items-center justify-between gap-3 py-3">
+                    <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                       <div>
                         <p className="text-sm font-semibold text-ink">
                           {c.hora} — {c.paciente}
                         </p>
                         <p className="text-xs text-muted">{c.tipo ?? "Consulta"}</p>
                       </div>
-                      <Badge tone={CONSULTA_STATUS_TONE[c.status as ConsultaStatus] ?? "muted"}>
-                        {CONSULTA_STATUS_LABEL[c.status as ConsultaStatus] ?? c.status ?? "—"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge tone={CONSULTA_STATUS_TONE[c.status as ConsultaStatus] ?? "muted"}>
+                          {CONSULTA_STATUS_LABEL[c.status as ConsultaStatus] ?? c.status ?? "—"}
+                        </Badge>
+                        {c.status === "agendada" && (
+                          <Button variant="ghost" size="sm" onClick={() => void mudarStatusConsulta(c.id, "confirmada")}>
+                            Confirmar
+                          </Button>
+                        )}
+                        {(c.status === "agendada" || c.status === "confirmada") && (
+                          <Button variant="ghost" size="sm" onClick={() => void mudarStatusConsulta(c.id, "realizada")}>
+                            Concluir
+                          </Button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -182,6 +201,15 @@ export function ClaraClient({
                           <p className="text-sm text-muted">{p.motivo}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
+                          {p.tipo === "consulta_nao_confirmada" && p.consulta_id && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => void mudarStatusConsulta(p.consulta_id!, "confirmada")}
+                            >
+                              Confirmar consulta
+                            </Button>
+                          )}
                           {p.paciente && (
                             <Link href={`/pacientes/${p.paciente.id}`}>
                               <Button variant="ghost" size="sm">
@@ -241,7 +269,7 @@ export function ClaraClient({
             <div className="grid grid-cols-1 gap-2 px-6 pb-6 sm:grid-cols-2 lg:grid-cols-1">
               <QuickAction icon={UserPlus} label="Cadastrar paciente" onClick={() => setModalAberto("paciente")} />
               <QuickAction icon={CalendarPlus} label="Agendar consulta" onClick={() => setModalAberto("consulta")} />
-              <QuickAction icon={CalendarClock} label="Confirmar / concluir consulta" href="/consultas" />
+              <QuickAction icon={CalendarClock} label="Confirmar / concluir consulta" href="/agenda" />
               <QuickAction icon={Wallet} label="Registrar pagamento" onClick={() => setModalAberto("pagamento")} />
               <QuickAction icon={ClipboardCheck} label="Enviar check-in" onClick={() => setModalAberto("enviar-checkin")} />
               <QuickAction icon={ClipboardCheck} label="Registrar resposta do check-in" onClick={() => setModalAberto("resposta-checkin")} />
