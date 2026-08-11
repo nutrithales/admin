@@ -10,16 +10,19 @@ import type { Tables } from "@/types/database.types";
 import type { ConsultaComProntuario } from "@/services/prontuarios.queries";
 import { ProntuarioTab } from "./ProntuarioTab";
 import { AvaliacoesTab } from "./AvaliacoesTab";
+import { PreConsultaTab } from "./PreConsultaTab";
 import { Card, CardContent } from "@/components/ui/Card";
 
 export function PacienteDetailClient({
   paciente,
   consultas,
   avaliacoes,
+  preConsulta,
 }: {
   paciente: Tables<"pacientes">;
   consultas: ConsultaComProntuario[];
   avaliacoes: Tables<"avaliacoes_fisicas">[];
+  preConsulta: Tables<"formularios_pre_consulta"> | null;
 }) {
   const [tab, setTab] = useState("prontuario");
   const completed = paciente.consultas_realizadas_iniciais + consultas.filter((item) => item.status === "realizada").length;
@@ -54,13 +57,16 @@ export function PacienteDetailClient({
         items={[
           { key: "prontuario", label: "Prontuário" },
           { key: "avaliacoes", label: "Avaliações físicas" },
+          { key: "pre-consulta", label: "Pré-consulta" },
         ]}
       />
 
       {tab === "prontuario" ? (
         <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
-      ) : (
+      ) : tab === "avaliacoes" ? (
         <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
+      ) : (
+        <PreConsultaTab formulario={preConsulta} />
       )}
     </div>
   );

@@ -137,6 +137,17 @@ export async function POST(request: NextRequest) {
   }
 
   const isReturn = /reconsulta|retorno|acompanhamento/i.test(booking.serviceTitle);
+  if (!isReturn) {
+    await admin.from("formularios_pre_consulta").upsert(
+      {
+        paciente_id: patient.id,
+        auth_id: patient.auth_id,
+        status: "pendente",
+        solicitado_em: new Date().toISOString(),
+      },
+      { onConflict: "paciente_id", ignoreDuplicates: true },
+    );
+  }
   await admin.from("pacientes").update({
     fluxo_etapa: isReturn ? "04_1_agendado_reconsulta" : "04_agendado",
     fluxo_updated_at: new Date().toISOString(),
