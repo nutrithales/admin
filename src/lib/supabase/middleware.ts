@@ -5,6 +5,7 @@ import type { Database } from "@/types/database.types";
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
+  "/paciente/login",
   // Unauthenticated endpoints called from the public patient site
   // (nutrithales.com.br) — must stay reachable without an admin session,
   // including the CORS preflight OPTIONS request.
@@ -51,6 +52,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+  // Match only the patient portal route boundary. `/pacientes` is the
+  // administrative patient-management page and must remain in the admin area.
+  const isPatientArea =
+    (pathname === "/paciente" || pathname.startsWith("/paciente/")) &&
+    pathname !== "/paciente/login";
 
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
@@ -59,7 +65,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && !isPublicPath(pathname)) {
+  if (user && isPatientArea) {
+    const { data: patient } = await supabase
+      .from("pacientes")
+      .select("id")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+
+    if (!patient) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/paciente/login";
+      url.searchParams.set("error", "not-patient");
+      return NextResponse.redirect(url);
+    }
+  } else if (user && !isPublicPath(pathname)) {
     const { data: admin } = await supabase
       .from("administradores")
       .select("id")
@@ -78,6 +98,18 @@ export async function updateSession(request: NextRequest) {
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && pathname === "/paciente/login") {
+    const { data: patient } = await supabase
+      .from("pacientes")
+      .select("id")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+    const url = request.nextUrl.clone();
+    url.pathname = patient ? "/paciente/pre-consulta" : "/";
     url.search = "";
     return NextResponse.redirect(url);
   }

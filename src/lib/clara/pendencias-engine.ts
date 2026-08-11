@@ -1,7 +1,11 @@
 import type { Tables } from "@/types/database.types";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 import { checkinSituacao, diasDesde } from "@/lib/clara/checkins";
-import { ETAPAS_AGUARDANDO_PLANO, fluxoEtapaLabel, type FluxoEtapa } from "@/lib/clara/fluxo";
+import { getFlowStage, type FlowStageKey } from "@/lib/fluxo/stages";
+
+/** Etapas em que a consulta já aconteceu mas o plano ainda não foi
+ * marcado como entregue — usado pela central de pendências. */
+const ETAPAS_AGUARDANDO_PLANO: readonly FlowStageKey[] = ["06_consulta_realizada", "07_pos_consulta_enviado"];
 
 export type PendenciaTipo =
   | "consulta_nao_confirmada"
@@ -184,7 +188,7 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
           candidatas.push({
             tipo: "contato_necessario",
             pacienteId: paciente.id,
-            motivo: `Próxima ação do Fluxo (${fluxoEtapaLabel(paciente.fluxo_etapa)}) estava marcada para ${proximaAcao.toLocaleDateString("pt-BR")}.`,
+            motivo: `Próxima ação do Fluxo (${getFlowStage(paciente.fluxo_etapa).label}) estava marcada para ${proximaAcao.toLocaleDateString("pt-BR")}.`,
             prioridade: "media",
           });
         }
@@ -197,13 +201,13 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
           candidatas.push({
             tipo: "sem_movimentacao",
             pacienteId: paciente.id,
-            motivo: `Sem movimentação no Fluxo há ${diasParado} dias (etapa: ${fluxoEtapaLabel(paciente.fluxo_etapa)}).`,
+            motivo: `Sem movimentação no Fluxo há ${diasParado} dias (etapa: ${getFlowStage(paciente.fluxo_etapa).label}).`,
             prioridade: "baixa",
           });
         }
       }
 
-      if (ETAPAS_AGUARDANDO_PLANO.includes(paciente.fluxo_etapa as FluxoEtapa)) {
+      if (ETAPAS_AGUARDANDO_PLANO.includes(paciente.fluxo_etapa as FlowStageKey)) {
         candidatas.push({
           tipo: "aguardando_plano_alimentar",
           pacienteId: paciente.id,

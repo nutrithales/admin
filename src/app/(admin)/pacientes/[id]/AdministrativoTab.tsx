@@ -13,7 +13,7 @@ import { updateFluxoObservacoesAction } from "@/services/pacientes.actions";
 import { resolverPendenciaAction } from "@/services/pendencias.actions";
 import { marcarPagamentoAction } from "@/services/pagamentos.actions";
 import { PENDENCIA_TIPO_LABEL, type PendenciaTipo } from "@/lib/clara/pendencias-engine";
-import { fluxoEtapaLabel } from "@/lib/clara/fluxo";
+import { getFlowStage } from "@/lib/fluxo/stages";
 
 const PRIORIDADE_TONE = { alta: "danger", media: "warning", baixa: "muted" } as const;
 const PAGAMENTO_TONE = { pago: "success", pendente: "warning", atrasado: "danger", cancelado: "muted" } as const;
@@ -72,7 +72,7 @@ export function AdministrativoTab({
         </div>
         <div className="px-6 pb-6">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="brand">{fluxoEtapaLabel(fluxoEtapa)}</Badge>
+            <Badge tone="brand">{getFlowStage(fluxoEtapa).label}</Badge>
             {fluxoUrgente && (
               <Badge tone="danger">
                 <AlertTriangle className="size-3" /> Urgente
@@ -86,7 +86,7 @@ export function AdministrativoTab({
             <ul className="mt-4 flex flex-col gap-2 border-l-2 border-border pl-3">
               {historicoFluxo.slice(0, 5).map((mov) => (
                 <li key={mov.id} className="text-sm text-muted">
-                  {mov.de_etapa ? fluxoEtapaLabel(mov.de_etapa) : "Início"} → {fluxoEtapaLabel(mov.para_etapa)}
+                  {mov.de_etapa ? getFlowStage(mov.de_etapa).label : "Início"} → {getFlowStage(mov.para_etapa).label}
                   <span className="ml-2 text-xs text-muted-light">{new Date(mov.created_at).toLocaleDateString("pt-BR")}</span>
                 </li>
               ))}

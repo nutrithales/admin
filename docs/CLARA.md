@@ -12,15 +12,17 @@ preparada para revisão humana e cópia manual. Ações destrutivas (excluir
 paciente, por exemplo) exigem confirmação explícita na tela e são
 restritas ao nível "admin" — nunca à secretária.
 
-> **Atenção — schema drift conhecido:** ao aplicar a migration da Clara,
-> descobrimos que o banco Supabase real já tinha colunas/tabelas que não
-> existiam nos arquivos de `supabase/migrations/` deste repositório (o
-> Fluxo descrito abaixo, e uma tabela `formularios_pre_consulta` de
-> formulário pré-consulta). Ou seja, os arquivos de migration commitados
-> não são a fonte de verdade completa do schema em produção. Antes de
-> escrever uma migration nova, rode `list_tables`/`list_migrations` contra
-> o projeto real (MCP do Supabase) em vez de confiar só no que está no
-> git.
+> **Nota histórica:** o módulo Fluxo (`/fluxo`, `src/lib/fluxo/stages.ts`,
+> `src/services/fluxo.*`) e o formulário de pré-consulta
+> (`formularios_pre_consulta`, `/paciente/pre-consulta`) foram construídos
+> em paralelo, por outro caminho (fora desta sessão), enquanto a Clara
+> estava sendo desenvolvida no mesmo repositório em outro branch — por
+> isso o PR da Clara teve conflito de merge real com esse trabalho. A
+> lição: antes de escrever uma migration nova ou desenhar uma feature que
+> toca uma área "cinzenta" do produto, vale rodar
+> `list_tables`/`list_migrations` contra o projeto real (MCP do Supabase)
+> e checar o branch-base atualizado — os arquivos locais podem estar
+> desatualizados em relação ao que já existe.
 
 ## Onde fica
 
@@ -36,12 +38,12 @@ restritas ao nível "admin" — nunca à secretária.
 ## Arquitetura
 
 - `src/lib/clara/*` — regras puras, sem I/O: cálculo de consultas
-  realizadas/restantes (`consultas.ts`), estágios do Fluxo (`fluxo.ts`),
-  situação de check-in (`checkins.ts`), motor de detecção de pendências
-  (`pendencias-engine.ts`), interpretação de comandos por palavra-chave
-  (`comandos.ts`), preenchimento de mensagens (`mensagens.ts`) e a matriz
-  de permissões (`permissoes.ts`). São funções puras de propósito — dá
-  para testar sem banco.
+  realizadas/restantes (`consultas.ts`), situação de check-in
+  (`checkins.ts`), motor de detecção de pendências (`pendencias-engine.ts`,
+  que lê as etapas do Fluxo de `src/lib/fluxo/stages.ts`), interpretação
+  de comandos por palavra-chave (`comandos.ts`), preenchimento de
+  mensagens (`mensagens.ts`) e a matriz de permissões (`permissoes.ts`).
+  São funções puras de propósito — dá para testar sem banco.
 - `src/services/*.queries.ts` / `*.actions.ts` — ligam essas regras ao
   Supabase, seguindo exatamente o padrão que já existia no projeto para os
   outros módulos (pacientes, consultas, planos, etc.).
@@ -97,34 +99,38 @@ migrou os dados existentes e unificou tudo em:
 
 ## Fluxo de pacientes
 
-**O Fluxo já existia antes da Clara** — foi construído e é operado por
-fora deste repositório (as colunas já estavam em produção quando a Clara
-foi criada; a migration da Clara só descobriu isso ao inspecionar o
-banco real, que tinha divergido dos arquivos de migration commitados).
+O Fluxo (`/fluxo`) **não é um módulo da Clara** — é a implementação
+já existente do funil de pacientes, com quadro kanban + tabela, busca,
+filtro por grupo, arrastar-e-soltar, e um painel de detalhe por paciente
+(urgente/observações/próxima ação/WhatsApp/link do perfil). Vive em
+`src/lib/fluxo/stages.ts` (`FLOW_STAGES`, `FLOW_GROUPS`, `getFlowStage`)
+e `src/services/fluxo.queries.ts`/`fluxo.actions.ts`
+(`listFluxoPacientes`, `updateFluxoPacienteAction`). A Clara **consome**
+esse sistema, não o substitui.
+
 `pacientes.fluxo_etapa` **não é texto livre**: tem uma CHECK constraint
 fixa no banco com 24 etapas específicas (funil numerado — `01_lead_recebido`
 → `16_renovado`, mais alguns estados utilitários como `nada_agora`,
-`mandar_mensagem`, `pausa_acompanhamento`). A lista em
-`src/lib/clara/fluxo.ts` (`FLUXO_ETAPAS`) espelha exatamente essa
-constraint — se a constraint mudar em banco, atualize a lista aqui junto.
+`mandar_mensagem`, `pausa_acompanhamento`), agrupadas em captação /
+atendimento / acompanhamento / renovação / outros. Se a constraint mudar
+em banco, atualize `FLOW_STAGES` junto.
 
-Colunas do sistema já existente, todas em `pacientes`:
+Colunas do Fluxo, todas em `pacientes`: `fluxo_etapa`, `fluxo_urgente`,
+`fluxo_observacoes` (a Clara reaproveita esse campo na aba
+"Administrativo" do perfil do paciente — não criou um campo de
+observações administrativas separado, para não duplicar),
+`fluxo_proxima_acao_em`, `fluxo_updated_at`. O webhook de agendamento
+(`src/app/api/agenda/webhook/route.ts`) e o `PATCH` da agenda
+(`src/app/api/agenda/route.ts`) já avançam `fluxo_etapa` automaticamente
+(novo lead → `04_agendado`; consulta concluída → `06_consulta_realizada`).
 
-- `fluxo_etapa` — etapa atual (enum fechado, ver acima).
-- `fluxo_urgente` — sinalizador booleano.
-- `fluxo_observacoes` — recado livre ligado à etapa atual (a Clara
-  reaproveita esse campo na aba "Administrativo" do perfil do paciente —
-  não criou um campo de observações administrativas separado, para não
-  duplicar).
-- `fluxo_proxima_acao_em` — data da próxima ação combinada.
-- `fluxo_updated_at` — última atualização do Fluxo.
-
-O que a Clara **adicionou** (aditivo, não mexeu em nenhuma dessas
-colunas): a tabela `fluxo_movimentacoes`, que não existia — histórico de
-toda mudança de etapa, com `de_etapa`/`para_etapa`/`observacao`/`admin_id`.
-`moverPacienteFluxoAction` (`src/services/fluxo.actions.ts`) atualiza a
-etapa (e, opcionalmente, urgente/observações/próxima ação) e grava o
-histórico na mesma chamada.
+O que a Clara **adicionou** por cima (aditivo — nenhuma coluna existente
+foi tocada): a tabela `fluxo_movimentacoes`, que não existia — histórico
+de toda mudança de etapa (`de_etapa`/`para_etapa`/`observacao`/`admin_id`).
+`updateFluxoPacienteAction` foi estendida para gravar esse histórico e
+recalcular a central de pendências a cada chamada, além de continuar
+fazendo o que já fazia. `getHistoricoFluxoAction`/`listHistoricoFluxo`
+alimentam o histórico curto mostrado na aba "Administrativo" do perfil.
 
 A central de pendências usa os campos reais do Fluxo: `fluxo_urgente =
 true` vira pendência de prioridade alta; `fluxo_proxima_acao_em` vencida

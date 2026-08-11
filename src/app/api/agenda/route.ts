@@ -125,6 +125,19 @@ export async function PATCH(request: NextRequest) {
       })
       .eq("google_event_id", id);
     if (error) throw error;
+    if (body.status === "realizada") {
+      const { data: consultation } = await admin
+        .from("consultas")
+        .select("auth_id")
+        .eq("google_event_id", id)
+        .maybeSingle();
+      if (consultation?.auth_id) {
+        await admin.from("pacientes").update({
+          fluxo_etapa: "06_consulta_realizada",
+          fluxo_updated_at: new Date().toISOString(),
+        }).eq("auth_id", consultation.auth_id);
+      }
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     return errorResponse(error);

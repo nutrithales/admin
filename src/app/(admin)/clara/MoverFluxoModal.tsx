@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label, FieldGroup, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/contexts/ToastContext";
-import { moverPacienteFluxoAction } from "@/services/fluxo.actions";
-import { FLUXO_ETAPAS, FLUXO_ETAPA_LABEL, type FluxoEtapa } from "@/lib/clara/fluxo";
+import { updateFluxoPacienteAction } from "@/services/fluxo.actions";
+import { FLOW_STAGES, getFlowStage, type FlowStageKey } from "@/lib/fluxo/stages";
 
 export interface MoverFluxoModalProps {
   open: boolean;
@@ -20,7 +20,7 @@ export interface MoverFluxoModalProps {
 export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteInicial }: MoverFluxoModalProps) {
   const { toast } = useToast();
   const [pacienteId, setPacienteId] = useState(pacienteInicial ?? "");
-  const [etapa, setEtapa] = useState<FluxoEtapa>("01_lead_recebido");
+  const [etapa, setEtapa] = useState<FlowStageKey>(FLOW_STAGES[0].key);
   const [urgente, setUrgente] = useState(false);
   const [proximaAcaoEm, setProximaAcaoEm] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -42,9 +42,10 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
       return;
     }
     setSaving(true);
-    const result = await moverPacienteFluxoAction(pacienteId, etapa, {
+    const result = await updateFluxoPacienteAction(pacienteId, {
+      etapa,
       urgente,
-      proximaAcaoEm: proximaAcaoEm || null,
+      proximaAcaoEm: proximaAcaoEm ? new Date(proximaAcaoEm).toISOString() : null,
       observacoes,
     });
     setSaving(false);
@@ -66,17 +67,17 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
             <option value="">Selecione um paciente</option>
             {pacientes.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.nome} — {FLUXO_ETAPA_LABEL[p.fluxo_etapa as FluxoEtapa] ?? p.fluxo_etapa}
+                {p.nome} — {getFlowStage(p.fluxo_etapa).label}
               </option>
             ))}
           </Select>
         </FieldGroup>
         <FieldGroup>
           <Label htmlFor="fluxo-etapa">Nova etapa</Label>
-          <Select id="fluxo-etapa" value={etapa} onChange={(e) => setEtapa(e.target.value as FluxoEtapa)}>
-            {FLUXO_ETAPAS.map((e) => (
-              <option key={e} value={e}>
-                {FLUXO_ETAPA_LABEL[e]}
+          <Select id="fluxo-etapa" value={etapa} onChange={(e) => setEtapa(e.target.value as FlowStageKey)}>
+            {FLOW_STAGES.map((e) => (
+              <option key={e.key} value={e.key}>
+                {e.label}
               </option>
             ))}
           </Select>

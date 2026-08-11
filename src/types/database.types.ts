@@ -551,6 +551,50 @@ export type Database = {
         }
         Relationships: []
       }
+      formularios_pre_consulta: {
+        Row: {
+          auth_id: string
+          consentimento_dados_saude: boolean
+          id: string
+          paciente_id: string
+          respondido_em: string | null
+          respostas: Json
+          solicitado_em: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          auth_id: string
+          consentimento_dados_saude?: boolean
+          id?: string
+          paciente_id: string
+          respondido_em?: string | null
+          respostas?: Json
+          solicitado_em?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          auth_id?: string
+          consentimento_dados_saude?: boolean
+          id?: string
+          paciente_id?: string
+          respondido_em?: string | null
+          respostas?: Json
+          solicitado_em?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formularios_pre_consulta_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: true
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pacientes: {
         Row: {
           altura_cm: number | null

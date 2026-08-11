@@ -59,13 +59,13 @@ alter table public.checkins
 -- 3) Fluxo de pacientes — histórico de movimentações
 --
 -- IMPORTANTE: o Fluxo em si (`pacientes.fluxo_etapa`, `fluxo_urgente`,
--- `fluxo_observacoes`, `fluxo_proxima_acao_em`, `fluxo_updated_at`) **já
--- existe** neste banco — foi aplicado por fora deste repositório antes da
--- Clara, com uma CHECK constraint fixa enumerando as etapas do funil. A
--- Clara não recria nada disso; ela só ADICIONA uma tabela de histórico de
--- movimentações, que ainda não existia, reaproveitando o `fluxo_etapa`
--- real (ver `src/lib/clara/fluxo.ts` para a lista de etapas espelhada a
--- partir da constraint do banco).
+-- `fluxo_observacoes`, `fluxo_proxima_acao_em`, `fluxo_updated_at`,
+-- migration `20260811194500_add_patient_flow.sql`) já existe — é um
+-- módulo próprio (`src/lib/fluxo/stages.ts`, `src/services/fluxo.*`,
+-- página `/fluxo`), com uma CHECK constraint fixa enumerando as etapas
+-- do funil. A Clara não recria nada disso; ela só ADICIONA uma tabela de
+-- histórico de movimentações, que ainda não existia, reaproveitando o
+-- `fluxo_etapa` real.
 -- =========================================================================
 create table if not exists public.fluxo_movimentacoes (
   id uuid primary key default gen_random_uuid(),
