@@ -37,7 +37,7 @@ export function Topbar({ onOpenMobileMenu, adminName, adminEmail }: TopbarProps)
 
       <div className="flex max-w-[760px] items-center justify-end gap-3 text-right">
         <p className="hidden text-[12px] font-medium italic leading-relaxed text-muted sm:block lg:text-[13px]">
-          “Tudo o que fizerem, façam de todo o coração, como para o Senhor, e não para os homens.”
+          “Entrega o teu caminho ao Senhor; confia nele, e ele o fará.”
         </p>
 
         <Dropdown
