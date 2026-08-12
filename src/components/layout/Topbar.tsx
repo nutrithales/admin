@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Menu, LogOut, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 
 export interface TopbarProps {
@@ -25,7 +24,7 @@ export function Topbar({ onOpenMobileMenu, adminName, adminEmail }: TopbarProps)
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-border bg-surface/90 px-4 py-2 backdrop-blur-md sm:px-6">
       <button
         onClick={onOpenMobileMenu}
         className="rounded-full p-2 text-ink hover:bg-bg-alt lg:hidden"
@@ -36,34 +35,36 @@ export function Topbar({ onOpenMobileMenu, adminName, adminEmail }: TopbarProps)
 
       <div className="hidden lg:block" />
 
-      <Dropdown
-        trigger={
-          <button className="flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-3 transition-colors hover:bg-bg-alt">
-            <span className="flex h-9 min-w-11 items-center justify-center rounded-lg bg-bg-alt px-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={BRAND_LOGO_DATA_URI}
-                alt="Thales Rosa Nutricionista"
-                className="h-8 w-auto object-contain"
-              />
-            </span>
-            <span className="hidden text-sm font-semibold text-ink sm:block">{adminName}</span>
-          </button>
-        }
-      >
-        <div className="border-b border-border px-4 py-3">
-          <p className="text-sm font-semibold text-ink">{adminName}</p>
-          <p className="truncate text-xs text-muted">{adminEmail}</p>
-        </div>
-        <Link href="/configuracoes">
-          <DropdownItem>
-            <Settings className="size-4" /> Configurações
+      <div className="flex max-w-[760px] items-center justify-end gap-3 text-right">
+        <p className="hidden text-[12px] font-medium italic leading-relaxed text-muted sm:block lg:text-[13px]">
+          “Tudo o que fizerem, façam de todo o coração, como para o Senhor, e não para os homens.”
+        </p>
+
+        <Dropdown
+          trigger={
+            <button
+              className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-bg-alt hover:text-ink"
+              aria-label="Abrir opções da conta"
+              title="Conta e configurações"
+            >
+              <Settings className="size-4" />
+            </button>
+          }
+        >
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-sm font-semibold text-ink">{adminName}</p>
+            <p className="truncate text-xs text-muted">{adminEmail}</p>
+          </div>
+          <Link href="/configuracoes">
+            <DropdownItem>
+              <Settings className="size-4" /> Configurações
+            </DropdownItem>
+          </Link>
+          <DropdownItem onClick={handleLogout} className="text-danger hover:bg-red-50">
+            <LogOut className="size-4" /> Sair
           </DropdownItem>
-        </Link>
-        <DropdownItem onClick={handleLogout} className="text-danger hover:bg-red-50">
-          <LogOut className="size-4" /> Sair
-        </DropdownItem>
-      </Dropdown>
+        </Dropdown>
+      </div>
     </header>
   );
 }
