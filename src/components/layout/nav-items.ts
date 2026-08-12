@@ -24,7 +24,7 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-export const navItems: NavItem[] = [
+// Navegação administrativa: Leads e pacientes têm fluxos independentes.\nexport const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Clara", href: "/clara", icon: Bot },
   { label: "Pacientes", href: "/pacientes", icon: Users },
