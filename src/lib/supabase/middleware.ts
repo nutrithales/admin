@@ -6,6 +6,9 @@ const PUBLIC_PATHS = [
   "/login",
   "/auth",
   "/paciente/login",
+  // Public endpoint used by the administrative login screen to request a
+  // password-reset email before an authenticated session exists.
+  "/api/auth/recover",
   // Unauthenticated endpoints called from the public patient site
   // (nutrithales.com.br) — must stay reachable without an admin session,
   // including the CORS preflight OPTIONS request.
