@@ -57,17 +57,28 @@ function LoginForm() {
     }
 
     setRecovering(true);
-    const supabase = createClient();
-    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-    });
 
-    if (recoveryError) {
-      setError("Não foi possível enviar o e-mail agora. Aguarde um minuto e tente novamente.");
-    } else {
-      setMessage("Enviamos um link para você criar uma nova senha. Confira também a caixa de spam.");
+    try {
+      const response = await fetch("/api/auth/recover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        setError(result.message || "Não foi possível enviar o link de recuperação.");
+        return;
+      }
+
+      setMessage(
+        "Enviamos um link para você criar uma nova senha. Use somente o e-mail mais recente e confira também a caixa de spam.",
+      );
+    } catch {
+      setError("Não foi possível conectar ao serviço de recuperação. Tente novamente.");
+    } finally {
+      setRecovering(false);
     }
-    setRecovering(false);
   }
 
   return (
