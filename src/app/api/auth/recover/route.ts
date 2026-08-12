@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The dashboard has a single administrative account. Returning the same
-  // response for any other address avoids exposing which accounts exist.
+  // O painel possui uma única conta administrativa. A resposta genérica para
+  // outros endereços impede a exposição de quais contas estão cadastradas.
   if (email !== ADMIN_EMAIL) {
     return NextResponse.json({ ok: true });
   }
