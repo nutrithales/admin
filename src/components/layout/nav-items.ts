@@ -15,6 +15,7 @@ import {
   Bot,
   Workflow,
   ContactRound,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ export const navItems: NavItem[] = [
   { label: "Biblioteca", href: "/biblioteca", icon: BookOpen },
   { label: "Agenda", href: "/agenda", icon: CalendarClock },
   { label: "Consultas", href: "/consultas", icon: CalendarClock },
+  { label: "Formulários", href: "/formularios", icon: FileText },
   { label: "Check-ins", href: "/checkins", icon: ClipboardCheck },
   { label: "IA", href: "/ia", icon: Sparkles },
   { label: "Configurações", href: "/configuracoes", icon: Settings },
