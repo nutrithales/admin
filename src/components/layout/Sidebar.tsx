@@ -36,11 +36,13 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             <img
               src={BRAND_LOGO_DATA_URI}
               alt="Thales Rosa Nutricionista"
-              className="h-12 w-auto shrink-0 object-contain"
+              className="h-14 w-auto shrink-0 object-contain"
             />
             <span className="min-w-0 text-[14px] font-bold leading-tight text-ink">
               Painel administrativo
-              <span className="mt-0.5 block text-xs font-medium text-muted">Nutri Thales Rosa</span>
+              <span className="mt-1 block text-[11px] font-medium tracking-[0.01em] text-muted">
+                CRN 8 18115 · CREF 019714
+              </span>
             </span>
           </Link>
           <button onClick={onCloseMobile} className="text-muted hover:text-ink lg:hidden" aria-label="Fechar menu">
