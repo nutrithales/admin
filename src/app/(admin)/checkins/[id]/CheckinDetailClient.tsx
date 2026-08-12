@@ -70,12 +70,12 @@ export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }
         <div className="rounded-3xl border border-border bg-surface p-5 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">1 · Analisar no ChatGPT</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">1 · Analisar no Assistente Check-in</p>
               <h2 className="mt-1 text-xl font-bold">Respostas completas</h2>
             </div>
             <button onClick={copiarEAbrirChatGPT} className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background">
               {copiado ? <Check size={17} /> : <Clipboard size={17} />}
-              {copiado ? "Copiado" : "Copiar + abrir ChatGPT"}
+              {copiado ? "Copiado" : "Copiar + abrir Assistente"}
               <ExternalLink size={14} />
             </button>
           </div>
