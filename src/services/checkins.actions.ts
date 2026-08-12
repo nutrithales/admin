@@ -10,7 +10,7 @@ import type { ActionResult } from "@/services/pacientes.actions";
 
 export async function enviarCheckinAction(authId: string): Promise<ActionResult> {
   await assertAdmin();
-  const supabase = await createClient();
+  const supabase = (await createClient()) as any;
   const { error } = await supabase.from("checkins").insert({
     auth_id: authId,
     status: "enviado",
@@ -27,7 +27,7 @@ export async function enviarCheckinAction(authId: string): Promise<ActionResult>
 
 export async function registrarRespostaCheckinAction(authId: string, resumo: string, pontuacao?: number): Promise<ActionResult> {
   await assertAdmin();
-  const supabase = await createClient();
+  const supabase = (await createClient()) as any;
   const { data: paciente } = await supabase.from("pacientes").select("id").eq("auth_id", authId).maybeSingle();
   const { data: pendente } = await supabase.from("checkins").select("id").eq("auth_id", authId).eq("status", "enviado").order("enviado_em", { ascending: false }).limit(1).maybeSingle();
   const respondidoEm = new Date().toISOString();
@@ -43,7 +43,7 @@ export async function registrarRespostaCheckinAction(authId: string, resumo: str
 
 export async function marcarCheckinRevisadoAction(id: number): Promise<ActionResult> {
   await assertAdmin();
-  const supabase = await createClient();
+  const supabase = (await createClient()) as any;
   const { error } = await supabase.from("checkins").update({ revisado: true }).eq("id", id);
   if (error) return { success: false, message: `Erro ao marcar como revisado: ${error.message}` };
   revalidatePath("/checkins");
