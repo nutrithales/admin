@@ -1,10 +1,4 @@
 export const FLOW_STAGES = [
-  { key: "01_lead_recebido", label: "01 — Lead recebido", group: "captação", color: "slate" },
-  { key: "02_qualificacao", label: "02 — Qualificação", group: "captação", color: "amber" },
-  { key: "03_planos_apresentados", label: "03 — Planos apresentados", group: "captação", color: "amber" },
-  { key: "follow_up_1", label: "Follow up 1", group: "captação", color: "amber" },
-  { key: "follow_up_2", label: "Follow up 2", group: "captação", color: "amber" },
-  { key: "follow_up_3", label: "Follow up 3", group: "captação", color: "amber" },
   { key: "04_agendado", label: "04 — Agendado", group: "atendimento", color: "sky" },
   { key: "04_1_agendado_reconsulta", label: "04.1 — Agendado (reconsulta)", group: "atendimento", color: "rose" },
   { key: "05_formulario_materiais", label: "05 — Formulário e materiais enviados", group: "atendimento", color: "sky" },
@@ -30,7 +24,6 @@ export type FlowStageKey = (typeof FLOW_STAGES)[number]["key"];
 export type FlowGroup = (typeof FLOW_STAGES)[number]["group"];
 
 export const FLOW_GROUPS = [
-  { key: "captação", label: "Captação" },
   { key: "atendimento", label: "Atendimento" },
   { key: "acompanhamento", label: "Acompanhamento" },
   { key: "renovação", label: "Renovação" },
