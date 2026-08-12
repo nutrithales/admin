@@ -5,30 +5,8 @@ import { listConsultasDoIntervalo, inicioDoDia, fimDoDia } from "@/services/clar
 import { listPacientesResumo } from "@/services/pacientes.queries";
 import { listPacientesForSelect } from "@/services/paginas.queries";
 import { listMensagensModelos } from "@/services/mensagens.queries";
+import { listLeadFollowupsPendentes } from "@/services/leads.queries";
 import { ClaraClient } from "./ClaraClient";
 
 export const metadata = { title: "Clara" };
-
-export default async function ClaraPage() {
-  await syncPendencias();
-
-  const [consultasHoje, pendencias, tarefas, pacientesResumo, pacientesParaConsulta, mensagens] = await Promise.all([
-    listConsultasDoIntervalo(inicioDoDia(), fimDoDia()),
-    listPendenciasAtivas(),
-    listTarefasPendentes(),
-    listPacientesResumo(),
-    listPacientesForSelect(),
-    listMensagensModelos(),
-  ]);
-
-  return (
-    <ClaraClient
-      consultasHoje={consultasHoje}
-      pendencias={pendencias}
-      tarefas={tarefas}
-      pacientesResumo={pacientesResumo}
-      pacientesParaConsulta={pacientesParaConsulta}
-      mensagens={mensagens}
-    />
-  );
-}
+export default async function ClaraPage(){await syncPendencias();const[consultasHoje,pendencias,tarefas,pacientesResumo,pacientesParaConsulta,mensagens,leadFollowups]=await Promise.all([listConsultasDoIntervalo(inicioDoDia(),fimDoDia()),listPendenciasAtivas(),listTarefasPendentes(),listPacientesResumo(),listPacientesForSelect(),listMensagensModelos(),listLeadFollowupsPendentes()]);return <ClaraClient consultasHoje={consultasHoje} pendencias={pendencias} tarefas={tarefas} pacientesResumo={pacientesResumo} pacientesParaConsulta={pacientesParaConsulta} mensagens={mensagens} leadFollowups={leadFollowups}/>;}
