@@ -1,4 +1,5 @@
-import { ClipboardCheck } from "lucide-react";
+import Link from "next/link";
+import { ClipboardCheck, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -34,14 +35,9 @@ export default async function CheckinsPage() {
     },
     {
       key: "pontuacao",
-      header: "Aderência",
+      header: "Score",
       sortValue: (c) => c.pontuacao ?? 0,
       render: (c) => c.pontuacao != null ? `${c.pontuacao}%` : <span className="text-muted-light">—</span>,
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (c) => <Badge tone={c.status === "respondido" ? "brand" : "muted"}>{c.status}</Badge>,
     },
     {
       key: "origem",
@@ -51,7 +47,16 @@ export default async function CheckinsPage() {
     {
       key: "revisado",
       header: "Revisão",
-      render: (c) => <Badge tone={c.revisado ? "muted" : "warning"}>{c.revisado ? "Revisado" : "Pendente"}</Badge>,
+      render: (c) => <Badge tone={c.revisado ? "success" : "warning"}>{c.revisado ? "Revisado" : "Pendente"}</Badge>,
+    },
+    {
+      key: "acoes",
+      header: "Ações",
+      render: (c) => (
+        <Link href={`/checkins/${c.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-3 py-2 text-xs font-semibold text-white hover:opacity-90">
+          Revisar <ExternalLink size={13} />
+        </Link>
+      ),
     },
   ];
 
@@ -59,7 +64,7 @@ export default async function CheckinsPage() {
     <div>
       <PageHeader
         title="Check-ins"
-        description="Acompanhe os check-ins recebidos pelo sistema, incluindo respostas enviadas pelos formulários do WhatsApp."
+        description="Central de acompanhamento: revise respostas, gere orientações, acompanhe a evolução e abra o WhatsApp do paciente."
       />
 
       {checkins.length === 0 ? (
