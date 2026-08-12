@@ -1,4 +1,3 @@
-"use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,10 +9,7 @@ export const SERVICOS = {
 } as const;
 export type ServicoKey = keyof typeof SERVICOS;
 
-type PagamentoInsert = {
-  paciente_id: string; servico: string; valor: number; pago_em: string;
-  forma_pagamento?: string; observacoes?: string; descricao_nota: string; nota_emitida: boolean;
-};
+type PagamentoInsert = { paciente_id:string; servico:string; valor:number; pago_em:string; forma_pagamento?:string; observacoes?:string; descricao_nota:string; nota_emitida:boolean };
 
 export async function listPagamentos() {
   const supabase = await createClient();
@@ -22,13 +18,15 @@ export async function listPagamentos() {
   return data ?? [];
 }
 export async function createPagamentoAction(form: { paciente_id:string; servico:ServicoKey; valor:number; pago_em:string; forma_pagamento?:string; observacoes?:string }) {
+  "use server";
   const supabase = await createClient();
-  const payload: PagamentoInsert = { ...form, descricao_nota: SERVICOS[form.servico].descricao, nota_emitida: false };
+  const payload: PagamentoInsert = { ...form, descricao_nota: SERVICOS[form.servico].descricao, nota_emitida:false };
   const { error } = await (supabase as any).from("pagamentos").insert(payload);
   if (error) return { success:false, message:error.message };
   revalidatePath("/pagamentos"); return { success:true, message:"Pagamento registrado." };
 }
 export async function toggleNotaAction(id:string, nota_emitida:boolean) {
+  "use server";
   const supabase = await createClient();
   const { error } = await (supabase as any).from("pagamentos").update({ nota_emitida, updated_at:new Date().toISOString() }).eq("id",id);
   if (error) return { success:false, message:error.message };
