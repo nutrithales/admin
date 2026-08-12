@@ -3,10 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database.types";
 import { nextFollowup, type LeadFollowupFlow } from "@/lib/leads/followups";
 
-export type Lead = Tables<"leads">;
+export type Lead = Tables<"leads"> & {
+  fluxo_followup: string | null;
+  followup_inicio_em: string | null;
+  ultimo_followup_enviado_dia: number | null;
+  ultimo_followup_enviado_em: string | null;
+};
 export type LeadFollowupPendente = { lead: Lead; dia:number; etiqueta:string; titulo:string; mensagem:string; due:Date; vencido:boolean };
 
-export async function listLeads():Promise<Lead[]>{const supabase=await createClient();const{data,error}=await supabase.from("leads").select("*").is("convertido_paciente_id",null).order("updated_at",{ascending:false});if(error)throw new Error(`Erro ao carregar leads: ${error.message}`);return data??[];}
+export async function listLeads():Promise<Lead[]>{const supabase=await createClient();const{data,error}=await supabase.from("leads").select("*").is("convertido_paciente_id",null).order("updated_at",{ascending:false});if(error)throw new Error(`Erro ao carregar leads: ${error.message}`);return (data??[]) as Lead[];}
 
 export async function listLeadFollowupsPendentes():Promise<LeadFollowupPendente[]>{
   const leads=await listLeads(); const now=new Date();
