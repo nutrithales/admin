@@ -164,6 +164,15 @@ export function ClaraClient({
     } else if (acaoDireta === "avancar_checkin_7_dias") {
       await updateFluxoPacienteAction(p.paciente.id, { etapa: "10_checkin_7_dias" });
       refresh();
+    } else if (acaoDireta === "avancar_reconsulta") {
+      await updateFluxoPacienteAction(p.paciente.id, { etapa: "11_confirmar_reconsulta" });
+      refresh();
+    } else if (acaoDireta === "avancar_proposta_renovacao") {
+      await updateFluxoPacienteAction(p.paciente.id, { etapa: "13_proposta_renovacao" });
+      refresh();
+    } else if (acaoDireta === "avancar_reativacao") {
+      await updateFluxoPacienteAction(p.paciente.id, { etapa: "15_reativacao_pendente" });
+      refresh();
     }
   }
 
@@ -171,7 +180,9 @@ export function ClaraClient({
   const checkinsPendentes = pendencias.filter(
     (p) => p.tipo === "checkin_nao_respondido" || p.tipo === "checkin_pendente_envio",
   ).length;
-  const planosProximosFim = pendencias.filter((p) => p.tipo === "plano_proximo_fim" || p.tipo === "plano_finalizado").length;
+  const planosProximosFim = pendencias.filter((p) =>
+    ["plano_proximo_fim", "plano_finalizado", "renovacao_proposta_pendente", "reativacao_pendente"].includes(p.tipo),
+  ).length;
   const semProximaConsulta = pendencias.filter((p) => p.tipo === "sem_proxima_consulta").length;
 
   const pacientesParaModais = pacientesResumo.map((p) => ({ id: p.id, nome: p.nome }));

@@ -20,8 +20,11 @@ export type PendenciaTipo =
   | "checkin_nao_respondido"
   | "checkin_3_dias_pendente"
   | "checkin_7_dias_pendente"
+  | "reconsulta_a_confirmar"
   | "plano_proximo_fim"
   | "plano_finalizado"
+  | "renovacao_proposta_pendente"
+  | "reativacao_pendente"
   | "pagamento_pendente"
   | "aguardando_plano_alimentar"
   | "sem_movimentacao"
@@ -40,8 +43,11 @@ export const PENDENCIA_TIPO_LABEL: Record<PendenciaTipo, string> = {
   checkin_nao_respondido: "Check-in sem resposta",
   checkin_3_dias_pendente: "Check-in de 3 dias (pós-plano)",
   checkin_7_dias_pendente: "Check-in de 7 dias (pós-plano)",
+  reconsulta_a_confirmar: "Reconsulta a confirmar",
   plano_proximo_fim: "Plano perto do fim",
   plano_finalizado: "Plano finalizado",
+  renovacao_proposta_pendente: "Proposta de renovação pendente",
+  reativacao_pendente: "Reativação pendente",
   pagamento_pendente: "Pagamento pendente",
   aguardando_plano_alimentar: "Aguardando plano alimentar",
   sem_movimentacao: "Sem movimentação no Fluxo",
@@ -63,8 +69,11 @@ export const PENDENCIA_MENSAGEM_SUGERIDA: Partial<Record<PendenciaTipo, string>>
   checkin_nao_respondido: "lembrete_checkin",
   checkin_3_dias_pendente: "checkin_3_dias",
   checkin_7_dias_pendente: "checkin_7_dias",
+  reconsulta_a_confirmar: "confirmar_reconsulta",
   plano_proximo_fim: "renovacao_plano",
   plano_finalizado: "renovacao_plano",
+  renovacao_proposta_pendente: "proposta_renovacao",
+  reativacao_pendente: "reativacao_paciente",
   pagamento_pendente: "cobranca_pagamento",
   contato_necessario: "reativacao_paciente",
 };
@@ -76,7 +85,10 @@ export type PendenciaAcaoDireta =
   | "enviar_checkin"
   | "concluir_tarefa"
   | "avancar_checkin_3_dias"
-  | "avancar_checkin_7_dias";
+  | "avancar_checkin_7_dias"
+  | "avancar_reconsulta"
+  | "avancar_proposta_renovacao"
+  | "avancar_reativacao";
 
 export const PENDENCIA_ACAO_DIRETA: Partial<Record<PendenciaTipo, PendenciaAcaoDireta>> = {
   consulta_nao_confirmada: "confirmar_consulta",
@@ -84,6 +96,9 @@ export const PENDENCIA_ACAO_DIRETA: Partial<Record<PendenciaTipo, PendenciaAcaoD
   tarefa_vencida: "concluir_tarefa",
   checkin_3_dias_pendente: "avancar_checkin_3_dias",
   checkin_7_dias_pendente: "avancar_checkin_7_dias",
+  reconsulta_a_confirmar: "avancar_reconsulta",
+  renovacao_proposta_pendente: "avancar_proposta_renovacao",
+  reativacao_pendente: "avancar_reativacao",
 };
 
 export interface PendenciaCandidata {
@@ -109,6 +124,9 @@ export interface DetectarPendenciasInput {
 const SEM_MOVIMENTACAO_DIAS = 30;
 const CHECKIN_3_DIAS = 3;
 const CHECKIN_7_DIAS_APOS_ETAPA_3 = 4; // + os 3 dias já passados = ~7 dias desde a entrega do plano
+const RECONSULTA_DIAS_APOS_CHECKIN_7 = 10; // dias em "10_checkin_7_dias" sem reconsulta marcada
+const RENOVACAO_PROPOSTA_DIAS = 7; // dias em "12_renovacao_30_dias" antes de propor renovação
+const RENOVACAO_REATIVACAO_DIAS = 23; // dias em "13_proposta_renovacao" antes de escalar (7 + 23 = ~30 dias do fim do plano)
 
 function horasAteConsulta(dataIso: string | null, hoje: Date): number | null {
   if (!dataIso) return null;
@@ -201,8 +219,44 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
         });
       }
 
-      // Plano.
-      if (stats.planoFinalizado) {
+      // `fluxo_updated_at` marca desde quando o paciente está na etapa
+      // atual do Fluxo — cada avanço de etapa reinicia essa contagem.
+      // Usado tanto pelo funil de renovação quanto pelos check-ins abaixo.
+      const diasNaEtapa = diasDesde(paciente.fluxo_updated_at, hoje);
+
+      // Plano — funil de renovação. Consulta com restantes=0 já avança o
+      // Fluxo automaticamente para "12_renovacao_30_dias" (ver
+      // updateConsultaStatusAction / PATCH /api/agenda), então a etapa em
+      // si é quem dita a escalada: 0-7 dias = renovação inicial, 7-30 dias
+      // = proposta de renovação, 30+ dias = reativação pendente.
+      if (paciente.fluxo_etapa === "13_proposta_renovacao") {
+        if (diasNaEtapa !== null && diasNaEtapa >= RENOVACAO_REATIVACAO_DIAS) {
+          candidatas.push({
+            tipo: "reativacao_pendente",
+            pacienteId: paciente.id,
+            motivo: `Proposta de renovação enviada há ${diasNaEtapa} dias sem resposta. Hora de tentar reativar.`,
+            prioridade: "alta",
+          });
+        }
+      } else if (paciente.fluxo_etapa === "12_renovacao_30_dias") {
+        if (diasNaEtapa !== null && diasNaEtapa >= RENOVACAO_PROPOSTA_DIAS) {
+          candidatas.push({
+            tipo: "renovacao_proposta_pendente",
+            pacienteId: paciente.id,
+            motivo: `${paciente.plano ?? "Plano"} finalizado há ${diasNaEtapa} dias sem renovação. Hora de mandar a proposta.`,
+            prioridade: "alta",
+          });
+        } else {
+          candidatas.push({
+            tipo: "plano_finalizado",
+            pacienteId: paciente.id,
+            motivo: `${paciente.plano ?? "Plano"} finalizado (${stats.realizadas}/${paciente.consultas_incluidas} consultas). Renovação necessária.`,
+            prioridade: "alta",
+          });
+        }
+      } else if (stats.planoFinalizado) {
+        // Caso de borda: restantes=0 mas o Fluxo não está na etapa de
+        // renovação (dado legado, ou avanço manual) — ainda sinaliza.
         candidatas.push({
           tipo: "plano_finalizado",
           pacienteId: paciente.id,
@@ -266,9 +320,6 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
       }
 
       // Check-ins de acompanhamento pós-entrega do plano (3 e 7 dias).
-      // `fluxo_updated_at` marca desde quando o paciente está na etapa
-      // atual — cada envio avança a etapa e reinicia essa contagem.
-      const diasNaEtapa = diasDesde(paciente.fluxo_updated_at, hoje);
       if (paciente.fluxo_etapa === "08_plano_entregue" && diasNaEtapa !== null && diasNaEtapa >= CHECKIN_3_DIAS) {
         candidatas.push({
           tipo: "checkin_3_dias_pendente",
@@ -285,6 +336,22 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
           tipo: "checkin_7_dias_pendente",
           pacienteId: paciente.id,
           motivo: "Uma semana após a entrega do plano — hora do check-in de 7 dias.",
+          prioridade: "media",
+        });
+      } else if (
+        paciente.fluxo_etapa === "10_checkin_7_dias" &&
+        diasNaEtapa !== null &&
+        diasNaEtapa >= RECONSULTA_DIAS_APOS_CHECKIN_7 &&
+        stats.restantes > 0 &&
+        !temProxima
+      ) {
+        // Ainda dentro do plano (restam consultas), check-ins já feitos e
+        // nenhuma próxima consulta marcada — hora de lembrar de agendar a
+        // reconsulta antes que o plano acabe sem acompanhamento.
+        candidatas.push({
+          tipo: "reconsulta_a_confirmar",
+          pacienteId: paciente.id,
+          motivo: `${diasNaEtapa} dias desde o check-in de 7 dias e ainda sem a próxima consulta marcada.`,
           prioridade: "media",
         });
       }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONSULTA_STATUS } from "@/lib/clara/consultas";
+import { CONSULTA_STATUS, computeConsultasStats } from "@/lib/clara/consultas";
 import { parseAgendaDescription, onlyDigits } from "@/lib/agenda/parse-description";
 
 export const dynamic = "force-dynamic";
@@ -179,10 +179,21 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.status === "realizada" && authId) {
-      // Consulta concluída avança direto para "montar plano" — é a
-      // próxima ação de verdade, e gera pendência automática pra Clara.
+      // Consulta concluída avança o Fluxo automaticamente — para "montar
+      // plano" (próxima ação de verdade, gera pendência pra Clara) ou,
+      // se era a última consulta do plano, direto para o funil de renovação.
+      const [{ data: paciente }, { data: consultasDoPaciente }] = await Promise.all([
+        admin
+          .from("pacientes")
+          .select("consultas_incluidas, consultas_realizadas_iniciais")
+          .eq("auth_id", authId)
+          .maybeSingle(),
+        admin.from("consultas").select("status").eq("auth_id", authId),
+      ]);
+      const restantes = paciente ? computeConsultasStats(paciente, consultasDoPaciente ?? []).restantes : 1;
+
       await admin.from("pacientes").update({
-        fluxo_etapa: "06_1_montar_plano",
+        fluxo_etapa: restantes === 0 ? "12_renovacao_30_dias" : "06_1_montar_plano",
         fluxo_updated_at: new Date().toISOString(),
       }).eq("auth_id", authId);
     }

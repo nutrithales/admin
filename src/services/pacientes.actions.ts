@@ -261,12 +261,27 @@ export async function changePacientePlanoAction(
     return { success: false, message: "Informe uma quantidade válida de consultas realizadas." };
   }
 
+  // Se o paciente estava no funil de renovação (fim do plano anterior), a
+  // troca de plano é a própria renovação — avança o Fluxo para "renovado".
+  const { data: pacienteAtual } = await supabase
+    .from("pacientes")
+    .select("fluxo_etapa")
+    .eq("id", id)
+    .maybeSingle();
+  const emFunilDeRenovacao =
+    pacienteAtual?.fluxo_etapa === "12_renovacao_30_dias" ||
+    pacienteAtual?.fluxo_etapa === "13_proposta_renovacao" ||
+    pacienteAtual?.fluxo_etapa === "15_reativacao_pendente";
+
   const { error } = await supabase
     .from("pacientes")
     .update({
       plano,
       consultas_incluidas: consultasIncluidas,
       consultas_realizadas_iniciais: consultasRealizadasIniciais,
+      ...(emFunilDeRenovacao
+        ? { fluxo_etapa: "16_renovado" as const, fluxo_updated_at: new Date().toISOString() }
+        : {}),
     })
     .eq("id", id);
   if (error) return { success: false, message: `Erro ao alterar plano: ${error.message}` };
