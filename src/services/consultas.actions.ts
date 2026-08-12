@@ -5,7 +5,7 @@ import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createClient } from "@/lib/supabase/server";
 import { consultaSchema, type ConsultaFormValues } from "@/utils/validation/consulta";
 import type { ActionResult } from "@/services/pacientes.actions";
-import type { ConsultaStatus } from "@/lib/clara/consultas";
+import { computeConsultasStats, type ConsultaStatus } from "@/lib/clara/consultas";
 import { syncPendencias } from "@/services/pendencias.actions";
 
 export async function createConsultaAction(values: ConsultaFormValues): Promise<ActionResult> {
@@ -100,11 +100,23 @@ export async function updateConsultaStatusAction(
     .maybeSingle();
   if (error) return { success: false, message: `Erro ao atualizar consulta: ${error.message}` };
 
-  // Consulta concluída avança automaticamente para "montar plano" no
-  // Fluxo — é a próxima ação de verdade, e gera pendência pra Clara.
+  // Consulta concluída avança automaticamente o Fluxo — para "montar
+  // plano" (é a próxima ação de verdade e gera pendência pra Clara) ou,
+  // se essa era a última consulta incluída no plano, direto para o
+  // funil de renovação.
   if (status === "realizada" && updated?.auth_id) {
+    const [{ data: paciente }, { data: consultasDoPaciente }] = await Promise.all([
+      supabase
+        .from("pacientes")
+        .select("consultas_incluidas, consultas_realizadas_iniciais")
+        .eq("auth_id", updated.auth_id)
+        .maybeSingle(),
+      supabase.from("consultas").select("status").eq("auth_id", updated.auth_id),
+    ]);
+    const restantes = paciente ? computeConsultasStats(paciente, consultasDoPaciente ?? []).restantes : 1;
+
     await supabase.from("pacientes").update({
-      fluxo_etapa: "06_1_montar_plano",
+      fluxo_etapa: restantes === 0 ? "12_renovacao_30_dias" : "06_1_montar_plano",
       fluxo_updated_at: new Date().toISOString(),
     }).eq("auth_id", updated.auth_id);
   }

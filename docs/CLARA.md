@@ -125,9 +125,48 @@ observações administrativas separado, para não duplicar),
 `fluxo_proxima_acao_em`, `fluxo_updated_at`. O webhook de agendamento
 (`src/app/api/agenda/webhook/route.ts`), o `PATCH` da agenda
 (`src/app/api/agenda/route.ts`) e `updateConsultaStatusAction`
-(cadastro manual de consultas) já avançam `fluxo_etapa` automaticamente
-(novo lead → `04_agendado`; consulta concluída → `06_1_montar_plano`,
-que já entra como pendência "Aguardando plano alimentar" pra Clara).
+(cadastro manual de consultas) já avançam `fluxo_etapa` automaticamente:
+novo lead → `04_agendado`; consulta marcada como "realizada" →
+`06_1_montar_plano` (se ainda restam consultas no plano — entra como
+pendência "Aguardando plano alimentar" pra Clara) **ou** direto para
+`12_renovacao_30_dias` quando essa era a última consulta incluída no
+plano (`computeConsultasStats(...).restantes === 0`), iniciando o funil
+de renovação descrito abaixo.
+
+### Funil de renovação e reconsulta (automação sobre o Fluxo)
+
+Duas cadeias de pendência automática, construídas em cima das etapas que
+já existiam no Fluxo (`12_renovacao_30_dias` → `13_proposta_renovacao` →
+`15_reativacao_pendente` → `16_renovado`, e `11_confirmar_reconsulta`) —
+nenhuma etapa nova foi criada, só a leitura do tempo parado em cada uma
+(`fluxo_updated_at`), no mesmo padrão já usado pelos check-ins de 3/7
+dias:
+
+- **Fim do plano → renovação** (`pendencias-engine.ts`): ao entrar em
+  `12_renovacao_30_dias`, pendência `plano_finalizado` (mensagem
+  "Renovação de plano") pelos primeiros 7 dias; depois de 7 dias sem
+  avançar, escala para `renovacao_proposta_pendente` (mensagem "Proposta
+  de renovação", avança para `13_proposta_renovacao`); depois de mais 23
+  dias nessa etapa (~30 dias desde o fim do plano) sem resposta, escala
+  para `reativacao_pendente` (reaproveita a mensagem "Reativação de
+  paciente", avança para `15_reativacao_pendente` — última etapa
+  automática; dali em diante é acompanhamento manual). Quando o
+  administrador efetivamente troca o plano do paciente
+  (`changePacientePlanoAction`) enquanto ele está em qualquer uma dessas
+  três etapas, o Fluxo avança sozinho para `16_renovado`.
+- **Reconsulta no meio do plano**: se o paciente ainda tem consultas
+  restantes (`restantes > 0`), já passou pelo check-in de 7 dias
+  (`10_checkin_7_dias`) e ficou 10 dias nessa etapa sem nenhuma consulta
+  futura marcada, gera pendência `reconsulta_a_confirmar` (mensagem
+  "Confirmar reconsulta", avança para `11_confirmar_reconsulta` ao
+  clicar). Evita que o acompanhamento pare no meio do plano só porque
+  ninguém marcou a próxima consulta.
+
+Constantes de prazo em `pendencias-engine.ts`:
+`RENOVACAO_PROPOSTA_DIAS` (7), `RENOVACAO_REATIVACAO_DIAS` (23),
+`RECONSULTA_DIAS_APOS_CHECKIN_7` (10). Modelos de mensagem novos
+(`proposta_renovacao`, `confirmar_reconsulta`) em
+`20260812150000_mensagens_renovacao_reconsulta.sql`.
 
 O que a Clara **adicionou** por cima (aditivo — nenhuma coluna existente
 foi tocada): a tabela `fluxo_movimentacoes`, que não existia — histórico
