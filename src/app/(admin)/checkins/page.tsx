@@ -19,9 +19,9 @@ export default async function CheckinsPage() {
     },
     {
       key: "semana",
-      header: "Semana",
+      header: "Data",
       sortValue: (c) => c.semana ?? "",
-      render: (c) => (c.semana ? new Date(c.semana).toLocaleDateString("pt-BR") : "—"),
+      render: (c) => (c.semana ? new Date(`${c.semana}T12:00:00`).toLocaleDateString("pt-BR") : "—"),
     },
     {
       key: "resumo",
@@ -34,14 +34,24 @@ export default async function CheckinsPage() {
     },
     {
       key: "pontuacao",
-      header: "Pontuação",
+      header: "Aderência",
       sortValue: (c) => c.pontuacao ?? 0,
-      render: (c) => c.pontuacao ?? <span className="text-muted-light">—</span>,
+      render: (c) => c.pontuacao != null ? `${c.pontuacao}%` : <span className="text-muted-light">—</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (c) => <Badge tone={c.status === "respondido" ? "brand" : "muted"}>{c.status}</Badge>,
     },
     {
       key: "origem",
       header: "Origem",
-      render: (c) => <Badge tone={c.origem === "liveclin" ? "brand" : "muted"}>{c.origem}</Badge>,
+      render: (c) => <Badge tone={c.origem === "whatsapp" ? "brand" : "muted"}>{c.origem === "whatsapp" ? "WhatsApp" : c.origem}</Badge>,
+    },
+    {
+      key: "revisado",
+      header: "Revisão",
+      render: (c) => <Badge tone={c.revisado ? "muted" : "warning"}>{c.revisado ? "Revisado" : "Pendente"}</Badge>,
     },
   ];
 
@@ -49,14 +59,14 @@ export default async function CheckinsPage() {
     <div>
       <PageHeader
         title="Check-ins"
-        description="Estrutura preparada para futura integração com o LiveClin. A integração ainda não está ativa."
+        description="Acompanhe os check-ins recebidos pelo sistema, incluindo respostas enviadas pelos formulários do WhatsApp."
       />
 
       {checkins.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
           title="Nenhum check-in registrado"
-          description="Quando a integração com o LiveClin for ativada, os check-ins dos pacientes aparecerão aqui automaticamente."
+          description="Envie o Check-in Quinzenal pela aba Formulários. Assim que o paciente responder, o resultado aparecerá aqui automaticamente."
         />
       ) : (
         <DataTable
