@@ -5,6 +5,10 @@ import type { Database } from "@/types/database.types";
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
+  // Temporary, high-entropy one-time administrator password reset. The API
+  // validates the token server-side and invalidates it after successful use.
+  "/redefinir-admin",
+  "/api/auth/admin-reset",
   "/paciente/login",
   // Public endpoint used by the administrative login screen to request a
   // password-reset email before an authenticated session exists.
