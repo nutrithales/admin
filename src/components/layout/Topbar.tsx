@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { Menu, LogOut, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 
 export interface TopbarProps {
@@ -13,7 +14,7 @@ export interface TopbarProps {
   adminPhotoUrl: string | null;
 }
 
-export function Topbar({ onOpenMobileMenu, adminName, adminEmail, adminPhotoUrl }: TopbarProps) {
+export function Topbar({ onOpenMobileMenu, adminName, adminEmail }: TopbarProps) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -22,13 +23,6 @@ export function Topbar({ onOpenMobileMenu, adminName, adminEmail, adminPhotoUrl 
     router.push("/login");
     router.refresh();
   }
-
-  const initials = adminName
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur-md sm:px-6">
@@ -44,19 +38,15 @@ export function Topbar({ onOpenMobileMenu, adminName, adminEmail, adminPhotoUrl 
 
       <Dropdown
         trigger={
-          <button className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-bg-alt">
-            {adminPhotoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
+          <button className="flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-3 transition-colors hover:bg-bg-alt">
+            <span className="flex h-9 min-w-11 items-center justify-center rounded-lg bg-bg-alt px-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={adminPhotoUrl}
-                alt={adminName}
-                className="size-8 rounded-full object-cover"
+                src={BRAND_LOGO_DATA_URI}
+                alt="Thales Rosa Nutricionista"
+                className="h-8 w-auto object-contain"
               />
-            ) : (
-              <span className="flex size-8 items-center justify-center rounded-full bg-brand text-xs font-bold text-ink-deep">
-                {initials || <UserIcon className="size-4" />}
-              </span>
-            )}
+            </span>
             <span className="hidden text-sm font-semibold text-ink sm:block">{adminName}</span>
           </button>
         }
