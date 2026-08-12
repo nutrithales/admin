@@ -225,6 +225,78 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
   };
 }
 
+export interface BulkCredentialsResult {
+  success: boolean;
+  message: string;
+  sent: number;
+  failed: { nome: string; email: string; error: string }[];
+}
+
+/** Gera uma nova senha e reenvia as credenciais por e-mail para vários
+ * pacientes de uma vez (mesma lógica de `resetPacientePasswordAction`, em
+ * lote). Usado no painel para disparar o e-mail de acesso de pacientes
+ * recém-importados sem precisar abrir um por um. */
+export async function sendBulkCredentialsAction(ids: string[]): Promise<BulkCredentialsResult> {
+  await assertAdmin();
+  if (ids.length === 0) {
+    return { success: false, message: "Nenhum paciente selecionado.", sent: 0, failed: [] };
+  }
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const { data: selecionados, error: fetchError } = await supabase
+    .from("pacientes")
+    .select("auth_id, email, nome")
+    .in("id", ids);
+
+  if (fetchError || !selecionados) {
+    return {
+      success: false,
+      message: `Erro ao buscar pacientes: ${fetchError?.message ?? "erro desconhecido"}.`,
+      sent: 0,
+      failed: [],
+    };
+  }
+
+  let sent = 0;
+  const failed: { nome: string; email: string; error: string }[] = [];
+
+  for (const p of selecionados) {
+    const nome = p.nome ?? "";
+    const email = p.email ?? "";
+    if (!p.auth_id || !email) {
+      failed.push({ nome, email, error: "sem acesso configurado" });
+      continue;
+    }
+
+    const password = generateTemporaryPassword();
+    const { error: updateError } = await admin.auth.admin.updateUserById(p.auth_id, { password });
+    if (updateError) {
+      failed.push({ nome, email, error: updateError.message });
+      continue;
+    }
+
+    const emailResult = await sendPatientCredentialsEmail({ to: email, nome, password });
+    if (!emailResult.ok) {
+      failed.push({ nome, email, error: emailResult.error ?? "falha ao enviar e-mail" });
+      continue;
+    }
+
+    sent++;
+  }
+
+  return {
+    success: failed.length === 0,
+    message:
+      failed.length === 0
+        ? `${sent} e-mail(s) de credenciais enviados com sucesso.`
+        : `${sent} enviado(s), ${failed.length} falharam: ${failed.map((f) => f.nome || f.email).join(", ")}.`,
+    sent,
+    failed,
+  };
+}
+
 /** Observações do Fluxo (recados de agenda/secretaria ligados ao estágio
  * atual do paciente no funil já existente) — nunca misturadas com
  * prontuário clínico, que fica em telas separadas. Reaproveita

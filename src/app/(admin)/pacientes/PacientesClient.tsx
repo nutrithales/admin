@@ -9,6 +9,7 @@ import {
   Ban,
   CheckCircle2,
   KeyRound,
+  Mail,
   Wallet,
   Trash2,
   Users,
@@ -26,6 +27,7 @@ import type { PacienteComConsultas } from "@/services/pacientes.queries";
 import {
   deletePacienteAction,
   resetPacientePasswordAction,
+  sendBulkCredentialsAction,
   setPacienteStatusAction,
 } from "@/services/pacientes.actions";
 import { PacienteFormModal } from "./PacienteFormModal";
@@ -46,6 +48,8 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
   const [resetPassword, setResetPassword] = useState<{ nome: string; password: string } | null>(
     null,
   );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sendingBulk, setSendingBulk] = useState(false);
 
   useEffect(() => setPacientes(initialPacientes), [initialPacientes]);
 
@@ -79,6 +83,22 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       setResetPassword({ nome: p.nome ?? "paciente", password: result.password });
     } else {
       toast({ kind: "error", title: "Erro", description: result.message });
+    }
+  }
+
+  async function handleBulkSendCredentials() {
+    if (selected.size === 0) return;
+    setSendingBulk(true);
+    const result = await sendBulkCredentialsAction(Array.from(selected));
+    setSendingBulk(false);
+    toast({
+      kind: result.success ? "success" : result.sent > 0 ? "warning" : "error",
+      title: result.success ? "Credenciais enviadas" : "Envio concluído com falhas",
+      description: result.message,
+    });
+    if (result.sent > 0) {
+      setSelected(new Set());
+      refresh();
     }
   }
 
@@ -249,6 +269,16 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
           rowKey={(p) => p.id}
           searchPlaceholder="Pesquisar por nome, e-mail ou CPF..."
           searchFields={(p) => `${p.nome ?? ""} ${p.email ?? ""} ${p.cpf ?? ""}`}
+          selectedKeys={selected}
+          onSelectedKeysChange={setSelected}
+          toolbarRight={
+            selected.size > 0 ? (
+              <Button variant="secondary" onClick={handleBulkSendCredentials} loading={sendingBulk}>
+                <Mail className="size-4" />
+                {`Enviar credenciais (${selected.size})`}
+              </Button>
+            ) : undefined
+          }
         />
       )}
 

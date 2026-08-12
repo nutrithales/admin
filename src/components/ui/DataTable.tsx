@@ -22,6 +22,11 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   rowKey: (row: T) => string;
   toolbarRight?: React.ReactNode;
+  /** Quando ambos são passados, exibe uma coluna de checkbox para seleção
+   * em massa. A seleção é controlada pelo componente pai para sobreviver a
+   * busca/paginação. */
+  selectedKeys?: Set<string>;
+  onSelectedKeysChange?: (keys: Set<string>) => void;
 }
 
 export function DataTable<T>({
@@ -33,6 +38,8 @@ export function DataTable<T>({
   emptyMessage = "Nenhum registro encontrado.",
   rowKey,
   toolbarRight,
+  selectedKeys,
+  onSelectedKeysChange,
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
@@ -73,6 +80,29 @@ export function DataTable<T>({
     });
   }
 
+  const selectable = !!selectedKeys && !!onSelectedKeysChange;
+  const pageKeys = pageRows.map(rowKey);
+  const allPageSelected = selectable && pageKeys.length > 0 && pageKeys.every((k) => selectedKeys!.has(k));
+
+  function toggleRow(key: string) {
+    if (!selectedKeys || !onSelectedKeysChange) return;
+    const next = new Set(selectedKeys);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onSelectedKeysChange(next);
+  }
+
+  function togglePage() {
+    if (!selectedKeys || !onSelectedKeysChange) return;
+    const next = new Set(selectedKeys);
+    if (allPageSelected) {
+      for (const k of pageKeys) next.delete(k);
+    } else {
+      for (const k of pageKeys) next.add(k);
+    }
+    onSelectedKeysChange(next);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -97,6 +127,17 @@ export function DataTable<T>({
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-bg-alt-2">
+              {selectable && (
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={togglePage}
+                    aria-label="Selecionar todos os registros da página"
+                    className="size-4 rounded border-border"
+                  />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -120,7 +161,10 @@ export function DataTable<T>({
           <tbody>
             {pageRows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-muted">
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-4 py-12 text-center text-muted"
+                >
                   {emptyMessage}
                 </td>
               </tr>
@@ -130,6 +174,17 @@ export function DataTable<T>({
                 key={rowKey(row)}
                 className="border-b border-border last:border-0 transition-colors hover:bg-bg-alt-2"
               >
+                {selectable && (
+                  <td className="px-4 py-3.5 align-middle">
+                    <input
+                      type="checkbox"
+                      checked={selectedKeys!.has(rowKey(row))}
+                      onChange={() => toggleRow(rowKey(row))}
+                      aria-label="Selecionar registro"
+                      className="size-4 rounded border-border"
+                    />
+                  </td>
+                )}
                 {columns.map((col) => (
                   <td key={col.key} className={cn("px-4 py-3.5 align-middle text-ink", col.className)}>
                     {col.render(row)}
