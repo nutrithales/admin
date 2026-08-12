@@ -68,3 +68,6 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
+// Esta rota é executada dinamicamente para gerar sempre um link novo.
+export const dynamic = "force-dynamic";
