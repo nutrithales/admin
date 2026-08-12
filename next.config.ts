@@ -1,20 +1,10 @@
 import type { NextConfig } from "next";
 
-const supabaseHostname = (() => {
-  try {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL
-      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-      : undefined;
-  } catch {
-    return undefined;
-  }
-})();
-
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: supabaseHostname
-      ? [{ protocol: "https", hostname: supabaseHostname }]
-      : [],
+    remotePatterns: [
+      { protocol: "https", hostname: "xwihrxinweeadtcouhoo.supabase.co" },
+    ],
   },
   // Garante que os .otf da Galano sejam empacotados na função serverless
   // que exporta o PDF (src/lib/pdf/plano-alimentar.tsx lê os arquivos via
