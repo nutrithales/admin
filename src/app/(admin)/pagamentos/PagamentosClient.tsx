@@ -3,7 +3,8 @@ import { useMemo,useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft,ChevronRight,Copy,Plus,ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/Button"; import { Card,CardContent } from "@/components/ui/Card"; import { Input,Label,Textarea } from "@/components/ui/Input"; import { Modal } from "@/components/ui/Modal"; import { PageHeader } from "@/components/ui/PageHeader"; import { Select } from "@/components/ui/Select";
-import { SERVICOS,createPagamentoAction,toggleNotaAction,type ServicoKey } from "@/services/pagamentos";
+import { createPagamentoAction,toggleNotaAction } from "@/services/pagamentos";
+import { SERVICOS,type ServicoKey } from "@/lib/pagamentos/catalogo";
 const brl=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
 export function PagamentosClient({initialPagamentos,pacientes}:{initialPagamentos:any[];pacientes:any[]}){
  const router=useRouter(), now=new Date(); const [month,setMonth]=useState(new Date(now.getFullYear(),now.getMonth(),1)); const [open,setOpen]=useState(false); const [saving,setSaving]=useState(false); const [form,setForm]=useState({paciente_id:"",servico:"plano_essencial" as ServicoKey,valor:"",pago_em:new Date().toISOString().slice(0,10),forma_pagamento:"",observacoes:""});
