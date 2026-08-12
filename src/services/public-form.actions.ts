@@ -24,14 +24,8 @@ export async function responderFormularioAction(token: string, formData: FormDat
     .eq("token", token)
     .maybeSingle();
 
-  if (!envio || envio.status === "cancelado" || envio.status === "expirado") {
-    redirect(`/f/${token}?status=indisponivel`);
-  }
-
-  if (envio.respondido_em || envio.status === "respondido") {
-    redirect(`/f/${token}?status=respondido`);
-  }
-
+  if (!envio || envio.status === "cancelado" || envio.status === "expirado") redirect(`/f/${token}?status=indisponivel`);
+  if (envio.respondido_em || envio.status === "respondido") redirect(`/f/${token}?status=respondido`);
   if (new Date(envio.expira_em).getTime() < Date.now()) {
     await supabase.from("formulario_envios").update({ status: "expirado" }).eq("id", envio.id);
     redirect(`/f/${token}?status=expirado`);
@@ -51,12 +45,9 @@ export async function responderFormularioAction(token: string, formData: FormDat
 
   for (const pergunta of perguntas ?? []) {
     const bruto = formData.get(pergunta.chave);
-    if (pergunta.obrigatoria && (bruto === null || String(bruto).trim() === "")) {
-      redirect(`/f/${token}?erro=obrigatorio`);
-    }
+    if (pergunta.obrigatoria && (bruto === null || String(bruto).trim() === "")) redirect(`/f/${token}?erro=obrigatorio`);
 
     let scoreResposta: number | null = null;
-
     if (pergunta.tipo === "numero" || pergunta.tipo === "escala") {
       const numero = valueToNumber(bruto);
       respostas[pergunta.chave] = numero;
@@ -83,47 +74,41 @@ export async function responderFormularioAction(token: string, formData: FormDat
   const resumo = pontuacao !== null
     ? `Score do check-in: ${pontuacao}%.${feedback ? ` Feedback do paciente: ${feedback}` : ""}`
     : feedback || `Resposta recebida para ${envio.formulario.nome}.`;
-
   const agora = new Date().toISOString();
 
-  const { error: respostaError } = await supabase.from("formulario_respostas").insert({
+  const { data: resposta, error: respostaError } = await supabase.from("formulario_respostas").insert({
     envio_id: envio.id,
     respostas,
     pontuacao,
     resumo,
     requer_atencao: requerAtencao,
-  });
-
-  if (respostaError) {
-    redirect(`/f/${token}?erro=salvar`);
-  }
+  }).select("id").single();
+  if (respostaError) redirect(`/f/${token}?erro=salvar`);
 
   await supabase.from("formulario_envios").update({ status: "respondido", respondido_em: agora, updated_at: agora }).eq("id", envio.id);
 
   if (envio.formulario.tipo === "checkin" && envio.paciente?.auth_id) {
-    await supabase.from("checkins").insert({
+    const { data: checkin } = await supabase.from("checkins").insert({
       auth_id: envio.paciente.auth_id,
+      paciente_id: envio.paciente_id,
       semana: agora.slice(0, 10),
       resumo,
+      respostas,
       pontuacao,
       origem: "whatsapp",
       status: "respondido",
       enviado_em: null,
       respondido_em: agora,
       revisado: false,
-    });
+    }).select("id").single();
+
+    if (checkin?.id && resposta?.id) {
+      await supabase.from("formulario_respostas").update({ checkin_id: checkin.id }).eq("id", resposta.id);
+    }
   }
 
   if (requerAtencao) {
-    const existe = await supabase
-      .from("pendencias")
-      .select("id")
-      .eq("paciente_id", envio.paciente_id)
-      .eq("tipo", "checkin_atencao")
-      .eq("status", "pendente")
-      .limit(1)
-      .maybeSingle();
-
+    const existe = await supabase.from("pendencias").select("id").eq("paciente_id", envio.paciente_id).eq("tipo", "checkin_atencao").eq("status", "pendente").limit(1).maybeSingle();
     if (!existe.data) {
       await supabase.from("pendencias").insert({
         tipo: "checkin_atencao",
