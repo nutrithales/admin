@@ -595,6 +595,54 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          convertido_paciente_id: string | null
+          created_at: string
+          email: string | null
+          etapa: string
+          id: string
+          nome: string
+          observacoes: string | null
+          origem: string | null
+          plano_interesse: string | null
+          proxima_acao_em: string | null
+          telefone: string | null
+          updated_at: string
+          urgente: boolean
+        }
+        Insert: {
+          convertido_paciente_id?: string | null
+          created_at?: string
+          email?: string | null
+          etapa?: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          origem?: string | null
+          plano_interesse?: string | null
+          proxima_acao_em?: string | null
+          telefone?: string | null
+          updated_at?: string
+          urgente?: boolean
+        }
+        Update: {
+          convertido_paciente_id?: string | null
+          created_at?: string
+          email?: string | null
+          etapa?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          origem?: string | null
+          plano_interesse?: string | null
+          proxima_acao_em?: string | null
+          telefone?: string | null
+          updated_at?: string
+          urgente?: boolean
+        }
+        Relationships: []
+      }
       pacientes: {
         Row: {
           altura_cm: number | null
