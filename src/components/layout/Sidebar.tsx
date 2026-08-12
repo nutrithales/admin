@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
+import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import { cn } from "@/utils/cn";
 import { navItems } from "./nav-items";
 
@@ -29,14 +30,17 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between px-6 py-5">
-          <Link href="/" className="flex items-center gap-2.5" onClick={onCloseMobile}>
-            <span className="flex size-9 items-center justify-center rounded-full bg-brand text-sm font-black text-ink-deep">
-              NT
-            </span>
-            <span className="text-[15px] font-bold leading-tight text-ink">
-              Nutri Thales Rosa
-              <span className="block text-xs font-medium text-muted">Painel administrativo</span>
+        <div className="flex items-center justify-between px-5 py-4">
+          <Link href="/" className="flex min-w-0 items-center gap-3" onClick={onCloseMobile}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={BRAND_LOGO_DATA_URI}
+              alt="Thales Rosa Nutricionista"
+              className="h-12 w-auto shrink-0 object-contain"
+            />
+            <span className="min-w-0 text-[14px] font-bold leading-tight text-ink">
+              Painel administrativo
+              <span className="mt-0.5 block text-xs font-medium text-muted">Nutri Thales Rosa</span>
             </span>
           </Link>
           <button onClick={onCloseMobile} className="text-muted hover:text-ink lg:hidden" aria-label="Fechar menu">
