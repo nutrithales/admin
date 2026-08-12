@@ -1,5 +1,6 @@
 "use client";
 
+// A recuperação de senha é processada pela rota segura do servidor.
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Lock, Mail, ShieldAlert } from "lucide-react";
