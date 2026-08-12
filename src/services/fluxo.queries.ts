@@ -13,7 +13,9 @@ export type FluxoPaciente = Tables<"pacientes"> & {
 export async function listFluxoPacientes(): Promise<FluxoPaciente[]> {
   const supabase = await createClient();
   const [{ data: patients, error }, { data: consultations }] = await Promise.all([
-    supabase.from("pacientes").select("*").order("fluxo_updated_at", { ascending: false }),
+    supabase.from("pacientes").select("*")
+      .not("fluxo_etapa", "in", '("01_lead_recebido","02_qualificacao","03_planos_apresentados","follow_up_1","follow_up_2","follow_up_3")')
+      .order("fluxo_updated_at", { ascending: false }),
     supabase.from("consultas").select("auth_id, data, status, modalidade").order("data", { ascending: false }),
   ]);
 
