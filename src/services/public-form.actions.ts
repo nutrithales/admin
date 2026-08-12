@@ -9,11 +9,18 @@ function valueToNumber(value: FormDataEntryValue | null) {
   return Number.isFinite(n) ? n : null;
 }
 
+function optionScore(opcoes: unknown, value: string) {
+  if (!Array.isArray(opcoes)) return null;
+  const option = opcoes.find((item: any) => String(item?.value) === value) as any;
+  const score = Number(option?.score);
+  return Number.isFinite(score) ? score : null;
+}
+
 export async function responderFormularioAction(token: string, formData: FormData) {
   const supabase = createAdminClient() as any;
   const { data: envio } = await supabase
     .from("formulario_envios")
-    .select("id,status,expira_em,paciente_id, formulario:formularios(id,nome,tipo), paciente:pacientes(id,auth_id,nome)")
+    .select("id,status,expira_em,paciente_id, formulario:formularios(id,nome,tipo,exibir_score), paciente:pacientes(id,auth_id,nome)")
     .eq("token", token)
     .maybeSingle();
 
@@ -32,12 +39,14 @@ export async function responderFormularioAction(token: string, formData: FormDat
 
   const { data: perguntas } = await supabase
     .from("formulario_perguntas")
-    .select("chave,titulo,tipo,obrigatoria,minimo,maximo")
+    .select("chave,titulo,tipo,obrigatoria,minimo,maximo,opcoes,exibir,peso,pontuavel")
     .eq("formulario_id", envio.formulario.id)
+    .eq("exibir", true)
     .order("ordem", { ascending: true });
 
   const respostas: Record<string, unknown> = {};
-  const notas: number[] = [];
+  let pontosObtidos = 0;
+  let pontosPossiveis = 0;
   let requerAtencao = false;
 
   for (const pergunta of perguntas ?? []) {
@@ -46,25 +55,34 @@ export async function responderFormularioAction(token: string, formData: FormDat
       redirect(`/f/${token}?erro=obrigatorio`);
     }
 
+    let scoreResposta: number | null = null;
+
     if (pergunta.tipo === "numero" || pergunta.tipo === "escala") {
       const numero = valueToNumber(bruto);
       respostas[pergunta.chave] = numero;
-      if (numero !== null) {
-        if (pergunta.tipo === "escala") notas.push(numero);
-        if (pergunta.tipo === "escala" && numero <= 2) requerAtencao = true;
-      }
+      if (numero !== null && pergunta.tipo === "escala") scoreResposta = numero;
     } else if (pergunta.tipo === "sim_nao") {
       respostas[pergunta.chave] = bruto === "sim";
     } else {
-      respostas[pergunta.chave] = bruto === null ? "" : String(bruto).trim();
+      const valor = bruto === null ? "" : String(bruto).trim();
+      respostas[pergunta.chave] = valor;
+      if (pergunta.tipo === "selecao") scoreResposta = optionScore(pergunta.opcoes, valor);
+    }
+
+    if (pergunta.pontuavel && scoreResposta !== null) {
+      const peso = Number(pergunta.peso ?? 0);
+      const pesoEfetivo = Number.isFinite(peso) ? peso : 0;
+      pontosObtidos += scoreResposta * pesoEfetivo;
+      pontosPossiveis += 5 * pesoEfetivo;
+      if (scoreResposta <= 2) requerAtencao = true;
     }
   }
 
-  const pontuacao = notas.length ? Math.round((notas.reduce((a, b) => a + b, 0) / notas.length) * 20) : null;
-  const observacao = typeof respostas.observacoes === "string" ? respostas.observacoes : "";
+  const pontuacao = pontosPossiveis > 0 ? Math.round((pontosObtidos / pontosPossiveis) * 100) : null;
+  const feedback = typeof respostas.feedback === "string" ? respostas.feedback : "";
   const resumo = pontuacao !== null
-    ? `Aderência média do check-in: ${pontuacao}%.${observacao ? ` Observação do paciente: ${observacao}` : ""}`
-    : observacao || `Resposta recebida para ${envio.formulario.nome}.`;
+    ? `Score do check-in: ${pontuacao}%.${feedback ? ` Feedback do paciente: ${feedback}` : ""}`
+    : feedback || `Resposta recebida para ${envio.formulario.nome}.`;
 
   const agora = new Date().toISOString();
 
@@ -110,7 +128,7 @@ export async function responderFormularioAction(token: string, formData: FormDat
       await supabase.from("pendencias").insert({
         tipo: "checkin_atencao",
         paciente_id: envio.paciente_id,
-        motivo: `Check-in de ${envio.paciente?.nome || "paciente"} possui resposta que merece atenção.`,
+        motivo: `Check-in de ${envio.paciente?.nome || "paciente"} possui uma ou mais respostas com pontuação baixa.`,
         prioridade: "alta",
         status: "pendente",
       });
