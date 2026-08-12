@@ -14,6 +14,7 @@ import {
   Settings,
   Bot,
   Workflow,
+  ContactRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Clara", href: "/clara", icon: Bot },
   { label: "Pacientes", href: "/pacientes", icon: Users },
+  { label: "Leads", href: "/leads", icon: ContactRound },
   { label: "Fluxo", href: "/fluxo", icon: Workflow },
   { label: "Páginas Personalizadas", href: "/paginas-personalizadas", icon: AppWindow },
   { label: "Planos Alimentares", href: "/planos-alimentares", icon: UtensilsCrossed },
