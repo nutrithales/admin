@@ -11,6 +11,9 @@ const PUBLIC_PATHS = [
   "/redefinir-admin",
   "/api/auth/admin-reset",
   "/paciente/login",
+  // Formulários individuais enviados por WhatsApp. O token da URL identifica
+  // o envio e o acesso aos dados acontece apenas no servidor via service role.
+  "/f",
   // Public endpoint used by the administrative login screen to request a
   // password-reset email before an authenticated session exists.
   "/api/auth/recover",
