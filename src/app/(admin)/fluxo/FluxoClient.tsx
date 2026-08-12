@@ -118,7 +118,7 @@ export function FluxoClient({ initialPatients }: { initialPatients: FluxoPacient
   const visibleStages = group === "todos" ? FLOW_STAGES : FLOW_STAGES.filter((stage) => stage.group === group);
   const stats = {
     total: patients.length,
-    captacao: patients.filter((patient) => getFlowStage(patient.fluxo_etapa).group === "captação").length,
+    atendimento: patients.filter((patient) => getFlowStage(patient.fluxo_etapa).group === "atendimento").length,
     acompanhamento: patients.filter((patient) => getFlowStage(patient.fluxo_etapa).group === "acompanhamento").length,
     renovacao: patients.filter((patient) => getFlowStage(patient.fluxo_etapa).group === "renovação").length,
     urgentes: patients.filter((patient) => patient.fluxo_urgente).length,
@@ -165,11 +165,11 @@ export function FluxoClient({ initialPatients }: { initialPatients: FluxoPacient
 
   return (
     <div>
-      <PageHeader title="Fluxo de pacientes" description="Acompanhe cada paciente, da primeira conversa à renovação do plano." />
+      <PageHeader title="Fluxo de pacientes" description="Acompanhe cada paciente, do agendamento à renovação do plano." />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {([
-          ["Total no fluxo", stats.total, UsersRound], ["Captação", stats.captacao, UserRound],
+          ["Total no fluxo", stats.total, UsersRound], ["Atendimento", stats.atendimento, UserRound],
           ["Acompanhamento", stats.acompanhamento, CalendarClock], ["Renovação", stats.renovacao, Columns3],
           ["Urgentes", stats.urgentes, AlertTriangle],
         ] as [string, number, LucideIcon][]).map(([label, value, Icon]) => (
