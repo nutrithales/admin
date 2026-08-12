@@ -5,6 +5,8 @@ import { CheckinDetailClient } from "./CheckinDetailClient";
 
 export const metadata = { title: "Revisar Check-in" };
 
+const CHECKIN_GPT_URL = "https://chatgpt.com/g/g-6a7cafe17184819196aad68445c4c67c-assistentente-check-in-thales-rosa";
+
 export default async function CheckinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const numericId = Number(id);
@@ -13,7 +15,7 @@ export default async function CheckinDetailPage({ params }: { params: Promise<{ 
   const data = await getCheckinDetalhe(numericId);
   if (!data) notFound();
 
-  const chatgptUrl = process.env.NEXT_PUBLIC_CHATGPT_CHECKIN_URL || "https://chatgpt.com/";
+  const chatgptUrl = process.env.NEXT_PUBLIC_CHATGPT_CHECKIN_URL || CHECKIN_GPT_URL;
 
   return (
     <div>
