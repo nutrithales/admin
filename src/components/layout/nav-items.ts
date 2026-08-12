@@ -1,37 +1,14 @@
 import {
-  LayoutDashboard,
-  Users,
-  AppWindow,
-  UtensilsCrossed,
-  Apple,
-  ChefHat,
-  Salad,
-  ListChecks,
-  BookOpen,
-  CalendarClock,
-  ClipboardCheck,
-  Sparkles,
-  Settings,
-  Bot,
-  Workflow,
-  ContactRound,
-  FileText,
-  type LucideIcon,
+  LayoutDashboard, Users, AppWindow, UtensilsCrossed, Apple, ChefHat, Salad, ListChecks, BookOpen, CalendarClock, ClipboardCheck, Sparkles, Settings, Bot, Workflow, ContactRound, FileText, ReceiptText, type LucideIcon,
 } from "lucide-react";
-
-export interface NavItem {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-}
-
-// Navegação administrativa: Leads e pacientes têm fluxos independentes.
+export interface NavItem { label: string; href: string; icon: LucideIcon; }
 export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Clara", href: "/clara", icon: Bot },
   { label: "Pacientes", href: "/pacientes", icon: Users },
   { label: "Leads", href: "/leads", icon: ContactRound },
   { label: "Fluxo", href: "/fluxo", icon: Workflow },
+  { label: "Pagamentos", href: "/pagamentos", icon: ReceiptText },
   { label: "Páginas Personalizadas", href: "/paginas-personalizadas", icon: AppWindow },
   { label: "Planos Alimentares", href: "/planos-alimentares", icon: UtensilsCrossed },
   { label: "Alimentos", href: "/alimentos", icon: Apple },
