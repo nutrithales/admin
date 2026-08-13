@@ -24,3 +24,9 @@ export async function toggleNotaAction(id:string, nota_emitida:boolean) {
   if (error) return { success:false, message:error.message };
   revalidatePath("/pagamentos"); return { success:true };
 }
+export async function deletePagamentoAction(id:string) {
+  const supabase = await createClient();
+  const { error } = await (supabase as any).from("pagamentos").delete().eq("id",id);
+  if (error) return { success:false, message:error.message };
+  revalidatePath("/pagamentos"); return { success:true, message:"Lançamento excluído." };
+}
