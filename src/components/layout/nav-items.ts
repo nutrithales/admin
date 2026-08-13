@@ -4,7 +4,7 @@ import {
 export interface NavItem { label: string; href: string; icon: LucideIcon; }
 export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Clara", href: "/clara", icon: Bot },
+  { label: "Maria", href: "/clara", icon: Bot },
   { label: "Pacientes", href: "/pacientes", icon: Users },
   { label: "Leads", href: "/leads", icon: ContactRound },
   { label: "Fluxo", href: "/fluxo", icon: Workflow },
