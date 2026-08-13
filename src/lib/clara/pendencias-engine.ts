@@ -1,14 +1,9 @@
 import type { Tables } from "@/types/database.types";
-import { computeConsultasStats } from "@/lib/clara/consultas";
 import { checkinSituacao, diasDesde } from "@/lib/clara/checkins";
 import { getFlowStage, type FlowStageKey } from "@/lib/fluxo/stages";
+import { planEndDate } from "@/lib/agenda/plans";
 
-/** Etapas em que a consulta já aconteceu mas o plano ainda não foi
- * marcado como entregue — usado pela central de pendências. Uma
- * consulta concluída avança automaticamente para "06_1_montar_plano"
- * (ver PATCH /api/agenda e updateConsultaStatusAction). */
 const ETAPAS_AGUARDANDO_PLANO: readonly FlowStageKey[] = [
-  "06_consulta_realizada",
   "06_1_montar_plano",
   "07_pos_consulta_enviado",
 ];
@@ -58,10 +53,6 @@ export const PENDENCIA_TIPO_LABEL: Record<PendenciaTipo, string> = {
   tarefa_vencida: "Tarefa vencida",
 };
 
-/** Modelo de mensagem (chave em `mensagens_modelos`) sugerido para cada
- * tipo de pendência, quando fizer sentido resolver mandando uma
- * mensagem pronta pelo WhatsApp. A Clara só prepara e abre o WhatsApp
- * com o texto preenchido — quem revisa e manda é sempre uma pessoa. */
 export const PENDENCIA_MENSAGEM_SUGERIDA: Partial<Record<PendenciaTipo, string>> = {
   consulta_nao_confirmada: "confirmacao_consulta",
   sem_proxima_consulta: "novo_link_agendamento",
@@ -78,8 +69,6 @@ export const PENDENCIA_MENSAGEM_SUGERIDA: Partial<Record<PendenciaTipo, string>>
   contato_necessario: "reativacao_paciente",
 };
 
-/** Ação direta (sem mensagem) que já resolve o motivo da pendência de
- * verdade — em vez de só marcar a pendência como resolvida por fora. */
 export type PendenciaAcaoDireta =
   | "confirmar_consulta"
   | "enviar_checkin"
@@ -117,25 +106,32 @@ export interface DetectarPendenciasInput {
   checkins: Tables<"checkins">[];
   pagamentos: Tables<"pagamentos">[];
   tarefas: Tables<"tarefas">[];
-  ultimaMovimentacaoPorPaciente: Map<string, string>; // paciente_id -> created_at ISO
+  ultimaMovimentacaoPorPaciente: Map<string, string>;
   hoje?: Date;
 }
 
 const SEM_MOVIMENTACAO_DIAS = 30;
-const CHECKIN_3_DIAS = 3;
-const CHECKIN_7_DIAS_APOS_ETAPA_3 = 4; // + os 3 dias já passados = ~7 dias desde a entrega do plano
-const RECONSULTA_DIAS_APOS_CHECKIN_7 = 10; // dias em "10_checkin_7_dias" sem reconsulta marcada
-const RENOVACAO_PROPOSTA_DIAS = 7; // dias em "12_renovacao_30_dias" antes de propor renovação
-const RENOVACAO_REATIVACAO_DIAS = 23; // dias em "13_proposta_renovacao" antes de escalar (7 + 23 = ~30 dias do fim do plano)
+const MS_DIA = 24 * 60 * 60 * 1000;
+const ETAPAS_COM_PENDENCIA_DE_PRAZO_PROPRIA = new Set<string>([
+  "14_plano_encerrado",
+  "15_reativacao_pendente",
+]);
 
 function horasAteConsulta(dataIso: string | null, hoje: Date): number | null {
   if (!dataIso) return null;
   return (new Date(dataIso).getTime() - hoje.getTime()) / (1000 * 60 * 60);
 }
 
-/** Motor puro de detecção de pendências — recebe os dados já carregados do
- * banco e devolve candidatos. Não decide nada clínico, só sinaliza
- * situações administrativas que precisam de atenção humana. */
+function diasAte(data: Date, hoje: Date) {
+  return Math.ceil((data.getTime() - hoje.getTime()) / MS_DIA);
+}
+
+function prazoVenceu(dataIso: string | null | undefined, hoje: Date) {
+  if (!dataIso) return false;
+  const data = new Date(dataIso);
+  return !Number.isNaN(data.getTime()) && data <= hoje;
+}
+
 export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCandidata[] {
   const hoje = input.hoje ?? new Date();
   const candidatas: PendenciaCandidata[] = [];
@@ -165,9 +161,7 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
   for (const paciente of input.pacientes) {
     const ativo = paciente.status === "ativo";
     const consultasDoPaciente = consultasPorAuth.get(paciente.auth_id) ?? [];
-    const stats = computeConsultasStats(paciente, consultasDoPaciente);
 
-    // Consulta próxima ainda não confirmada (próximas 48h).
     for (const consulta of consultasDoPaciente) {
       if (consulta.status !== "agendada") continue;
       const horas = horasAteConsulta(consulta.data, hoje);
@@ -184,7 +178,6 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
     }
 
     if (ativo) {
-      // Sem próxima consulta agendada.
       const temProxima = consultasDoPaciente.some(
         (c) => (c.status === "agendada" || c.status === "confirmada") && c.data && new Date(c.data) >= hoje,
       );
@@ -197,7 +190,6 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
         });
       }
 
-      // Check-in.
       const ultimoCheckin = ultimoCheckinPorAuth.get(paciente.auth_id) ?? null;
       const situacao = checkinSituacao(ultimoCheckin, paciente.data_inicio, hoje);
       if (situacao === "pendente_envio") {
@@ -211,68 +203,47 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
         candidatas.push({
           tipo: "checkin_nao_respondido",
           pacienteId: paciente.id,
-          motivo:
-            situacao === "atrasado"
-              ? "Check-in enviado, resposta em atraso."
-              : "Check-in enviado, aguardando resposta.",
+          motivo: situacao === "atrasado" ? "Check-in enviado, resposta em atraso." : "Check-in enviado, aguardando resposta.",
           prioridade: situacao === "atrasado" ? "alta" : "baixa",
         });
       }
 
-      // `fluxo_updated_at` marca desde quando o paciente está na etapa
-      // atual do Fluxo — cada avanço de etapa reinicia essa contagem.
-      // Usado tanto pelo funil de renovação quanto pelos check-ins abaixo.
-      const diasNaEtapa = diasDesde(paciente.fluxo_updated_at, hoje);
-
-      // Plano — funil de renovação. Consulta com restantes=0 já avança o
-      // Fluxo automaticamente para "12_renovacao_30_dias" (ver
-      // updateConsultaStatusAction / PATCH /api/agenda), então a etapa em
-      // si é quem dita a escalada: 0-7 dias = renovação inicial, 7-30 dias
-      // = proposta de renovação, 30+ dias = reativação pendente.
-      if (paciente.fluxo_etapa === "13_proposta_renovacao") {
-        if (diasNaEtapa !== null && diasNaEtapa >= RENOVACAO_REATIVACAO_DIAS) {
-          candidatas.push({
-            tipo: "reativacao_pendente",
-            pacienteId: paciente.id,
-            motivo: `Proposta de renovação enviada há ${diasNaEtapa} dias sem resposta. Hora de tentar reativar.`,
-            prioridade: "alta",
-          });
-        }
-      } else if (paciente.fluxo_etapa === "12_renovacao_30_dias") {
-        if (diasNaEtapa !== null && diasNaEtapa >= RENOVACAO_PROPOSTA_DIAS) {
-          candidatas.push({
-            tipo: "renovacao_proposta_pendente",
-            pacienteId: paciente.id,
-            motivo: `${paciente.plano ?? "Plano"} finalizado há ${diasNaEtapa} dias sem renovação. Hora de mandar a proposta.`,
-            prioridade: "alta",
-          });
-        } else {
-          candidatas.push({
-            tipo: "plano_finalizado",
-            pacienteId: paciente.id,
-            motivo: `${paciente.plano ?? "Plano"} finalizado (${stats.realizadas}/${paciente.consultas_incluidas} consultas). Renovação necessária.`,
-            prioridade: "alta",
-          });
-        }
-      } else if (stats.planoFinalizado) {
-        // Caso de borda: restantes=0 mas o Fluxo não está na etapa de
-        // renovação (dado legado, ou avanço manual) — ainda sinaliza.
-        candidatas.push({
-          tipo: "plano_finalizado",
-          pacienteId: paciente.id,
-          motivo: `${paciente.plano ?? "Plano"} finalizado (${stats.realizadas}/${paciente.consultas_incluidas} consultas). Renovação necessária.`,
-          prioridade: "alta",
-        });
-      } else if (stats.ultimaConsultaDoPlano) {
+      const terminoPlano = planEndDate(paciente.data_inicio, paciente.plano);
+      if (paciente.fluxo_etapa === "12_renovacao_30_dias" && terminoPlano) {
+        const faltamDias = Math.max(0, diasAte(terminoPlano, hoje));
         candidatas.push({
           tipo: "plano_proximo_fim",
           pacienteId: paciente.id,
-          motivo: `Paciente está na última consulta incluída no ${paciente.plano ?? "plano"}.`,
-          prioridade: "media",
+          motivo: `${paciente.plano ?? "Plano"} termina em ${faltamDias} dia(s), em ${terminoPlano.toLocaleDateString("pt-BR")}. Preparar renovação.`,
+          prioridade: faltamDias <= 7 ? "alta" : "media",
+          prazo: terminoPlano.toISOString(),
         });
       }
 
-      // Fluxo (sistema já existente: fluxo_etapa / fluxo_urgente / fluxo_proxima_acao_em).
+      if (
+        paciente.fluxo_etapa === "14_plano_encerrado" &&
+        prazoVenceu(paciente.fluxo_proxima_acao_em, hoje)
+      ) {
+        candidatas.push({
+          tipo: "reativacao_pendente",
+          pacienteId: paciente.id,
+          motivo: "Plano encerrado há 10 dias. Enviar a mensagem de reativação; ao tratar, avançar para 15 — Reativação pendente.",
+          prioridade: "alta",
+          prazo: paciente.fluxo_proxima_acao_em,
+        });
+      } else if (
+        paciente.fluxo_etapa === "15_reativacao_pendente" &&
+        prazoVenceu(paciente.fluxo_proxima_acao_em, hoje)
+      ) {
+        candidatas.push({
+          tipo: "reativacao_pendente",
+          pacienteId: paciente.id,
+          motivo: "Último lembrete de reativação: passaram 3 dias desde a entrada na etapa 15.",
+          prioridade: "alta",
+          prazo: paciente.fluxo_proxima_acao_em,
+        });
+      }
+
       if (paciente.fluxo_urgente) {
         candidatas.push({
           tipo: "fluxo_urgente",
@@ -282,19 +253,20 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
         });
       }
 
-      if (paciente.fluxo_proxima_acao_em) {
+      if (
+        paciente.fluxo_proxima_acao_em &&
+        prazoVenceu(paciente.fluxo_proxima_acao_em, hoje) &&
+        !ETAPAS_COM_PENDENCIA_DE_PRAZO_PROPRIA.has(paciente.fluxo_etapa)
+      ) {
         const proximaAcao = new Date(paciente.fluxo_proxima_acao_em);
-        if (proximaAcao <= hoje) {
-          candidatas.push({
-            tipo: "contato_necessario",
-            pacienteId: paciente.id,
-            motivo: `Próxima ação do Fluxo (${getFlowStage(paciente.fluxo_etapa).label}) estava marcada para ${proximaAcao.toLocaleDateString("pt-BR")}.`,
-            prioridade: "media",
-          });
-        }
-      } else {
-        // Sem próxima ação marcada: cai no fallback de "sem movimentação"
-        // usando o histórico registrado pela Clara (fluxo_movimentacoes).
+        candidatas.push({
+          tipo: "contato_necessario",
+          pacienteId: paciente.id,
+          motivo: `Próxima ação do Fluxo (${getFlowStage(paciente.fluxo_etapa).label}) estava marcada para ${proximaAcao.toLocaleDateString("pt-BR")}.`,
+          prioridade: "media",
+          prazo: paciente.fluxo_proxima_acao_em,
+        });
+      } else if (!paciente.fluxo_proxima_acao_em) {
         const ultimaMovimentacao = input.ultimaMovimentacaoPorPaciente.get(paciente.id);
         const diasParado = diasDesde(ultimaMovimentacao ?? paciente.fluxo_updated_at, hoje);
         if (diasParado !== null && diasParado >= SEM_MOVIMENTACAO_DIAS) {
@@ -313,50 +285,35 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
           pacienteId: paciente.id,
           motivo:
             paciente.fluxo_etapa === "06_1_montar_plano"
-              ? "Consulta realizada — plano alimentar precisa ser montado."
-              : "Paciente aguardando entrega do plano alimentar.",
-          prioridade: "media",
+              ? "Consulta realizada há 1 dia — plano alimentar precisa ser montado."
+              : "Pós-consulta enviado — paciente ainda aguarda a entrega do plano alimentar.",
+          prioridade: paciente.fluxo_etapa === "06_1_montar_plano" ? "alta" : "media",
         });
       }
 
-      // Check-ins de acompanhamento pós-entrega do plano (3 e 7 dias).
-      if (paciente.fluxo_etapa === "08_plano_entregue" && diasNaEtapa !== null && diasNaEtapa >= CHECKIN_3_DIAS) {
+      if (paciente.fluxo_etapa === "09_checkin_3_dias") {
         candidatas.push({
           tipo: "checkin_3_dias_pendente",
           pacienteId: paciente.id,
-          motivo: `Plano entregue há ${diasNaEtapa} dias — hora do check-in de 3 dias.`,
+          motivo: "Plano entregue há 3 dias — hora do check-in de 3 dias.",
           prioridade: "media",
         });
-      } else if (
-        paciente.fluxo_etapa === "09_checkin_3_dias" &&
-        diasNaEtapa !== null &&
-        diasNaEtapa >= CHECKIN_7_DIAS_APOS_ETAPA_3
-      ) {
+      } else if (paciente.fluxo_etapa === "10_checkin_7_dias") {
         candidatas.push({
           tipo: "checkin_7_dias_pendente",
           pacienteId: paciente.id,
-          motivo: "Uma semana após a entrega do plano — hora do check-in de 7 dias.",
+          motivo: "Sete dias desde a entrega do plano — hora do check-in de 7 dias.",
           prioridade: "media",
         });
-      } else if (
-        paciente.fluxo_etapa === "10_checkin_7_dias" &&
-        diasNaEtapa !== null &&
-        diasNaEtapa >= RECONSULTA_DIAS_APOS_CHECKIN_7 &&
-        stats.restantes > 0 &&
-        !temProxima
-      ) {
-        // Ainda dentro do plano (restam consultas), check-ins já feitos e
-        // nenhuma próxima consulta marcada — hora de lembrar de agendar a
-        // reconsulta antes que o plano acabe sem acompanhamento.
+      } else if (paciente.fluxo_etapa === "11_confirmar_reconsulta" && !temProxima) {
         candidatas.push({
           tipo: "reconsulta_a_confirmar",
           pacienteId: paciente.id,
-          motivo: `${diasNaEtapa} dias desde o check-in de 7 dias e ainda sem a próxima consulta marcada.`,
+          motivo: "Sete dias após o check-in de 7 dias e ainda sem próxima consulta marcada. Confirmar a reconsulta.",
           prioridade: "media",
         });
       }
 
-      // Cadastro.
       if (!paciente.telefone || !paciente.cpf) {
         candidatas.push({
           tipo: "cadastro_incompleto",
@@ -375,7 +332,6 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
       }
     }
 
-    // Pagamentos (independe do status do paciente).
     for (const pagamento of pagamentosPorPaciente.get(paciente.id) ?? []) {
       if (pagamento.status === "pendente" || pagamento.status === "atrasado") {
         candidatas.push({
@@ -389,7 +345,6 @@ export function detectarPendencias(input: DetectarPendenciasInput): PendenciaCan
     }
   }
 
-  // Tarefas vencidas.
   const hojeIso = hoje.toISOString().slice(0, 10);
   for (const tarefa of input.tarefas) {
     if (tarefa.status === "pendente" && tarefa.prazo && tarefa.prazo < hojeIso) {
