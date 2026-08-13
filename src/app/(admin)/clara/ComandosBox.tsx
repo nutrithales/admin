@@ -81,7 +81,7 @@ export function ComandosBox() {
           ),
         )}
 
-        {enviando && <div className="self-start text-sm text-muted">Maria está buscando os dados...</div>}
+        {enviando && <div className="self-start text-sm text-muted">Marc.ia está buscando os dados...</div>}
       </div>
 
       <form
@@ -94,7 +94,7 @@ export function ComandosBox() {
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder="Maria, organize meu dia..."
+          placeholder="Marc.ia, organize meu dia..."
           disabled={enviando}
         />
         <Button type="submit" size="sm" disabled={enviando || !texto.trim()}>
