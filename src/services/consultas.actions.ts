@@ -5,7 +5,8 @@ import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createClient } from "@/lib/supabase/server";
 import { consultaSchema, type ConsultaFormValues } from "@/utils/validation/consulta";
 import type { ActionResult } from "@/services/pacientes.actions";
-import { computeConsultasStats, type ConsultaStatus } from "@/lib/clara/consultas";
+import { type ConsultaStatus } from "@/lib/clara/consultas";
+import { automaticNextActionForStage } from "@/lib/fluxo/automation";
 import { syncPendencias } from "@/services/pendencias.actions";
 
 export async function createConsultaAction(values: ConsultaFormValues): Promise<ActionResult> {
@@ -76,12 +77,6 @@ const STATUS_LABEL: Record<ConsultaStatus, string> = {
   reagendada: "marcada para reagendamento",
 };
 
-/** Muda o status de uma consulta (confirmar, concluir, cancelar, marcar
- * falta, reagendar) e recalcula a central de pendências em seguida — como
- * "consultas realizadas" é sempre derivado do histórico real (nunca um
- * contador armazenado), não existe risco de contagem duplicada aqui: mudar
- * o status de agendada→realizada é a única forma de uma consulta contar,
- * e mudar de volta (cancelar/reabrir) automaticamente deixa de contar. */
 export async function updateConsultaStatusAction(
   id: string,
   status: ConsultaStatus,
@@ -100,25 +95,31 @@ export async function updateConsultaStatusAction(
     .maybeSingle();
   if (error) return { success: false, message: `Erro ao atualizar consulta: ${error.message}` };
 
-  // Consulta concluída avança automaticamente o Fluxo — para "montar
-  // plano" (é a próxima ação de verdade e gera pendência pra Clara) ou,
-  // se essa era a última consulta incluída no plano, direto para o
-  // funil de renovação.
   if (status === "realizada" && updated?.auth_id) {
-    const [{ data: paciente }, { data: consultasDoPaciente }] = await Promise.all([
-      supabase
-        .from("pacientes")
-        .select("consultas_incluidas, consultas_realizadas_iniciais")
-        .eq("auth_id", updated.auth_id)
-        .maybeSingle(),
-      supabase.from("consultas").select("status").eq("auth_id", updated.auth_id),
-    ]);
-    const restantes = paciente ? computeConsultasStats(paciente, consultasDoPaciente ?? []).restantes : 1;
+    const agora = new Date();
+    const { data: paciente } = await supabase
+      .from("pacientes")
+      .select("id, fluxo_etapa")
+      .eq("auth_id", updated.auth_id)
+      .maybeSingle();
 
-    await supabase.from("pacientes").update({
-      fluxo_etapa: restantes === 0 ? "12_renovacao_30_dias" : "06_1_montar_plano",
-      fluxo_updated_at: new Date().toISOString(),
-    }).eq("auth_id", updated.auth_id);
+    if (paciente) {
+      await supabase.from("pacientes").update({
+        fluxo_etapa: "06_consulta_realizada",
+        fluxo_proxima_acao_em: automaticNextActionForStage("06_consulta_realizada", agora),
+        fluxo_updated_at: agora.toISOString(),
+      }).eq("id", paciente.id);
+
+      if (paciente.fluxo_etapa !== "06_consulta_realizada") {
+        await supabase.from("fluxo_movimentacoes").insert({
+          paciente_id: paciente.id,
+          de_etapa: paciente.fluxo_etapa,
+          para_etapa: "06_consulta_realizada",
+          admin_id: null,
+          observacao: "Consulta marcada como realizada.",
+        });
+      }
+    }
   }
 
   await syncPendencias();
@@ -126,5 +127,6 @@ export async function updateConsultaStatusAction(
   revalidatePath("/agenda");
   revalidatePath("/clara");
   revalidatePath("/pacientes");
+  revalidatePath("/fluxo");
   return { success: true, message: `Consulta ${STATUS_LABEL[status]}.` };
 }
