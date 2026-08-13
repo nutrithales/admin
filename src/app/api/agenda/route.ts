@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONSULTA_STATUS, computeConsultasStats } from "@/lib/clara/consultas";
+import { CONSULTA_STATUS } from "@/lib/clara/consultas";
+import { automaticNextActionForStage } from "@/lib/fluxo/automation";
 import { parseAgendaDescription, onlyDigits } from "@/lib/agenda/parse-description";
 
 export const dynamic = "force-dynamic";
@@ -130,10 +131,6 @@ export async function PATCH(request: NextRequest) {
 
     let authId = updated?.auth_id ?? null;
 
-    // Evento sem consulta correspondente ainda (agendamento antigo, ou o
-    // webhook da agenda pública não sincronizou este evento). Em vez de
-    // deixar a ação sem efeito, tenta localizar o paciente pelos dados do
-    // próprio evento e cria o vínculo agora.
     if (!updated) {
       const info = parseAgendaDescription(body.description ?? "");
       const email = info.email?.toLowerCase();
@@ -179,23 +176,30 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.status === "realizada" && authId) {
-      // Consulta concluída avança o Fluxo automaticamente — para "montar
-      // plano" (próxima ação de verdade, gera pendência pra Clara) ou,
-      // se era a última consulta do plano, direto para o funil de renovação.
-      const [{ data: paciente }, { data: consultasDoPaciente }] = await Promise.all([
-        admin
-          .from("pacientes")
-          .select("consultas_incluidas, consultas_realizadas_iniciais")
-          .eq("auth_id", authId)
-          .maybeSingle(),
-        admin.from("consultas").select("status").eq("auth_id", authId),
-      ]);
-      const restantes = paciente ? computeConsultasStats(paciente, consultasDoPaciente ?? []).restantes : 1;
+      const agora = new Date();
+      const { data: paciente } = await admin
+        .from("pacientes")
+        .select("id, fluxo_etapa")
+        .eq("auth_id", authId)
+        .maybeSingle();
 
-      await admin.from("pacientes").update({
-        fluxo_etapa: restantes === 0 ? "12_renovacao_30_dias" : "06_1_montar_plano",
-        fluxo_updated_at: new Date().toISOString(),
-      }).eq("auth_id", authId);
+      if (paciente) {
+        await admin.from("pacientes").update({
+          fluxo_etapa: "06_consulta_realizada",
+          fluxo_proxima_acao_em: automaticNextActionForStage("06_consulta_realizada", agora),
+          fluxo_updated_at: agora.toISOString(),
+        }).eq("id", paciente.id);
+
+        if (paciente.fluxo_etapa !== "06_consulta_realizada") {
+          await admin.from("fluxo_movimentacoes").insert({
+            paciente_id: paciente.id,
+            de_etapa: paciente.fluxo_etapa,
+            para_etapa: "06_consulta_realizada",
+            admin_id: null,
+            observacao: "Consulta marcada como realizada pela agenda.",
+          });
+        }
+      }
     }
     return NextResponse.json({ success: true });
   } catch (error) {
