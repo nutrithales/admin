@@ -9,7 +9,7 @@ import { executarComandoAction, type ComandoResposta } from "@/services/clara.ac
 import { COMANDOS_SUGERIDOS } from "@/lib/clara/comandos";
 
 interface Mensagem {
-  autor: "voce" | "clara";
+  autor: "voce" | "maria";
   texto?: string;
   resposta?: ComandoResposta;
 }
@@ -27,7 +27,7 @@ export function ComandosBox() {
     setEnviando(true);
     try {
       const resposta = await executarComandoAction(mensagem);
-      setHistorico((prev) => [...prev, { autor: "clara", resposta }]);
+      setHistorico((prev) => [...prev, { autor: "maria", resposta }]);
     } finally {
       setEnviando(false);
     }
@@ -81,7 +81,7 @@ export function ComandosBox() {
           ),
         )}
 
-        {enviando && <div className="self-start text-sm text-muted">Mar.ia está buscando os dados...</div>}
+        {enviando && <div className="self-start text-sm text-muted">Maria está buscando os dados...</div>}
       </div>
 
       <form
@@ -94,7 +94,7 @@ export function ComandosBox() {
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder="Mar.ia, organize meu dia..."
+          placeholder="Maria, organize meu dia..."
           disabled={enviando}
         />
         <Button type="submit" size="sm" disabled={enviando || !texto.trim()}>
