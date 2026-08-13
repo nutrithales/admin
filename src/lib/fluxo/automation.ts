@@ -5,19 +5,12 @@ export interface FlowAutomaticRule {
   nextStage?: FlowStageKey;
 }
 
-/**
- * Regras administrativas de passagem/lembrança do Fluxo.
- * O prazo começa quando o paciente entra na etapa.
- */
 export const FLOW_AUTOMATIC_RULES: Partial<Record<FlowStageKey, FlowAutomaticRule>> = {
   "06_consulta_realizada": { afterDays: 1, nextStage: "06_1_montar_plano" },
-  "08_plano_entregue": { afterDays: 3, nextStage: "09_checkin_3_dias" },
-  "09_checkin_3_dias": { afterDays: 4, nextStage: "10_checkin_7_dias" },
-  "10_checkin_7_dias": { afterDays: 7, nextStage: "11_confirmar_reconsulta" },
-  // Em 14, após 10 dias nasce a pendência de mensagem. O avanço para 15
-  // acontece quando essa mensagem é tratada, não apenas porque o tempo passou.
+  "08_plano_entregue": { afterDays: 3 },
+  "09_checkin_3_dias": { afterDays: 4 },
+  "10_checkin_7_dias": { afterDays: 7 },
   "14_plano_encerrado": { afterDays: 10 },
-  // Em 15, três dias depois vence o último lembrete; a etapa permanece 15.
   "15_reativacao_pendente": { afterDays: 3 },
 };
 
