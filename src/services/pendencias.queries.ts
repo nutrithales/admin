@@ -11,10 +11,11 @@ const PRIORIDADE_ORDEM: Record<string, number> = { alta: 0, media: 1, baixa: 2 }
 
 export async function listPendenciasAtivas(): Promise<PendenciaComPaciente[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const hoje = new Date().toISOString().slice(0, 10);
+  const { data, error } = await (supabase as any)
     .from("pendencias")
     .select("*, paciente:pacientes(id, auth_id, nome, telefone, fluxo_etapa), tarefa:tarefas(id, titulo)")
-    .neq("status", "resolvida")
+    .or(`status.eq.pendente,and(status.eq.adiada,adiada_ate.lte.${hoje})`)
     .order("prazo", { ascending: true, nullsFirst: false });
 
   if (error) throw new Error(`Erro ao carregar pendências: ${error.message}`);
