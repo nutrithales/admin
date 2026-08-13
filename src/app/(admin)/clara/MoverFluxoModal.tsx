@@ -29,15 +29,14 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const idInicial = pacienteInicial ?? "";
-      setPacienteId(idInicial);
-      const paciente = pacientes.find((p) => p.id === idInicial);
-      setEtapa(paciente ? getFlowStage(paciente.fluxo_etapa).key : FLOW_STAGES[0].key);
-      setUrgente(false);
-      setProximaAcaoEm("");
-      setObservacoes("");
-    }
+    if (!open) return;
+    const idInicial = pacienteInicial ?? "";
+    setPacienteId(idInicial);
+    const paciente = pacientes.find((p) => p.id === idInicial);
+    setEtapa(paciente ? getFlowStage(paciente.fluxo_etapa).key : FLOW_STAGES[0].key);
+    setUrgente(false);
+    setProximaAcaoEm("");
+    setObservacoes("");
   }, [open, pacienteInicial, pacientes]);
 
   function trocarPaciente(id: string) {
@@ -48,11 +47,7 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!pacienteId) {
-      toast({ kind: "error", title: "Selecione um paciente." });
-      return;
-    }
-
+    if (!pacienteId) return toast({ kind: "error", title: "Selecione um paciente." });
     setSaving(true);
     const pacienteAtual = pacientes.find((p) => p.id === pacienteId);
     const etapaAtual = pacienteAtual ? getFlowStage(pacienteAtual.fluxo_etapa).key : null;
@@ -66,7 +61,6 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
           return;
         }
       }
-
       const resolucao = await resolverPendenciaAction(pendenciaId);
       setSaving(false);
       if (!resolucao.success) {
@@ -75,7 +69,6 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
         onClose();
         return;
       }
-
       toast({ kind: "success", title: "Pendência resolvida", description: `Paciente atualizado para ${getFlowStage(etapa).label}.` });
       onSaved();
       onClose();
@@ -89,7 +82,6 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
       observacoes,
     });
     setSaving(false);
-
     if (result.success) {
       toast({ kind: "success", title: result.message });
       onSaved();
@@ -100,53 +92,32 @@ export function MoverFluxoModal({ open, onClose, onSaved, pacientes, pacienteIni
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={pendenciaId ? "Resolver pendência e atualizar Kanban" : "Mover paciente no Fluxo"} size="sm">
+    <Modal open={open} onClose={onClose} title={pendenciaId ? "Resolver e mover no Kanban" : "Mover paciente no Fluxo"} size="sm">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <FieldGroup>
           <Label htmlFor="fluxo-paciente">Paciente</Label>
           <Select id="fluxo-paciente" value={pacienteId} onChange={(e) => trocarPaciente(e.target.value)} disabled={Boolean(pendenciaId)}>
             <option value="">Selecione um paciente</option>
-            {pacientes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome} — {getFlowStage(p.fluxo_etapa).label}
-              </option>
-            ))}
+            {pacientes.map((p) => <option key={p.id} value={p.id}>{p.nome} — {getFlowStage(p.fluxo_etapa).label}</option>)}
           </Select>
         </FieldGroup>
         <FieldGroup>
-          <Label htmlFor="fluxo-etapa">{pendenciaId ? "Para qual Kanban o paciente vai?" : "Nova etapa"}</Label>
+          <Label htmlFor="fluxo-etapa">{pendenciaId ? "Para qual etapa do Kanban o paciente vai?" : "Nova etapa"}</Label>
           <Select id="fluxo-etapa" value={etapa} onChange={(e) => setEtapa(e.target.value as FlowStageKey)}>
-            {FLOW_STAGES.map((e) => (
-              <option key={e.key} value={e.key}>
-                {e.label}
-              </option>
-            ))}
+            {FLOW_STAGES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
           </Select>
         </FieldGroup>
         {!pendenciaId && <>
           <div className="grid grid-cols-2 gap-3">
-            <FieldGroup>
-              <Label htmlFor="fluxo-proxima-acao">Próxima ação em</Label>
-              <Input id="fluxo-proxima-acao" type="date" value={proximaAcaoEm} onChange={(e) => setProximaAcaoEm(e.target.value)} />
-            </FieldGroup>
-            <label className="mt-6 flex items-center gap-2 text-sm font-semibold text-ink">
-              <input type="checkbox" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} className="size-4" />
-              Marcar como urgente
-            </label>
+            <FieldGroup><Label htmlFor="fluxo-proxima-acao">Próxima ação em</Label><Input id="fluxo-proxima-acao" type="date" value={proximaAcaoEm} onChange={(e) => setProximaAcaoEm(e.target.value)} /></FieldGroup>
+            <label className="mt-6 flex items-center gap-2 text-sm font-semibold text-ink"><input type="checkbox" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} className="size-4" />Marcar como urgente</label>
           </div>
-          <FieldGroup>
-            <Label htmlFor="fluxo-observacoes">Observações</Label>
-            <Textarea id="fluxo-observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
-          </FieldGroup>
+          <FieldGroup><Label htmlFor="fluxo-observacoes">Observações</Label><Textarea id="fluxo-observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} /></FieldGroup>
         </>}
-        {pendenciaId && <p className="text-xs text-muted">Ao salvar, a pendência será marcada como resolvida e o paciente ficará na etapa escolhida. Se mantiver a etapa atual, os prazos e observações existentes serão preservados.</p>}
+        {pendenciaId && <p className="text-xs text-muted">Ao confirmar, a pendência será resolvida e o paciente será movido para a etapa escolhida. Se mantiver a etapa atual, apenas a pendência será encerrada.</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            {pendenciaId ? "Resolver e atualizar Kanban" : "Salvar"}
-          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" loading={saving}>{pendenciaId ? "Resolver e mover" : "Salvar"}</Button>
         </div>
       </form>
     </Modal>
