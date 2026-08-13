@@ -15,8 +15,9 @@ export type LeadFollowupPendente = { lead: Lead; dia:number; etiqueta:string; ti
 
 export async function listLeads():Promise<Lead[]> {
   const supabase=await createClient();
-  const leadsTable=supabase.from("leads") as any;
-  const followupsTable=supabase.from("lead_followups_agendados") as any;
+  const db=supabase as any;
+  const leadsTable=db.from("leads");
+  const followupsTable=db.from("lead_followups_agendados");
   const {data,error}=await leadsTable.select("*").is("convertido_paciente_id",null).order("updated_at",{ascending:false});
   if(error)throw new Error(`Erro ao carregar leads: ${error.message}`);
   const leads=(data??[]) as Lead[];
@@ -29,11 +30,12 @@ export async function listLeads():Promise<Lead[]> {
 
 export async function listLeadFollowupsPendentes():Promise<LeadFollowupPendente[]> {
   const supabase=await createClient();
-  const followupsTable=supabase.from("lead_followups_agendados") as any;
+  const db=supabase as any;
+  const followupsTable=db.from("lead_followups_agendados");
   const {data:rows,error}=await followupsTable.select("lead_id,fluxo,dia,etiqueta,agendado_para").eq("status","pendente").lte("agendado_para",new Date().toISOString()).order("agendado_para",{ascending:true});
   if(error)throw new Error(`Erro ao carregar follow-ups: ${error.message}`);
   if(!rows?.length)return [];
-  const leadsTable=supabase.from("leads") as any;
+  const leadsTable=db.from("leads");
   const {data:leadRows,error:leadError}=await leadsTable.select("*").in("id",[...new Set(rows.map((r:any)=>r.lead_id))]);
   if(leadError)throw new Error(`Erro ao carregar leads dos follow-ups: ${leadError.message}`);
   const leadMap=new Map((leadRows??[]).map((l:any)=>[l.id,l as Lead]));
