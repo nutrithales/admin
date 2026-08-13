@@ -24,8 +24,6 @@ export interface ComandoInterpretado {
   pacienteBusca?: string;
 }
 
-// Marcas de acentuação combinantes (resultado de normalize("NFD")) — usa
-// \u para evitar depender de caracteres invisíveis no código-fonte.
 const DIACRITICOS = new RegExp("[\\u0300-\\u036f]", "g");
 
 function normalizar(texto: string): string {
@@ -58,8 +56,6 @@ const REGRAS: Regra[] = [
   { intencao: "ultima_consulta_plano", gruposDePalavras: [["ultima", "consulta", "plano"], ["chegando", "ultima", "consulta"]] },
 ];
 
-/** Tenta extrair um nome de paciente citado depois de "para" — usado no
- * comando "prepare uma mensagem de renovação para <nome>". */
 function extrairPacienteBusca(textoOriginal: string): string | undefined {
   const match = /\bpara\s+(.+)$/i.exec(textoOriginal.trim());
   const nome = match?.[1];
@@ -85,7 +81,7 @@ export function interpretarComando(textoOriginal: string): ComandoInterpretado {
 }
 
 export const COMANDOS_SUGERIDOS = [
-  "Clara, organize meu dia.",
+  "Marc.ia, organize meu dia.",
   "Mostre minha agenda de amanhã.",
   "Quais pacientes estão sem próxima consulta?",
   "Quem precisa renovar o plano?",
