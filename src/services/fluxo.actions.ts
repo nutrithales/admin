@@ -27,12 +27,20 @@ export async function updateFluxoPacienteAction(id: string, values: z.input<type
   const supabase = await createClient();
   const db = supabase as any;
   const data = parsed.data;
-  const { data: paciente } = await db.from("pacientes").select("fluxo_etapa,plano_entregue_em").eq("id", id).maybeSingle();
+  const { data: paciente } = await db
+    .from("pacientes")
+    .select("fluxo_etapa,plano_entregue_em,reconsulta_intervalo_dias")
+    .eq("id", id)
+    .maybeSingle();
   if (!paciente) return { success: false, message: "Paciente não encontrado." };
 
   const etapaMudou = data.etapa !== undefined && data.etapa !== paciente.fluxo_etapa;
-  const agora = new Date().toISOString();
+  const agoraDate = new Date();
+  const agora = agoraDate.toISOString();
   const marcouEntrega = etapaMudou && paciente.fluxo_etapa === "06_plano_elaboracao" && data.etapa === "07_acompanhamento_ativo";
+  const intervalo = Number(paciente.reconsulta_intervalo_dias) || 45;
+  const reconsultaPrevista = new Date(agoraDate);
+  reconsultaPrevista.setDate(reconsultaPrevista.getDate() + intervalo);
   const proximaAcao = data.proximaAcaoEm !== undefined ? data.proximaAcaoEm : etapaMudou ? null : undefined;
 
   const { error } = await db.from("pacientes").update({
@@ -40,7 +48,13 @@ export async function updateFluxoPacienteAction(id: string, values: z.input<type
     ...(data.urgente !== undefined ? { fluxo_urgente: data.urgente } : {}),
     ...(data.observacoes !== undefined ? { fluxo_observacoes: data.observacoes || null } : {}),
     ...(proximaAcao !== undefined ? { fluxo_proxima_acao_em: proximaAcao } : {}),
-    ...(marcouEntrega ? { plano_entregue_em: agora } : {}),
+    ...(marcouEntrega
+      ? {
+          plano_entregue_em: agora,
+          proxima_reconsulta_prevista: reconsultaPrevista.toISOString(),
+          reconsulta_intervalo_dias: intervalo,
+        }
+      : {}),
     fluxo_updated_at: agora,
   }).eq("id", id);
 
@@ -52,7 +66,9 @@ export async function updateFluxoPacienteAction(id: string, values: z.input<type
       de_etapa: paciente.fluxo_etapa,
       para_etapa: data.etapa!,
       admin_id: adminId,
-      observacao: marcouEntrega ? "Plano entregue ao paciente; contatos D+3 e D+7 passam a ser controlados pela Marc.ia." : null,
+      observacao: marcouEntrega
+        ? `Plano entregue. Marc.ia agenda contatos D+3/D+7 e reconsulta prevista em ${intervalo} dias.`
+        : null,
     });
   }
 
@@ -60,7 +76,12 @@ export async function updateFluxoPacienteAction(id: string, values: z.input<type
   revalidatePath("/fluxo");
   revalidatePath("/clara");
   revalidatePath("/pacientes");
-  return { success: true, message: marcouEntrega ? "Plano marcado como entregue e acompanhamento iniciado." : "Fluxo atualizado." };
+  return {
+    success: true,
+    message: marcouEntrega
+      ? `Plano entregue. Reconsulta prevista para ${reconsultaPrevista.toLocaleDateString("pt-BR")}.`
+      : "Fluxo atualizado.",
+  };
 }
 
 export async function getHistoricoFluxoAction(pacienteId: string): Promise<Tables<"fluxo_movimentacoes">[]> {
