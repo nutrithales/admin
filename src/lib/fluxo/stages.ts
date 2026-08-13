@@ -11,7 +11,7 @@ export const FLOW_STAGES = [
   { key: "pausa_acompanhamento", label: "Pausa no acompanhamento", group: "outros", color: "stone" },
 ] as const;
 
-export type FlowStageKey = (typeof FLOW_STAGES)[number]["key"];
+export type FlowStageKey = string;
 export type FlowGroup = (typeof FLOW_STAGES)[number]["group"];
 
 export const FLOW_GROUPS = [
