@@ -8,5 +8,5 @@ import { listMensagensModelos } from "@/services/mensagens.queries";
 import { listLeadFollowupsPendentes } from "@/services/leads.queries";
 import { ClaraClient } from "./ClaraClient";
 
-export const metadata = { title: "Mar.ia" };
+export const metadata = { title: "Maria" };
 export default async function ClaraPage(){await syncPendencias();const[consultasHoje,pendencias,tarefas,pacientesResumo,pacientesParaConsulta,mensagens,leadFollowups]=await Promise.all([listConsultasDoIntervalo(inicioDoDia(),fimDoDia()),listPendenciasAtivas(),listTarefasPendentes(),listPacientesResumo(),listPacientesForSelect(),listMensagensModelos(),listLeadFollowupsPendentes()]);return <ClaraClient consultasHoje={consultasHoje} pendencias={pendencias} tarefas={tarefas} pacientesResumo={pacientesResumo} pacientesParaConsulta={pacientesParaConsulta} mensagens={mensagens} leadFollowups={leadFollowups}/>;}
