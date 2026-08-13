@@ -14,8 +14,10 @@ export const FLOW_AUTOMATIC_RULES: Partial<Record<FlowStageKey, FlowAutomaticRul
   "08_plano_entregue": { afterDays: 3, nextStage: "09_checkin_3_dias" },
   "09_checkin_3_dias": { afterDays: 4, nextStage: "10_checkin_7_dias" },
   "10_checkin_7_dias": { afterDays: 7, nextStage: "11_confirmar_reconsulta" },
-  "14_plano_encerrado": { afterDays: 10, nextStage: "15_reativacao_pendente" },
-  // Último lembrete: permanece em 15 e a próxima ação vence 3 dias depois.
+  // Em 14, após 10 dias nasce a pendência de mensagem. O avanço para 15
+  // acontece quando essa mensagem é tratada, não apenas porque o tempo passou.
+  "14_plano_encerrado": { afterDays: 10 },
+  // Em 15, três dias depois vence o último lembrete; a etapa permanece 15.
   "15_reativacao_pendente": { afterDays: 3 },
 };
 
