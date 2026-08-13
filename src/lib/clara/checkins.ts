@@ -1,7 +1,10 @@
 import type { Tables } from "@/types/database.types";
 
 /** Periodicidade atual dos check-ins, em dias. */
-export const CHECKIN_PERIODICIDADE_DIAS = 14;
+export const CHECKIN_PERIODICIDADE_DIAS = 15;
+
+/** Primeiro lembrete após envio sem resposta. */
+export const CHECKIN_LEMBRETE_RESPOSTA_DIAS = 2;
 
 /** Depois de quantos dias sem resposta um check-in enviado é considerado atrasado. */
 export const CHECKIN_PRAZO_RESPOSTA_DIAS = 5;
@@ -14,9 +17,6 @@ export function diasDesde(iso: string | null | undefined, hoje = new Date()): nu
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-/** Situação do check-in de um paciente, a partir do último registro (se
- * houver) e da data de início do acompanhamento. Não toma decisão clínica
- * — apenas indica se é hora de enviar, aguardar resposta ou revisar. */
 export function checkinSituacao(
   ultimoCheckin: Pick<Tables<"checkins">, "status" | "enviado_em" | "respondido_em" | "created_at"> | null,
   dataInicio: string | null,
