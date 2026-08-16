@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label, FieldGroup, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { pacienteSchema, type PacienteFormValues } from "@/utils/validation/paciente";
-import { createPacienteAction, updatePacienteAction } from "@/services/pacientes.actions";
+import {
+  createPacienteComDemografiaAction,
+  updatePacienteComDemografiaAction,
+} from "@/services/paciente-demografia.actions";
 import { useToast } from "@/contexts/ToastContext";
 import type { Tables } from "@/types/database.types";
 import { PasswordRevealModal } from "@/components/ui/PasswordRevealModal";
@@ -108,8 +111,8 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
 
     setSaving(true);
     const result = paciente
-      ? await updatePacienteAction(paciente.id, parsed.data)
-      : await createPacienteAction(parsed.data);
+      ? await updatePacienteComDemografiaAction(paciente.id, parsed.data)
+      : await createPacienteComDemografiaAction(parsed.data);
     setSaving(false);
 
     if (result.success) {
@@ -140,79 +143,39 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <FieldGroup>
           <Label htmlFor="nome">Nome completo</Label>
-          <Input
-            id="nome"
-            value={values.nome}
-            onChange={(e) => setField("nome", e.target.value)}
-            error={errors.nome}
-            placeholder="Maria da Silva"
-          />
+          <Input id="nome" value={values.nome} onChange={(e) => setField("nome", e.target.value)} error={errors.nome} placeholder="Maria da Silva" />
         </FieldGroup>
 
         <FieldGroup>
           <Label htmlFor="email">E-mail</Label>
-          <Input
-            id="email"
-            type="email"
-            value={values.email}
-            onChange={(e) => setField("email", e.target.value)}
-            error={errors.email}
-            placeholder="maria@email.com"
-          />
+          <Input id="email" type="email" value={values.email} onChange={(e) => setField("email", e.target.value)} error={errors.email} placeholder="maria@email.com" />
         </FieldGroup>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FieldGroup>
             <Label htmlFor="telefone">Telefone</Label>
-            <Input
-              id="telefone"
-              value={values.telefone}
-              onChange={(e) => setField("telefone", e.target.value)}
-              placeholder="(41) 99999-9999"
-            />
+            <Input id="telefone" value={values.telefone} onChange={(e) => setField("telefone", e.target.value)} placeholder="(41) 99999-9999" />
           </FieldGroup>
           <FieldGroup>
             <Label htmlFor="cpf">CPF</Label>
-            <Input
-              id="cpf"
-              value={values.cpf}
-              onChange={(e) => setField("cpf", e.target.value)}
-              placeholder="000.000.000-00"
-            />
+            <Input id="cpf" value={values.cpf} onChange={(e) => setField("cpf", e.target.value)} placeholder="000.000.000-00" />
           </FieldGroup>
         </div>
 
         <FieldGroup>
           <Label htmlFor="data_nascimento">Data de nascimento{paciente ? "" : " *"}</Label>
-          <Input
-            id="data_nascimento"
-            type="date"
-            value={values.data_nascimento ?? ""}
-            onChange={(e) => setField("data_nascimento", e.target.value)}
-            error={errors.data_nascimento}
-          />
+          <Input id="data_nascimento" type="date" value={values.data_nascimento ?? ""} onChange={(e) => setField("data_nascimento", e.target.value)} error={errors.data_nascimento} />
           <p className="text-xs text-muted">Usada para calcular automaticamente a idade na Matriz Nutricional.</p>
         </FieldGroup>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FieldGroup>
             <Label htmlFor="plano">Plano</Label>
-            <Input
-              id="plano"
-              value={values.plano}
-              onChange={(e) => setField("plano", e.target.value)}
-              placeholder="Acompanhamento mensal"
-            />
+            <Input id="plano" value={values.plano} onChange={(e) => setField("plano", e.target.value)} placeholder="Acompanhamento mensal" />
           </FieldGroup>
           <FieldGroup>
             <Label htmlFor="status">Status</Label>
-            <Select
-              id="status"
-              value={values.status}
-              onChange={(e) =>
-                setField("status", e.target.value as "ativo" | "inativo" | "pendente")
-              }
-            >
+            <Select id="status" value={values.status} onChange={(e) => setField("status", e.target.value as "ativo" | "inativo" | "pendente")}>
               <option value="ativo">Ativo</option>
               <option value="inativo">Inativo</option>
               <option value="pendente">Pendente</option>
@@ -222,12 +185,7 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
 
         <FieldGroup>
           <Label htmlFor="data_inicio">Data de início</Label>
-          <Input
-            id="data_inicio"
-            type="date"
-            value={values.data_inicio}
-            onChange={(e) => setField("data_inicio", e.target.value)}
-          />
+          <Input id="data_inicio" type="date" value={values.data_inicio} onChange={(e) => setField("data_inicio", e.target.value)} />
         </FieldGroup>
 
         <p className="text-sm font-semibold text-ink">Dados que influenciam a dieta</p>
@@ -235,23 +193,11 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <FieldGroup>
             <Label htmlFor="peso_kg">Peso (kg)</Label>
-            <Input
-              id="peso_kg"
-              type="number"
-              step="0.1"
-              value={values.peso_kg ?? ""}
-              onChange={(e) => setField("peso_kg", e.target.value === "" ? undefined : Number(e.target.value))}
-            />
+            <Input id="peso_kg" type="number" step="0.1" value={values.peso_kg ?? ""} onChange={(e) => setField("peso_kg", e.target.value === "" ? undefined : Number(e.target.value))} />
           </FieldGroup>
           <FieldGroup>
             <Label htmlFor="altura_cm">Altura (cm)</Label>
-            <Input
-              id="altura_cm"
-              type="number"
-              step="0.1"
-              value={values.altura_cm ?? ""}
-              onChange={(e) => setField("altura_cm", e.target.value === "" ? undefined : Number(e.target.value))}
-            />
+            <Input id="altura_cm" type="number" step="0.1" value={values.altura_cm ?? ""} onChange={(e) => setField("altura_cm", e.target.value === "" ? undefined : Number(e.target.value))} />
           </FieldGroup>
           <FieldGroup className="col-span-2 sm:col-span-1">
             <Label htmlFor="nivel_atividade">Nível de atividade</Label>
@@ -265,16 +211,7 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
           </FieldGroup>
           <FieldGroup>
             <Label htmlFor="treino_frequencia_semanal">Treinos/semana</Label>
-            <Input
-              id="treino_frequencia_semanal"
-              type="number"
-              min={0}
-              max={14}
-              value={values.treino_frequencia_semanal ?? ""}
-              onChange={(e) =>
-                setField("treino_frequencia_semanal", e.target.value === "" ? undefined : Number(e.target.value))
-              }
-            />
+            <Input id="treino_frequencia_semanal" type="number" min={0} max={14} value={values.treino_frequencia_semanal ?? ""} onChange={(e) => setField("treino_frequencia_semanal", e.target.value === "" ? undefined : Number(e.target.value))} />
           </FieldGroup>
         </div>
 
@@ -291,31 +228,17 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
 
         <FieldGroup>
           <Label htmlFor="restricoes_alimentares">Restrições alimentares (separadas por vírgula)</Label>
-          <Input
-            id="restricoes_alimentares"
-            placeholder="ex.: vegetariano, sem_lactose, sem_gluten"
-            value={restricoesInput}
-            onChange={(e) => setRestricoesInput(e.target.value)}
-          />
+          <Input id="restricoes_alimentares" placeholder="ex.: vegetariano, sem_lactose, sem_gluten" value={restricoesInput} onChange={(e) => setRestricoesInput(e.target.value)} />
         </FieldGroup>
 
         <FieldGroup>
           <Label htmlFor="preferencias_alimentares">Preferências e rotina</Label>
-          <Textarea
-            id="preferencias_alimentares"
-            placeholder="ex.: não gosta de peixe, prefere refeições práticas, come fora no almoço..."
-            value={values.preferencias_alimentares}
-            onChange={(e) => setField("preferencias_alimentares", e.target.value)}
-          />
+          <Textarea id="preferencias_alimentares" placeholder="ex.: não gosta de peixe, prefere refeições práticas, come fora no almoço..." value={values.preferencias_alimentares} onChange={(e) => setField("preferencias_alimentares", e.target.value)} />
         </FieldGroup>
 
         <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            {paciente ? "Salvar alterações" : "Cadastrar paciente"}
-          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" loading={saving}>{paciente ? "Salvar alterações" : "Cadastrar paciente"}</Button>
         </div>
       </form>
     </Modal>
