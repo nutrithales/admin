@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, AppWindow, UtensilsCrossed, Apple, ChefHat, Salad, ListChecks, BookOpen, CalendarClock, ClipboardCheck, Sparkles, Settings, Bot, Workflow, ContactRound, FileText, ReceiptText, type LucideIcon,
+  LayoutDashboard, Users, AppWindow, UtensilsCrossed, Apple, ChefHat, Salad, ListChecks, BookOpen, CalendarClock, ClipboardCheck, Sparkles, Settings, Bot, Workflow, ContactRound, FileText, ReceiptText, Calculator, type LucideIcon,
 } from "lucide-react";
 export interface NavItem { label: string; href: string; icon: LucideIcon; }
 export const navItems: NavItem[] = [
@@ -11,6 +11,7 @@ export const navItems: NavItem[] = [
   { label: "Pagamentos", href: "/pagamentos", icon: ReceiptText },
   { label: "Páginas Personalizadas", href: "/paginas-personalizadas", icon: AppWindow },
   { label: "Planos Alimentares", href: "/planos-alimentares", icon: UtensilsCrossed },
+  { label: "Matriz Nutricional", href: "/matriz-nutricional", icon: Calculator },
   { label: "Alimentos", href: "/alimentos", icon: Apple },
   { label: "Receitas", href: "/receitas", icon: ChefHat },
   { label: "Refeições", href: "/refeicoes", icon: Salad },
