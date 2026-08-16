@@ -27,15 +27,14 @@ export interface AlimentoOption {
   gordura_100g: number;
   porcao_padrao_g: number | null;
   grupo_alimentar: string | null;
+  medidas_caseiras: Tables<"alimentos">["medidas_caseiras"];
 }
 
-/** Busca usada pelo Combobox de alimentos — server-side (`.ilike()`,
- * `limit`) porque a base pode ter milhares de linhas entre as fontes. */
 export async function searchAlimentos(query: string, limit = 20): Promise<AlimentoOption[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("alimentos")
-    .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar")
+    .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar, medidas_caseiras")
     .eq("ativo", true)
     .ilike("nome", `%${query}%`)
     .order("nome", { ascending: true })
