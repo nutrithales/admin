@@ -34,9 +34,10 @@ export interface MatrizResultado {
   nome: string;
   numeroRefeicoes: NumeroRefeicoes;
   rmrKcal: number | null;
-  metodoRmr: "Cunningham" | "Mifflin-St Jeor" | null;
+  metodoRmr: "Harris-Benedict revisada (1984)" | null;
   getKcal: number | null;
   getOrigem: "calculado" | "manual" | null;
+  fatorAtividade: number;
   ajusteObjetivoPercentual: number;
   energiaAlvoKcal: number | null;
   proteinaG: number | null;
@@ -112,36 +113,40 @@ function arredondar50(valor: number) {
   return Math.round(valor / 50) * 50;
 }
 
+/**
+ * Harris-Benedict revisada por Roza & Shizgal (1984).
+ * Peso em kg, altura em cm e idade em anos.
+ * Homem: 88.362 + 13.397W + 4.799H - 5.677A
+ * Mulher: 447.593 + 9.247W + 3.098H - 4.330A
+ */
 function calcularRmr(input: MatrizInput): { kcal: number; metodo: MatrizResultado["metodoRmr"] } | null {
-  if (input.massaMagraKg && input.massaMagraKg > 0) {
-    return {
-      kcal: Math.round(500 + 22 * input.massaMagraKg),
-      metodo: "Cunningham",
-    };
-  }
-
   if (
-    input.pesoKg > 0 &&
-    input.alturaCm &&
-    input.alturaCm > 0 &&
-    input.idade &&
-    input.idade > 0 &&
-    input.sexo
+    input.pesoKg <= 0 ||
+    !input.alturaCm ||
+    input.alturaCm <= 0 ||
+    !input.idade ||
+    input.idade <= 0 ||
+    !input.sexo
   ) {
-    const constanteSexo = input.sexo === "masculino" ? 5 : -161;
-    return {
-      kcal: Math.round(10 * input.pesoKg + 6.25 * input.alturaCm - 5 * input.idade + constanteSexo),
-      metodo: "Mifflin-St Jeor",
-    };
+    return null;
   }
 
-  return null;
+  const kcal =
+    input.sexo === "masculino"
+      ? 88.362 + 13.397 * input.pesoKg + 4.799 * input.alturaCm - 5.677 * input.idade
+      : 447.593 + 9.247 * input.pesoKg + 3.098 * input.alturaCm - 4.33 * input.idade;
+
+  return {
+    kcal: Math.round(kcal),
+    metodo: "Harris-Benedict revisada (1984)",
+  };
 }
 
 export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
   const matriz = MATRIZES[input.numeroRefeicoes];
   const avisos: string[] = [];
   const rmr = calcularRmr(input);
+  const fatorAtividade = FATOR_ATIVIDADE[input.nivelAtividade];
 
   let getKcal: number | null = null;
   let getOrigem: MatrizResultado["getOrigem"] = null;
@@ -150,7 +155,7 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
     getKcal = Math.round(input.gastoEnergeticoManual);
     getOrigem = "manual";
   } else if (rmr) {
-    getKcal = Math.round(rmr.kcal * FATOR_ATIVIDADE[input.nivelAtividade]);
+    getKcal = Math.round(rmr.kcal * fatorAtividade);
     getOrigem = "calculado";
   }
 
@@ -173,7 +178,7 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
     avisos.push("Sem composição corporal recente: a matriz pode ser usada, mas vale revisar a estratégia com a avaliação física.");
   }
   if (!rmr && !input.gastoEnergeticoManual) {
-    avisos.push("Faltam dados para estimar o gasto energético. Informe composição corporal ou complete sexo, idade e altura.");
+    avisos.push("Para calcular o gasto pela Harris-Benedict, complete peso, altura, idade e sexo biológico.");
   }
   if (rmr && energiaAlvoKcal && energiaAlvoKcal < rmr.kcal) {
     avisos.push("A energia-alvo ficou abaixo da estimativa de repouso; revise clinicamente antes de criar o plano.");
@@ -198,6 +203,7 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
     metodoRmr: rmr?.metodo ?? null,
     getKcal,
     getOrigem,
+    fatorAtividade,
     ajusteObjetivoPercentual: Math.round(ajuste * 100),
     energiaAlvoKcal,
     proteinaG,
