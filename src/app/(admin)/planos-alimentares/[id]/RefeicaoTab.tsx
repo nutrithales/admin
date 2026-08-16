@@ -11,6 +11,7 @@ import { MacroSummary } from "@/components/ui/MacroSummary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
 import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
+import { formatarQuantidadeComMedida } from "@/lib/nutrition/medida-caseira";
 import {
   removerItemDoPlanoAction,
   reordenarItensAction,
@@ -80,7 +81,7 @@ function ItemRow({
             {item.ingredientes.map((ing) => (
               <li key={ing.id} className="flex items-center gap-1.5">
                 <span>
-                  {ing.alimento.nome} — {Math.round(ing.quantidade_g_final)}g
+                  {ing.alimento.nome} — {formatarQuantidadeComMedida(ing.quantidade_g_final, ing.alimento.medidas_caseiras)}
                 </span>
                 {editavel && (
                   <button
@@ -97,7 +98,9 @@ function ItemRow({
             ))}
           </ul>
         ) : (
-          <p className="mt-1 text-xs text-muted">{item.quantidade_g}g</p>
+          <p className="mt-1 text-xs text-muted">
+            {formatarQuantidadeComMedida(item.quantidade_g, item.alimento?.medidas_caseiras)}
+          </p>
         )}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge tone="muted">{macros.kcal} kcal</Badge>
@@ -148,9 +151,6 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
   const [savingObservacoes, setSavingObservacoes] = useState(false);
   const [alvoSubstituicao, setAlvoSubstituicao] = useState<AlvoSubstituicao | null>(null);
 
-  // "Montar por texto (IA)" escreve a observação direto no servidor; sem
-  // isso, o textarea (que só lê o valor inicial do estado local) ficaria
-  // mostrando o texto antigo até trocar de aba e voltar.
   useEffect(() => setObservacoes(refeicao.observacoes ?? ""), [refeicao.observacoes]);
 
   function refresh() {
