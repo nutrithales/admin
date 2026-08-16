@@ -12,6 +12,12 @@ export const pacienteSchema = z.object({
   email: z.string().trim().email("E-mail inválido."),
   telefone: z.string().trim().optional().or(z.literal("")),
   cpf: z.string().trim().optional().or(z.literal("")),
+  data_nascimento: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || !Number.isNaN(new Date(`${v}T12:00:00`).getTime()), "Data de nascimento inválida."),
   plano: z.string().trim().optional().or(z.literal("")),
   status: z.enum(["ativo", "inativo", "pendente"]),
   data_inicio: z.string().trim().optional().or(z.literal("")),
