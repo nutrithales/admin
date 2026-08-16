@@ -16,6 +16,7 @@ const emptyForm: PacienteFormValues = {
   email: "",
   telefone: "",
   cpf: "",
+  data_nascimento: "",
   plano: "",
   status: "ativo",
   data_inicio: "",
@@ -53,6 +54,7 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
         email: paciente.email ?? "",
         telefone: paciente.telefone ?? "",
         cpf: paciente.cpf ?? "",
+        data_nascimento: paciente.data_nascimento ?? "",
         plano: paciente.plano ?? "",
         status:
           paciente.status === "inativo" || paciente.status === "pendente"
@@ -87,6 +89,12 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
         .map((t) => t.trim())
         .filter(Boolean),
     };
+
+    if (!paciente && !payload.data_nascimento) {
+      setErrors((prev) => ({ ...prev, data_nascimento: "Informe a data de nascimento." }));
+      return;
+    }
+
     const parsed = pacienteSchema.safeParse(payload);
     if (!parsed.success) {
       const fieldErrors: typeof errors = {};
@@ -173,6 +181,18 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
             />
           </FieldGroup>
         </div>
+
+        <FieldGroup>
+          <Label htmlFor="data_nascimento">Data de nascimento{paciente ? "" : " *"}</Label>
+          <Input
+            id="data_nascimento"
+            type="date"
+            value={values.data_nascimento ?? ""}
+            onChange={(e) => setField("data_nascimento", e.target.value)}
+            error={errors.data_nascimento}
+          />
+          <p className="text-xs text-muted">Usada para calcular automaticamente a idade na Matriz Nutricional.</p>
+        </FieldGroup>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FieldGroup>
