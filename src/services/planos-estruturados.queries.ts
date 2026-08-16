@@ -4,7 +4,15 @@ import type { Tables } from "@/types/database.types";
 
 type AlimentoResumo = Pick<
   Tables<"alimentos">,
-  "id" | "nome" | "origem" | "kcal_100g" | "proteina_100g" | "carboidrato_100g" | "gordura_100g" | "porcao_padrao_g"
+  | "id"
+  | "nome"
+  | "origem"
+  | "kcal_100g"
+  | "proteina_100g"
+  | "carboidrato_100g"
+  | "gordura_100g"
+  | "porcao_padrao_g"
+  | "medidas_caseiras"
 >;
 
 export type IngredienteComAlimento = Tables<"plano_refeicao_item_ingredientes"> & { alimento: AlimentoResumo };
@@ -29,8 +37,8 @@ const SELECT_COMPLETO = `*,
     itens:plano_refeicao_itens(
       *,
       receita:receitas(*),
-      alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g),
-      ingredientes:plano_refeicao_item_ingredientes(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g))
+      alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, medidas_caseiras),
+      ingredientes:plano_refeicao_item_ingredientes(*, alimento:alimentos(id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, medidas_caseiras))
     )
   )`;
 
@@ -41,8 +49,6 @@ export async function getPlanoEstruturado(id: string): Promise<PlanoEstruturadoC
   if (error) throw new Error(`Erro ao carregar plano: ${error.message}`);
   if (!data) return null;
 
-  // `pacientes` liga por `auth_id`, não é FK direta de `planos_estruturados.auth_id`
-  // pra `pacientes.id` — mesmo padrão já usado em `planos.queries.ts`.
   const [{ data: paciente }, { data: protocolo }] = await Promise.all([
     supabase.from("pacientes").select("id, nome").eq("auth_id", data.auth_id).maybeSingle(),
     supabase.from("protocolos").select("id, nome").eq("id", data.protocolo_id).maybeSingle(),
