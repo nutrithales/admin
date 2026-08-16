@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calculator, CheckCircle2, ClipboardPlus, Info, TriangleAlert, UtensilsCrossed } from "lucide-react";
+import {
+  Calculator,
+  CheckCircle2,
+  ClipboardPlus,
+  Info,
+  TriangleAlert,
+  UtensilsCrossed,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,7 +17,10 @@ import { FieldGroup, Input, Label } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/contexts/ToastContext";
 import { createPlanoEstruturadoAction } from "@/services/planos-estruturados.actions";
-import type { MatrizPacienteOption, MatrizProtocoloOption } from "@/services/matriz-nutricional.queries";
+import type {
+  MatrizPacienteOption,
+  MatrizProtocoloOption,
+} from "@/services/matriz-nutricional.queries";
 import {
   calcularMatrizNutricional,
   objetivoLabel,
@@ -69,6 +79,7 @@ export function MatrizNutricionalClient({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+
   const [authId, setAuthId] = useState("");
   const [objetivo, setObjetivo] = useState<ObjetivoMatriz>("emagrecimento");
   const [numeroRefeicoes, setNumeroRefeicoes] = useState<NumeroRefeicoes>(5);
@@ -78,27 +89,32 @@ export function MatrizNutricionalClient({
   const [altura, setAltura] = useState("");
   const [percentualGordura, setPercentualGordura] = useState("");
   const [massaMagra, setMassaMagra] = useState("");
-  const [gastoManual, setGastoManual] = useState("");
   const [metaKcal, setMetaKcal] = useState("");
   const [metaProteina, setMetaProteina] = useState("");
   const [metaCarboidrato, setMetaCarboidrato] = useState("");
   const [metaGordura, setMetaGordura] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const paciente = useMemo(() => pacientes.find((p) => p.authId === authId) ?? null, [authId, pacientes]);
+  const paciente = useMemo(
+    () => pacientes.find((p) => p.authId === authId) ?? null,
+    [authId, pacientes],
+  );
+  const idade = calcularIdade(paciente?.dataNascimento ?? null);
 
   useEffect(() => {
     if (!paciente) return;
     const avaliacao = paciente.avaliacao;
     const pesoPreferido = avaliacao?.pesoKg ?? paciente.pesoKg;
     const alturaPreferida = avaliacao?.alturaCm ?? paciente.alturaCm;
+
     setPeso(pesoPreferido ? String(pesoPreferido) : "");
     setAltura(alturaPreferida ? String(alturaPreferida) : "");
-    setPercentualGordura(avaliacao?.percentualGordura ? String(avaliacao.percentualGordura) : "");
-    setMassaMagra(avaliacao?.massaMagraKg ? String(avaliacao.massaMagraKg) : "");
+    setPercentualGordura(
+      avaliacao?.percentualGordura != null ? String(avaliacao.percentualGordura) : "",
+    );
+    setMassaMagra(avaliacao?.massaMagraKg != null ? String(avaliacao.massaMagraKg) : "");
     setObjetivo(objetivoValido(paciente.objetivo));
     setNivelAtividade(atividadeValida(paciente.nivelAtividade));
-    setGastoManual("");
   }, [paciente]);
 
   const massaMagraDerivada = useMemo(() => {
@@ -110,22 +126,24 @@ export function MatrizNutricionalClient({
     return Math.round(pesoKg * (1 - gordura / 100) * 10) / 10;
   }, [massaMagra, percentualGordura, peso]);
 
+  const dadosHarrisCompletos = Boolean(n(peso) && n(altura) && idade && sexo);
+
   const resultado = useMemo(() => {
     const pesoKg = n(peso);
     if (!pesoKg) return null;
+
     return calcularMatrizNutricional({
       pesoKg,
       alturaCm: n(altura),
-      idade: calcularIdade(paciente?.dataNascimento ?? null),
+      idade,
       sexo: sexo || undefined,
       massaMagraKg: massaMagraDerivada,
       percentualGordura: n(percentualGordura),
       nivelAtividade,
       objetivo,
       numeroRefeicoes,
-      gastoEnergeticoManual: n(gastoManual),
     });
-  }, [altura, gastoManual, massaMagraDerivada, nivelAtividade, numeroRefeicoes, objetivo, paciente?.dataNascimento, percentualGordura, peso, sexo]);
+  }, [altura, idade, massaMagraDerivada, nivelAtividade, numeroRefeicoes, objetivo, percentualGordura, peso, sexo]);
 
   useEffect(() => {
     if (!resultado?.energiaAlvoKcal) {
@@ -135,6 +153,7 @@ export function MatrizNutricionalClient({
       setMetaGordura("");
       return;
     }
+
     setMetaKcal(String(resultado.energiaAlvoKcal));
     setMetaProteina(resultado.proteinaG ? String(resultado.proteinaG) : "");
     setMetaCarboidrato(resultado.carboidratoG ? String(resultado.carboidratoG) : "");
@@ -150,8 +169,12 @@ export function MatrizNutricionalClient({
   const proteinaMeta = n(metaProteina);
   const carboMeta = n(metaCarboidrato);
   const gorduraMeta = n(metaGordura);
-  const kcalMacros = proteinaMeta && carboMeta && gorduraMeta ? proteinaMeta * 4 + carboMeta * 4 + gorduraMeta * 9 : null;
-  const diferencaMacros = kcalMeta && kcalMacros ? Math.abs(kcalMacros - kcalMeta) / kcalMeta : null;
+  const kcalMacros =
+    proteinaMeta && carboMeta && gorduraMeta
+      ? proteinaMeta * 4 + carboMeta * 4 + gorduraMeta * 9
+      : null;
+  const diferencaMacros =
+    kcalMeta && kcalMacros ? Math.abs(kcalMacros - kcalMeta) / kcalMeta : null;
   const macrosValidos = diferencaMacros !== null && diferencaMacros <= 0.03;
 
   const distribuicaoAjustada = resultado?.distribuicao.map((refeicao) => ({
@@ -164,8 +187,20 @@ export function MatrizNutricionalClient({
       toast({ kind: "error", title: "Complete os dados antes de criar o plano." });
       return;
     }
+    if (!dadosHarrisCompletos) {
+      toast({
+        kind: "error",
+        title: "Harris–Benedict incompleta",
+        description: "Peso, altura, idade e sexo biológico são necessários para calcular o gasto energético.",
+      });
+      return;
+    }
     if (!macrosValidos) {
-      toast({ kind: "error", title: "Revise os macronutrientes", description: "A soma dos macros precisa ficar a até 3% da meta calórica." });
+      toast({
+        kind: "error",
+        title: "Revise os macronutrientes",
+        description: "A soma dos macros precisa ficar a até 3% da meta calórica.",
+      });
       return;
     }
 
@@ -173,9 +208,16 @@ export function MatrizNutricionalClient({
     const contexto = [
       `Matriz ${resultado?.codigo ?? ""} (${numeroRefeicoes} refeições).`,
       `Objetivo: ${objetivoLabel(objetivo)}.`,
-      paciente.avaliacao ? `Avaliação física de ${formatarData(paciente.avaliacao.data)} utilizada como referência.` : "Sem avaliação física recente vinculada.",
-      paciente.preferenciasAlimentares ? `Rotina/preferências cadastradas: ${paciente.preferenciasAlimentares}` : null,
-      paciente.restricoesAlimentares.length ? `Restrições cadastradas: ${paciente.restricoesAlimentares.join(", ")}.` : null,
+      `Gasto estimado por Harris-Benedict revisada (1984): ${resultado?.getKcal ?? "não calculado"} kcal.`,
+      paciente.avaliacao
+        ? `Avaliação física de ${formatarData(paciente.avaliacao.data)} utilizada como referência.`
+        : "Sem avaliação física recente vinculada.",
+      paciente.preferenciasAlimentares
+        ? `Rotina/preferências cadastradas: ${paciente.preferenciasAlimentares}`
+        : null,
+      paciente.restricoesAlimentares.length
+        ? `Restrições cadastradas: ${paciente.restricoesAlimentares.join(", ")}.`
+        : null,
       "Metas e matriz foram sugeridas pelo módulo clínico e revisadas pelo nutricionista antes da criação do plano.",
     ]
       .filter(Boolean)
@@ -192,7 +234,11 @@ export function MatrizNutricionalClient({
     setSaving(false);
 
     if (!resposta.success || !resposta.planoId) {
-      toast({ kind: "error", title: "Não foi possível criar o plano", description: resposta.message });
+      toast({
+        kind: "error",
+        title: "Não foi possível criar o plano",
+        description: resposta.message,
+      });
       return;
     }
 
@@ -204,7 +250,7 @@ export function MatrizNutricionalClient({
     <div>
       <PageHeader
         title="Matriz Nutricional"
-        description="Cruza objetivo, composição corporal, atividade e número de refeições para sugerir uma estrutura de plano. A decisão final continua sendo clínica."
+        description="Cruza objetivo, composição corporal, atividade e número de refeições. O gasto energético é calculado pela Harris–Benedict revisada (1984), e a decisão final continua sendo clínica."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
@@ -213,7 +259,7 @@ export function MatrizNutricionalClient({
             <ClipboardPlus className="size-5 text-brand" />
             <div>
               <h2 className="font-semibold text-ink">1. Dados para a estratégia</h2>
-              <p className="text-sm text-muted">Os dados da última avaliação física entram automaticamente quando existirem.</p>
+              <p className="text-sm text-muted">A avaliação física mais recente é carregada automaticamente quando existir.</p>
             </div>
           </div>
 
@@ -223,32 +269,38 @@ export function MatrizNutricionalClient({
               <Select id="paciente-matriz" value={authId} onChange={(e) => setAuthId(e.target.value)}>
                 <option value="">Selecione um paciente</option>
                 {pacientes.map((p) => (
-                  <option key={p.authId} value={p.authId}>
-                    {p.nome}
-                  </option>
+                  <option key={p.authId} value={p.authId}>{p.nome}</option>
                 ))}
               </Select>
             </FieldGroup>
 
             {paciente?.avaliacao && (
               <div className="rounded-xl bg-bg-alt p-3 text-sm text-muted">
-                <span className="font-semibold text-ink">Avaliação carregada:</span> {formatarData(paciente.avaliacao.data)}
-                {paciente.avaliacao.percentualGordura != null ? ` · ${paciente.avaliacao.percentualGordura}% de gordura` : ""}
-                {paciente.avaliacao.massaMagraKg != null ? ` · ${paciente.avaliacao.massaMagraKg} kg de massa magra` : ""}
+                <span className="font-semibold text-ink">Avaliação carregada:</span>{" "}
+                {formatarData(paciente.avaliacao.data)}
+                {paciente.avaliacao.percentualGordura != null
+                  ? ` · ${paciente.avaliacao.percentualGordura}% de gordura`
+                  : ""}
+                {paciente.avaliacao.massaMagraKg != null
+                  ? ` · ${paciente.avaliacao.massaMagraKg} kg de massa magra`
+                  : ""}
               </div>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldGroup>
                 <Label htmlFor="objetivo-matriz">Objetivo principal</Label>
-                <Select id="objetivo-matriz" value={objetivo} onChange={(e) => setObjetivo(e.target.value as ObjetivoMatriz)}>
+                <Select
+                  id="objetivo-matriz"
+                  value={objetivo}
+                  onChange={(e) => setObjetivo(e.target.value as ObjetivoMatriz)}
+                >
                   {objetivos.map((item) => (
-                    <option key={item} value={item}>
-                      {objetivoLabel(item)}
-                    </option>
+                    <option key={item} value={item}>{objetivoLabel(item)}</option>
                   ))}
                 </Select>
               </FieldGroup>
+
               <FieldGroup>
                 <Label htmlFor="refeicoes-matriz">Refeições por dia</Label>
                 <Select
@@ -279,32 +331,47 @@ export function MatrizNutricionalClient({
               <FieldGroup>
                 <Label htmlFor="massa-magra-matriz">Massa magra (kg)</Label>
                 <Input id="massa-magra-matriz" type="number" step="0.1" value={massaMagra} onChange={(e) => setMassaMagra(e.target.value)} />
-                {!n(massaMagra) && massaMagraDerivada && <p className="mt-1 text-xs text-muted">Calculada: {massaMagraDerivada} kg</p>}
+                {!n(massaMagra) && massaMagraDerivada && (
+                  <p className="mt-1 text-xs text-muted">Calculada pela composição: {massaMagraDerivada} kg</p>
+                )}
               </FieldGroup>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <FieldGroup>
                 <Label htmlFor="atividade-matriz">Nível de atividade</Label>
-                <Select id="atividade-matriz" value={nivelAtividade} onChange={(e) => setNivelAtividade(e.target.value as NivelAtividade)}>
-                  <option value="sedentario">Sedentário</option>
-                  <option value="leve">Leve</option>
-                  <option value="moderado">Moderado</option>
-                  <option value="intenso">Intenso</option>
+                <Select
+                  id="atividade-matriz"
+                  value={nivelAtividade}
+                  onChange={(e) => setNivelAtividade(e.target.value as NivelAtividade)}
+                >
+                  <option value="sedentario">Sedentário · ×1,20</option>
+                  <option value="leve">Leve · ×1,375</option>
+                  <option value="moderado">Moderado · ×1,55</option>
+                  <option value="intenso">Intenso · ×1,725</option>
                 </Select>
               </FieldGroup>
+
               <FieldGroup>
                 <Label htmlFor="sexo-matriz">Sexo biológico</Label>
                 <Select id="sexo-matriz" value={sexo} onChange={(e) => setSexo(e.target.value as SexoBiologico | "")}>
-                  <option value="">Só é necessário sem massa magra</option>
+                  <option value="">Selecione</option>
                   <option value="masculino">Masculino</option>
                   <option value="feminino">Feminino</option>
                 </Select>
               </FieldGroup>
+
               <FieldGroup>
-                <Label htmlFor="get-manual">GET manual (opcional)</Label>
-                <Input id="get-manual" type="number" step="10" value={gastoManual} onChange={(e) => setGastoManual(e.target.value)} placeholder="Sobrescreve a estimativa" />
+                <Label>Idade</Label>
+                <Input value={idade ? `${idade} anos` : "Data de nascimento não cadastrada"} disabled />
               </FieldGroup>
+            </div>
+
+            <div className="rounded-xl border border-border bg-bg-alt p-3 text-xs text-muted">
+              <p className="font-semibold text-ink">Harris–Benedict revisada (Roza & Shizgal, 1984)</p>
+              <p className="mt-1">Homens: 88,362 + 13,397 × peso + 4,799 × altura − 5,677 × idade.</p>
+              <p>Mulheres: 447,593 + 9,247 × peso + 3,098 × altura − 4,330 × idade.</p>
+              <p className="mt-1">A TMB estimada é multiplicada pelo fator de atividade para chegar ao GET.</p>
             </div>
           </div>
         </section>
@@ -335,11 +402,14 @@ export function MatrizNutricionalClient({
                     </div>
                     <h3 className="text-xl font-semibold text-ink">{resultado.nome}</h3>
                     <p className="mt-1 text-sm text-muted">
-                      {resultado.energiaAlvoKcal ? `${resultado.energiaAlvoKcal} kcal como ponto de partida` : "Aguardando dados para estimar energia"}
+                      {resultado.energiaAlvoKcal
+                        ? `${resultado.energiaAlvoKcal} kcal como ponto de partida`
+                        : "Complete os dados da Harris–Benedict para calcular a energia"}
                     </p>
                   </div>
+
                   <div className="text-right text-sm text-muted">
-                    <p>Repouso: {resultado.rmrKcal ? `${resultado.rmrKcal} kcal` : "—"}</p>
+                    <p>TMB: {resultado.rmrKcal ? `${resultado.rmrKcal} kcal` : "—"}</p>
                     <p>GET: {resultado.getKcal ? `${resultado.getKcal} kcal` : "—"}</p>
                     {resultado.metodoRmr && <p className="text-xs">{resultado.metodoRmr}</p>}
                   </div>
@@ -374,12 +444,14 @@ export function MatrizNutricionalClient({
                     <span className="flex items-center gap-1 text-xs font-medium text-amber-700"><Info className="size-3.5" /> Confira kcal × macros</span>
                   )}
                 </div>
+
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <FieldGroup><Label>Kcal</Label><Input type="number" value={metaKcal} onChange={(e) => setMetaKcal(e.target.value)} /></FieldGroup>
                   <FieldGroup><Label>Proteína (g)</Label><Input type="number" value={metaProteina} onChange={(e) => setMetaProteina(e.target.value)} /></FieldGroup>
                   <FieldGroup><Label>Carboidrato (g)</Label><Input type="number" value={metaCarboidrato} onChange={(e) => setMetaCarboidrato(e.target.value)} /></FieldGroup>
                   <FieldGroup><Label>Gordura (g)</Label><Input type="number" value={metaGordura} onChange={(e) => setMetaGordura(e.target.value)} /></FieldGroup>
                 </div>
+
                 {kcalMacros && kcalMeta && (
                   <p className="mt-2 text-xs text-muted">Macros somam {Math.round(kcalMacros)} kcal · diferença de {Math.round(Math.abs(kcalMacros - kcalMeta))} kcal da meta.</p>
                 )}
@@ -403,7 +475,11 @@ export function MatrizNutricionalClient({
                 </div>
               )}
 
-              <Button onClick={criarPlano} loading={saving} disabled={!protocoloMatriz || !macrosValidos || !kcalMeta}>
+              <Button
+                onClick={criarPlano}
+                loading={saving}
+                disabled={!protocoloMatriz || !dadosHarrisCompletos || !macrosValidos || !kcalMeta}
+              >
                 Criar plano com esta matriz
               </Button>
               <p className="text-center text-xs text-muted">Depois de criar, você segue para o editor normal do plano e pode ajustar refeições, alimentos e observações.</p>
