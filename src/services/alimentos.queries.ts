@@ -27,7 +27,7 @@ export interface AlimentoOption {
   gordura_100g: number;
   porcao_padrao_g: number | null;
   grupo_alimentar: string | null;
-  medidas_caseiras: Tables<"alimentos">["medidas_caseiras"];
+  medidas_caseiras?: Tables<"alimentos">["medidas_caseiras"];
 }
 
 export async function searchAlimentos(query: string, limit = 20): Promise<AlimentoOption[]> {
