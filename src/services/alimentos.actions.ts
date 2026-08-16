@@ -8,9 +8,6 @@ import { searchAlimentos, type AlimentoOption } from "@/services/alimentos.queri
 import { buscarAlimentoComIA, type AlimentoEstimado } from "@/lib/ai/buscar-alimento";
 import type { ActionResult } from "@/services/pacientes.actions";
 
-/** Wrapper de Server Action sobre `searchAlimentos` — o Combobox roda no
- * cliente e não pode importar `alimentos.queries.ts` diretamente (é
- * `server-only`). */
 export async function searchAlimentosAction(query: string): Promise<AlimentoOption[]> {
   await assertAdmin();
   return searchAlimentos(query);
@@ -20,9 +17,6 @@ interface BuscarAlimentoIAResult extends ActionResult {
   estimativa?: AlimentoEstimado;
 }
 
-/** Usada quando a busca não encontra o alimento na base — a IA propõe um
- * rascunho de cadastro (sempre marcado como estimativa), o nutricionista
- * revisa os campos no formulário antes de salvar. Nunca grava nada sozinha. */
 export async function buscarAlimentoComIAAction(nome: string): Promise<BuscarAlimentoIAResult> {
   await assertAdmin();
   if (!nome.trim()) return { success: false, message: "Informe o nome do alimento primeiro." };
@@ -36,18 +30,9 @@ export async function buscarAlimentoComIAAction(nome: string): Promise<BuscarAli
 }
 
 export interface SubstitutoOption extends AlimentoOption {
-  /** Menor = mais parecido nutricionalmente na mesma quantidade. Soma das
-   * diferenças percentuais de kcal/proteína/carboidrato/gordura — não é
-   * uma unidade física, só serve pra ordenar. */
   distancia: number;
 }
 
-/** Sugere alimentos pra substituir `alimentoId` mantendo a mesma
- * quantidade — usado tanto na Receita Modular (trocar um componente)
- * quanto no builder de plano (trocar um ingrediente sem recalcular o
- * resto da refeição). Prioriza candidatos do mesmo grupo/categoria; se
- * não achar o suficiente, expande a busca pra base toda (ainda ordenado
- * por proximidade nutricional, então o resultado continua sensato). */
 export async function findSubstitutosAction(alimentoId: string, quantidadeG: number, limit = 8): Promise<SubstitutoOption[]> {
   await assertAdmin();
   const supabase = await createClient();
@@ -59,7 +44,7 @@ export async function findSubstitutosAction(alimentoId: string, quantidadeG: num
   async function buscar(filtroGrupo: boolean): Promise<AlimentoOption[]> {
     let query = supabase
       .from("alimentos")
-      .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar")
+      .select("id, nome, origem, kcal_100g, proteina_100g, carboidrato_100g, gordura_100g, porcao_padrao_g, grupo_alimentar, medidas_caseiras")
       .eq("ativo", true)
       .neq("id", alimentoId);
     if (filtroGrupo && original.grupo_alimentar) query = query.eq("grupo_alimentar", original.grupo_alimentar);
@@ -134,8 +119,6 @@ function toRow(data: AlimentoFormValues) {
     alergenos: data.alergenos,
     observacoes: data.observacoes || null,
     ativo: data.ativo,
-    // edição manual pelo formulário conta como revisão, mesmo que o
-    // alimento tenha sido criado automaticamente por importação de IA.
     revisado_manualmente: true,
   };
 }
@@ -178,8 +161,6 @@ export async function deleteAlimentoAction(id: string): Promise<ActionResult> {
 
   const { error } = await supabase.from("alimentos").delete().eq("id", id);
   if (error) {
-    // FK com receita_itens/refeicao_modelo_opcao_itens usa `on delete restrict`
-    // de propósito — não deixar apagar um alimento em uso silenciosamente.
     return {
       success: false,
       message: error.code === "23503" ? "Este alimento está em uso em receitas ou refeições." : `Erro ao excluir: ${error.message}`,
