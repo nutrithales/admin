@@ -52,7 +52,7 @@ export interface PacientePlanoDashboard {
   };
   refeicoes: PacientePlanoRefeicao[];
   substituicoes: PacientePlanoSubstituicao[];
-  vegetais: {
+  vegetais?: {
     tipoA: PacientePlanoVegetal[];
     tipoB: PacientePlanoVegetal[];
   };
