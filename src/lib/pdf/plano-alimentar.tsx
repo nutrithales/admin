@@ -199,28 +199,32 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
             Use as quantidades indicadas para substituir o alimento correspondente dentro da mesma refeição e opção. As equivalências são calculadas a partir da porção prescrita no plano e podem ser diferentes entre almoço, jantar, café da manhã e lanches.
           </Text>
 
-          {[...refeicoesSubstituicao.entries()].map(([chave, grupos]) => (
-            <View key={chave} style={styles.anexoRefeicao}>
-              <Text style={styles.anexoRefeicaoTitulo}>{grupos[0].refeicao}</Text>
-              {[...new Set(grupos.map((g) => g.opcaoNumero))].sort((a, b) => a - b).map((opcaoNumero) => {
-                const gruposOpcao = grupos.filter((g) => g.opcaoNumero === opcaoNumero);
-                return (
-                  <View key={opcaoNumero}>
-                    <Text style={styles.anexoOpcao}>Opção {opcaoNumero}{gruposOpcao[0]?.opcaoNome ? ` - ${gruposOpcao[0].opcaoNome}` : ""}</Text>
-                    {gruposOpcao.map((grupo, index) => (
-                      <View key={`${grupo.alimentoOrigem}-${index}`} style={styles.anexoGrupo} wrap={false}>
-                        <Text style={styles.anexoOrigem}>{grupo.alimentoOrigem}: {Math.round(grupo.quantidadeOrigemG)} g</Text>
-                        <Text style={styles.anexoGrupoNome}>{grupo.grupoNome}</Text>
-                        {grupo.substituicoes.map((sub, j) => (
-                          <Text key={`${sub.nome}-${j}`} style={styles.anexoSub}>• {sub.nome}: {Math.round(sub.quantidadeG)} g</Text>
-                        ))}
-                      </View>
-                    ))}
-                  </View>
-                );
-              })}
-            </View>
-          ))}
+          {[...refeicoesSubstituicao.entries()].map(([chave, grupos]) => {
+            const primeiroGrupo = grupos[0];
+            if (!primeiroGrupo) return null;
+            return (
+              <View key={chave} style={styles.anexoRefeicao}>
+                <Text style={styles.anexoRefeicaoTitulo}>{primeiroGrupo.refeicao}</Text>
+                {[...new Set(grupos.map((g) => g.opcaoNumero))].sort((a, b) => a - b).map((opcaoNumero) => {
+                  const gruposOpcao = grupos.filter((g) => g.opcaoNumero === opcaoNumero);
+                  return (
+                    <View key={opcaoNumero}>
+                      <Text style={styles.anexoOpcao}>Opção {opcaoNumero}{gruposOpcao[0]?.opcaoNome ? ` - ${gruposOpcao[0].opcaoNome}` : ""}</Text>
+                      {gruposOpcao.map((grupo, index) => (
+                        <View key={`${grupo.alimentoOrigem}-${index}`} style={styles.anexoGrupo} wrap={false}>
+                          <Text style={styles.anexoOrigem}>{grupo.alimentoOrigem}: {Math.round(grupo.quantidadeOrigemG)} g</Text>
+                          <Text style={styles.anexoGrupoNome}>{grupo.grupoNome}</Text>
+                          {grupo.substituicoes.map((sub, j) => (
+                            <Text key={`${sub.nome}-${j}`} style={styles.anexoSub}>• {sub.nome}: {Math.round(sub.quantidadeG)} g</Text>
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
 
           <Text style={styles.anexoNota}>
             As substituições são referências práticas de equivalência dentro de cada grupo alimentar. Preferências, tolerância gastrointestinal, treino, restrições e contexto clínico continuam prevalecendo sobre a troca automática.
