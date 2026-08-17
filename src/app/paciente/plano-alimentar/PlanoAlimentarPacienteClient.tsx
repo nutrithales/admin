@@ -63,7 +63,7 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
       <section className="rounded-[24px] bg-ink-deep p-4 text-white shadow-dark sm:rounded-[28px] sm:p-7">
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink-deep sm:size-11"><Utensils className="size-5" /></div>
-          <div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand sm:text-xs">Seu plano alimentar</p><h1 className="mt-1 line-clamp-2 text-xl font-black leading-tight sm:text-3xl">{plano.titulo}</h1><p className="mt-1.5 text-xs text-white/65 sm:text-sm">{plano.protocoloNome ?? "Plano individualizado"}</p></div>
+          <div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand sm:text-xs">Seu plano alimentar</p><h1 className="mt-1 line-clamp-2 text-xl font-black leading-tight sm:text-3xl">{plano.titulo}</h1><p className="mt-1.5 text-xs text-white/65 sm:text-sm">Plano individualizado</p></div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4">
           {plano.metas.kcal != null && <Resumo label="Energia" value={`${Math.round(plano.metas.kcal)} kcal`} />}
