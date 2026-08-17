@@ -7,6 +7,7 @@ export interface PacientePlanoSubstituicao {
   grupo: string;
   nome: string;
   quantidadeG: number;
+  medidaCaseira?: string | null;
 }
 
 export interface PacientePlanoVegetal {
@@ -19,9 +20,10 @@ export interface PacientePlanoItem {
   nome: string;
   quantidadeG?: number;
   quantidadeTexto?: string;
+  medidaCaseira?: string | null;
   papelMacro?: string | null;
   grupoSubstituicaoId?: string | null;
-  ingredientes?: { nome: string; quantidadeG: number }[];
+  ingredientes?: { nome: string; quantidadeG: number; medidaCaseira?: string | null }[];
 }
 
 export interface PacientePlanoOpcao {
@@ -58,11 +60,33 @@ export interface PacientePlanoDashboard {
   };
 }
 
+type Medida = { peso_g?: number; unidade?: string };
+
+function medidaCaseira(medidas: unknown, quantidadeG?: number | null): string | null {
+  if (!quantidadeG || !Array.isArray(medidas) || medidas.length === 0) return null;
+  const validas = (medidas as Medida[]).filter((m) => Number(m?.peso_g) > 0 && typeof m?.unidade === "string");
+  if (!validas.length) return null;
+
+  const pontuadas = validas.map((m) => {
+    const unidades = quantidadeG / Number(m.peso_g);
+    const arred05 = Math.round(unidades * 2) / 2;
+    const erro = Math.abs(unidades - arred05);
+    const faixa = arred05 >= 0.5 && arred05 <= 8 ? 0 : 1;
+    return { ...m, unidades, arred05, score: faixa * 10 + erro };
+  }).sort((a, b) => a.score - b.score);
+
+  const melhor = pontuadas[0];
+  if (!melhor || melhor.arred05 <= 0) return null;
+  const qtd = melhor.arred05.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  return `≈ ${qtd} ${String(melhor.unidade).toLowerCase()}`;
+}
+
 interface RpcSubRow {
   item_id: string;
   grupo_nome: string;
   alimento_substituto_nome: string;
   quantidade_substituto_g: number;
+  medidas_caseiras?: unknown;
 }
 
 interface RpcVegetalRow {
@@ -77,11 +101,7 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
   const plano = await getPlanoEstruturado(planoId);
   if (!plano) return null;
 
-  const { data: paciente } = await supabase
-    .from("pacientes")
-    .select("id, nome")
-    .eq("auth_id", plano.auth_id)
-    .maybeSingle();
+  const { data: paciente } = await supabase.from("pacientes").select("id, nome").eq("auth_id", plano.auth_id).maybeSingle();
 
   const rpcClient = supabase as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -92,12 +112,16 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
     rpcClient.rpc("listas_vegetais_dashboard_plano", { p_plano_id: plano.id }),
   ]);
 
-  const substituicoes: PacientePlanoSubstituicao[] = ((subData ?? []) as RpcSubRow[]).map((row) => ({
-    itemId: row.item_id,
-    grupo: row.grupo_nome,
-    nome: row.alimento_substituto_nome,
-    quantidadeG: Number(row.quantidade_substituto_g),
-  }));
+  const substituicoes: PacientePlanoSubstituicao[] = ((subData ?? []) as RpcSubRow[]).map((row) => {
+    const quantidadeG = Number(row.quantidade_substituto_g);
+    return {
+      itemId: row.item_id,
+      grupo: row.grupo_nome,
+      nome: row.alimento_substituto_nome,
+      quantidadeG,
+      medidaCaseira: medidaCaseira(row.medidas_caseiras, quantidadeG),
+    };
+  });
 
   const vegetaisRows = ((vegetalData ?? []) as RpcVegetalRow[]).sort((a, b) => a.ordem - b.ordem);
   const vegetais = {
@@ -105,42 +129,37 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
     tipoB: vegetaisRows.filter((row) => row.tipo === "VEG_B").map((row) => ({ nome: row.nome, porcaoG: row.porcao_g == null ? null : Number(row.porcao_g) })),
   };
 
-  const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes]
-    .sort((a, b) => a.ordem - b.ordem)
-    .map((refeicao) => {
-      const grupos = new Map<number, PacientePlanoOpcao>();
-      const itens = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
+  const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes].sort((a, b) => a.ordem - b.ordem).map((refeicao) => {
+    const grupos = new Map<number, PacientePlanoOpcao>();
+    const itens = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
 
-      for (const item of itens) {
-        const numero = item.opcao_numero ?? 1;
-        const atual: PacientePlanoOpcao = grupos.get(numero) ?? { numero, nome: item.opcao_nome ?? null, itens: [] };
-        const tipoA = item.papel_macro === "livre";
-        const tipoB = item.papel_macro === "vegetal_b";
+    for (const item of itens) {
+      const numero = item.opcao_numero ?? 1;
+      const atual: PacientePlanoOpcao = grupos.get(numero) ?? { numero, nome: item.opcao_nome ?? null, itens: [] };
+      const tipoA = item.papel_macro === "livre";
+      const tipoB = item.papel_macro === "vegetal_b";
+      const quantidadeG = !tipoA && !tipoB && item.alimento ? Number(item.quantidade_g ?? 0) || undefined : undefined;
 
-        atual.itens.push({
-          id: item.id,
-          nome: tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : item.receita?.nome ?? item.alimento?.nome ?? "Item",
-          quantidadeTexto: tipoA ? "livre" : tipoB ? "1 porção" : undefined,
-          quantidadeG: !tipoA && !tipoB && item.alimento ? Number(item.quantidade_g ?? 0) || undefined : undefined,
-          papelMacro: item.papel_macro,
-          grupoSubstituicaoId: item.grupo_substituicao_id,
-          ingredientes: item.receita
-            ? [...item.ingredientes]
-                .sort((a, b) => a.ordem - b.ordem)
-                .map((ing) => ({ nome: ing.alimento.nome, quantidadeG: Number(ing.quantidade_g_final) }))
-            : undefined,
-        });
-        grupos.set(numero, atual);
-      }
+      atual.itens.push({
+        id: item.id,
+        nome: tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : item.receita?.nome ?? item.alimento?.nome ?? "Item",
+        quantidadeTexto: tipoA ? "livre" : tipoB ? "1 porção" : undefined,
+        quantidadeG,
+        medidaCaseira: item.alimento ? medidaCaseira(item.alimento.medidas_caseiras, quantidadeG) : null,
+        papelMacro: item.papel_macro,
+        grupoSubstituicaoId: item.grupo_substituicao_id,
+        ingredientes: item.receita
+          ? [...item.ingredientes].sort((a, b) => a.ordem - b.ordem).map((ing) => {
+              const q = Number(ing.quantidade_g_final);
+              return { nome: ing.alimento.nome, quantidadeG: q, medidaCaseira: medidaCaseira(ing.alimento.medidas_caseiras, q) };
+            })
+          : undefined,
+      });
+      grupos.set(numero, atual);
+    }
 
-      return {
-        id: refeicao.id,
-        nome: refeicao.nome,
-        ordem: refeicao.ordem,
-        observacoes: refeicao.observacoes,
-        opcoes: [...grupos.values()].sort((a, b) => a.numero - b.numero),
-      };
-    });
+    return { id: refeicao.id, nome: refeicao.nome, ordem: refeicao.ordem, observacoes: refeicao.observacoes, opcoes: [...grupos.values()].sort((a, b) => a.numero - b.numero) };
+  });
 
   return {
     id: plano.id,
@@ -148,12 +167,7 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
     pacienteNome: paciente?.nome || "Paciente",
     protocoloNome: plano.protocolo?.nome ?? null,
     observacoes: plano.observacoes,
-    metas: {
-      kcal: plano.meta_kcal,
-      proteinaG: plano.meta_proteina_g,
-      carboidratoG: plano.meta_carboidrato_g,
-      gorduraG: plano.meta_gordura_g,
-    },
+    metas: { kcal: plano.meta_kcal, proteinaG: plano.meta_proteina_g, carboidratoG: plano.meta_carboidrato_g, gorduraG: plano.meta_gordura_g },
     refeicoes: refeicoesFormatadas,
     substituicoes,
     vegetais,
@@ -175,9 +189,7 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
   ]);
 
   if (!paciente || !planoResumo) return null;
-
   const plano = await getPlanoEstruturado(planoResumo.id);
   if (!plano || plano.auth_id !== user.id) return null;
-
   return montarDashboardPlano(plano.id);
 }
