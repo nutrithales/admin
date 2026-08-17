@@ -6,24 +6,14 @@ import { SUPABASE_URL } from "@/lib/supabase/config";
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
-  // Temporary, high-entropy one-time administrator password reset. The API
-  // validates the token server-side and invalidates it after successful use.
   "/redefinir-admin",
   "/api/auth/admin-reset",
   "/paciente/login",
-  // Formulários individuais enviados por WhatsApp. O token da URL identifica
-  // o envio e o acesso aos dados acontece apenas no servidor via service role.
+  "/preview-plano-alimentar",
   "/f",
-  // Public endpoint used by the administrative login screen to request a
-  // password-reset email before an authenticated session exists.
   "/api/auth/recover",
-  // Unauthenticated endpoints called from the public patient site
-  // (nutrithales.com.br) — must stay reachable without an admin session,
-  // including the CORS preflight OPTIONS request.
   "/api/pacientes/self-register",
   "/api/pacientes/forgot-password",
-  // Server-to-server booking sync. The route validates AGENDA_SYNC_SECRET
-  // itself, so it must not be redirected to the interactive admin login.
   "/api/agenda/webhook",
 ];
 
@@ -31,12 +21,6 @@ function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-/**
- * Refreshes the Supabase session cookie on every request and gates every
- * non-public route behind "is this user in `administradores`?". Runs in
- * the Edge middleware, so this is the first line of defense — pages still
- * rely on RLS for actual data access, this only protects page rendering.
- */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -66,8 +50,6 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  // Match only the patient portal route boundary. `/pacientes` is the
-  // administrative patient-management page and must remain in the admin area.
   const isPatientArea =
     (pathname === "/paciente" || pathname.startsWith("/paciente/")) &&
     pathname !== "/paciente/login";
