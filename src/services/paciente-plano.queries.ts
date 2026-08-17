@@ -56,26 +56,16 @@ interface RpcSubRow {
   quantidade_substituto_g: number;
 }
 
-export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDashboard | null> {
+async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashboard | null> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const plano = await getPlanoEstruturado(planoId);
+  if (!plano) return null;
 
-  const [{ data: paciente }, { data: planoResumo }] = await Promise.all([
-    supabase.from("pacientes").select("id, nome").eq("auth_id", user.id).maybeSingle(),
-    supabase
-      .from("planos_estruturados")
-      .select("id")
-      .eq("auth_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  if (!paciente || !planoResumo) return null;
-
-  const plano = await getPlanoEstruturado(planoResumo.id);
-  if (!plano || plano.auth_id !== user.id) return null;
+  const { data: paciente } = await supabase
+    .from("pacientes")
+    .select("id, nome")
+    .eq("auth_id", plano.auth_id)
+    .maybeSingle();
 
   const rpcClient = supabase as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -128,7 +118,7 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
   return {
     id: plano.id,
     titulo: plano.titulo || "Plano alimentar",
-    pacienteNome: paciente.nome || "Paciente",
+    pacienteNome: paciente?.nome || "Paciente",
     protocoloNome: plano.protocolo?.nome ?? null,
     observacoes: plano.observacoes,
     metas: {
@@ -140,4 +130,32 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
     refeicoes: refeicoesFormatadas,
     substituicoes,
   };
+}
+
+export async function getPlanoAlimentarDashboardPorId(planoId: string): Promise<PacientePlanoDashboard | null> {
+  return montarDashboardPlano(planoId);
+}
+
+export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDashboard | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [{ data: paciente }, { data: planoResumo }] = await Promise.all([
+    supabase.from("pacientes").select("id, nome").eq("auth_id", user.id).maybeSingle(),
+    supabase
+      .from("planos_estruturados")
+      .select("id")
+      .eq("auth_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (!paciente || !planoResumo) return null;
+
+  const plano = await getPlanoEstruturado(planoResumo.id);
+  if (!plano || plano.auth_id !== user.id) return null;
+
+  return montarDashboardPlano(plano.id);
 }
