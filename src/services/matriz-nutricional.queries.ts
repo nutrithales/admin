@@ -51,7 +51,7 @@ export async function listDadosMatrizNutricional(): Promise<{
         .from("protocolos")
         .select("id, nome, refeicoes:protocolo_refeicoes(id)")
         .eq("ativo", true)
-        .like("nome", "Matriz NTR —%")
+        .like("nome", "Matriz NTR -%")
         .order("nome", { ascending: true }),
     ]);
 
