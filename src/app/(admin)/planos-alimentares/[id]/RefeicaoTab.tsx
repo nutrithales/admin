@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, ChefHat, Apple, Repeat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Label, FieldGroup, Textarea } from "@/components/ui/Input";
-import { DragList } from "@/components/ui/DragList";
 import { MacroSummary } from "@/components/ui/MacroSummary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
@@ -14,7 +13,6 @@ import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular
 import { formatarQuantidadeComMedida } from "@/lib/nutrition/medida-caseira";
 import {
   removerItemDoPlanoAction,
-  reordenarItensAction,
   updateMetaRefeicaoAction,
   substituirItemAvulsoAction,
   substituirIngredienteAction,
@@ -31,8 +29,8 @@ export function macrosDoItem(item: PlanoItemComDados) {
   return calcularMacrosTotais(item.ingredientes.map((ing) => ({ quantidade_g: ing.quantidade_g_final, alimento: ing.alimento })));
 }
 
-export function macrosDaRefeicao(refeicao: PlanoRefeicaoComItens) {
-  return refeicao.itens.reduce(
+function macrosDosItens(itens: PlanoItemComDados[]) {
+  return itens.reduce(
     (acc, item) => {
       const m = macrosDoItem(item);
       return {
@@ -44,6 +42,13 @@ export function macrosDaRefeicao(refeicao: PlanoRefeicaoComItens) {
     },
     { kcal: 0, proteina_g: 0, carboidrato_g: 0, gordura_g: 0 },
   );
+}
+
+/** O resumo da refeição e do dia usa a Opção 1 como referência. As opções
+ * 2 e 3 são alternativas equivalentes e nunca devem ser somadas entre si. */
+export function macrosDaRefeicao(refeicao: PlanoRefeicaoComItens) {
+  const referencia = refeicao.itens.filter((item) => (item.opcao_numero ?? 1) === 1);
+  return macrosDosItens(referencia.length ? referencia : refeicao.itens);
 }
 
 interface AlvoSubstituicao {
@@ -157,20 +162,27 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
     router.refresh();
   }
 
-  const itensOrdenados = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
+  const opcoes = useMemo(() => {
+    const agrupadas = new Map<number, PlanoItemComDados[]>();
+    for (const item of refeicao.itens) {
+      const numero = item.opcao_numero ?? 1;
+      agrupadas.set(numero, [...(agrupadas.get(numero) ?? []), item]);
+    }
+    return [...agrupadas.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([numero, itens]) => ({
+        numero,
+        nome: itens.find((i) => i.opcao_nome)?.opcao_nome ?? null,
+        itens: [...itens].sort((a, b) => a.ordem - b.ordem),
+        macros: arredondarMacros(macrosDosItens(itens)),
+      }));
+  }, [refeicao.itens]);
+
   const realizado = arredondarMacros(macrosDaRefeicao(refeicao));
 
   async function handleRemove(itemId: string) {
     const result = await removerItemDoPlanoAction(itemId, planoId);
     toast({ kind: result.success ? "success" : "error", title: result.message });
-    if (result.success) refresh();
-  }
-
-  async function handleReorder(itens: PlanoItemComDados[]) {
-    const result = await reordenarItensAction(
-      planoId,
-      itens.map((i) => i.id),
-    );
     if (result.success) refresh();
   }
 
@@ -221,17 +233,19 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-bg-alt-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-        <MacroSummary
-          compact
-          realizado={realizado}
-          meta={{
-            kcal: refeicao.meta_kcal ?? undefined,
-            proteina_g: refeicao.meta_proteina_g ?? undefined,
-            carboidrato_g: refeicao.meta_carboidrato_g ?? undefined,
-            gordura_g: refeicao.meta_gordura_g ?? undefined,
-          }}
-          className="flex-1"
-        />
+        <div className="flex-1">
+          <MacroSummary
+            compact
+            realizado={realizado}
+            meta={{
+              kcal: refeicao.meta_kcal ?? undefined,
+              proteina_g: refeicao.meta_proteina_g ?? undefined,
+              carboidrato_g: refeicao.meta_carboidrato_g ?? undefined,
+              gordura_g: refeicao.meta_gordura_g ?? undefined,
+            }}
+          />
+          {opcoes.length > 1 && <p className="mt-2 text-xs text-muted">A Opção 1 é usada como referência dos macros. O paciente escolhe apenas uma opção por refeição.</p>}
+        </div>
         {editavel && (
           <Button type="button" variant="ghost" size="sm" onClick={() => setEditandoMeta((v) => !v)}>
             {editandoMeta ? "Fechar" : "Editar meta"}
@@ -281,49 +295,68 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
         </div>
       )}
 
-      {itensOrdenados.length === 0 ? (
+      {opcoes.length === 0 ? (
         <EmptyState icon={ChefHat} title="Nenhum item nesta refeição" description="Adicione uma receita ou um alimento avulso." />
       ) : (
-        <DragList
-          items={itensOrdenados}
-          keyFor={(i) => i.id}
-          onReorder={editavel ? handleReorder : () => {}}
-          renderItem={(item) => (
-            <ItemRow
-              item={item}
-              editavel={editavel}
-              onRemove={() => handleRemove(item.id)}
-              onSubstituirItem={() =>
-                item.alimento &&
-                setAlvoSubstituicao({
-                  tipo: "item",
-                  id: item.id,
-                  alimentoId: item.alimento.id,
-                  nome: item.alimento.nome,
-                  quantidadeG: item.quantidade_g ?? 0,
-                })
-              }
-              onSubstituirIngrediente={(ing) =>
-                setAlvoSubstituicao({
-                  tipo: "ingrediente",
-                  id: ing.id,
-                  alimentoId: ing.alimento.id,
-                  nome: ing.alimento.nome,
-                  quantidadeG: ing.quantidade_g_final,
-                })
-              }
-            />
-          )}
-        />
+        <div className="flex flex-col gap-4">
+          {opcoes.map((opcao) => (
+            <section key={opcao.numero} className="rounded-xl border border-border bg-surface p-4">
+              <div className="mb-4 flex flex-col gap-2 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge tone={opcao.numero === 1 ? "brand" : "muted"}>Opção {opcao.numero}</Badge>
+                  <p className="font-semibold text-ink">{opcao.nome || (opcao.numero === 1 ? "Principal" : "Alternativa")}</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 text-xs text-muted">
+                  <span>{opcao.macros.kcal} kcal</span>
+                  <span>•</span>
+                  <span>{opcao.macros.proteina_g}g P</span>
+                  <span>•</span>
+                  <span>{opcao.macros.carboidrato_g}g C</span>
+                  <span>•</span>
+                  <span>{opcao.macros.gordura_g}g G</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-4">
+                {opcao.itens.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    editavel={editavel}
+                    onRemove={() => handleRemove(item.id)}
+                    onSubstituirItem={() =>
+                      item.alimento &&
+                      setAlvoSubstituicao({
+                        tipo: "item",
+                        id: item.id,
+                        alimentoId: item.alimento.id,
+                        nome: item.alimento.nome,
+                        quantidadeG: item.quantidade_g ?? 0,
+                      })
+                    }
+                    onSubstituirIngrediente={(ing) =>
+                      setAlvoSubstituicao({
+                        tipo: "ingrediente",
+                        id: ing.id,
+                        alimentoId: ing.alimento.id,
+                        nome: ing.alimento.nome,
+                        quantidadeG: ing.quantidade_g_final,
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       )}
 
       {editavel && (
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)} className="w-fit">
-            <Plus className="size-4" /> Adicionar receita ou alimento
+            <Plus className="size-4" /> Adicionar à Opção 1
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setTextoLivreOpen(true)} className="w-fit">
-            <Sparkles className="size-4" /> Montar por texto (IA)
+            <Sparkles className="size-4" /> Montar Opção 1 por texto (IA)
           </Button>
         </div>
       )}
