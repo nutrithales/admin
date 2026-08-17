@@ -76,7 +76,7 @@ const PROTEINA_G_KG: Record<ObjetivoMatriz, number> = {
 const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string; refeicoes: { nome: string; percentual: number }[] }> = {
   4: {
     codigo: "A",
-    nome: "Matriz A — 4 refeições",
+    nome: "Matriz A - 4 refeições",
     refeicoes: [
       { nome: "Café da manhã", percentual: 25 },
       { nome: "Almoço", percentual: 35 },
@@ -86,7 +86,7 @@ const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string;
   },
   5: {
     codigo: "B",
-    nome: "Matriz B — 5 refeições",
+    nome: "Matriz B - 5 refeições",
     refeicoes: [
       { nome: "Café da manhã", percentual: 20 },
       { nome: "Lanche da manhã", percentual: 10 },
@@ -97,7 +97,7 @@ const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string;
   },
   6: {
     codigo: "C",
-    nome: "Matriz C — 6 refeições",
+    nome: "Matriz C - 6 refeições",
     refeicoes: [
       { nome: "Café da manhã", percentual: 20 },
       { nome: "Lanche da manhã", percentual: 10 },
