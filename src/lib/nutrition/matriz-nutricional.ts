@@ -39,6 +39,7 @@ export interface MatrizResultado {
   getOrigem: "calculado" | "manual" | null;
   fatorAtividade: number;
   ajusteObjetivoPercentual: number;
+  energiaCalculadaKcal: number | null;
   energiaAlvoKcal: number | null;
   proteinaG: number | null;
   carboidratoG: number | null;
@@ -72,6 +73,10 @@ const PROTEINA_G_KG: Record<ObjetivoMatriz, number> = {
   performance: 1.6,
   saude_geral: 1.4,
 };
+
+export const FAIXAS_ENERGETICAS_MATRIZ = [
+  1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000,
+] as const;
 
 const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string; refeicoes: { nome: string; percentual: number }[] }> = {
   4: {
@@ -109,15 +114,15 @@ const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string;
   },
 };
 
-function arredondar50(valor: number) {
-  return Math.round(valor / 50) * 50;
+function faixaEnergeticaMaisProxima(valor: number) {
+  return FAIXAS_ENERGETICAS_MATRIZ.reduce((melhor, atual) =>
+    Math.abs(atual - valor) < Math.abs(melhor - valor) ? atual : melhor,
+  );
 }
 
 /**
  * Harris-Benedict revisada por Roza & Shizgal (1984).
  * Peso em kg, altura em cm e idade em anos.
- * Homem: 88.362 + 13.397W + 4.799H - 5.677A
- * Mulher: 447.593 + 9.247W + 3.098H - 4.330A
  */
 function calcularRmr(input: MatrizInput): { kcal: number; metodo: MatrizResultado["metodoRmr"] } | null {
   if (
@@ -136,10 +141,7 @@ function calcularRmr(input: MatrizInput): { kcal: number; metodo: MatrizResultad
       ? 88.362 + 13.397 * input.pesoKg + 4.799 * input.alturaCm - 5.677 * input.idade
       : 447.593 + 9.247 * input.pesoKg + 3.098 * input.alturaCm - 4.33 * input.idade;
 
-  return {
-    kcal: Math.round(kcal),
-    metodo: "Harris-Benedict revisada (1984)",
-  };
+  return { kcal: Math.round(kcal), metodo: "Harris-Benedict revisada (1984)" };
 }
 
 export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
@@ -160,7 +162,8 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
   }
 
   const ajuste = AJUSTE_OBJETIVO[input.objetivo];
-  const energiaAlvoKcal = getKcal ? arredondar50(getKcal * (1 + ajuste)) : null;
+  const energiaCalculadaKcal = getKcal ? Math.round(getKcal * (1 + ajuste)) : null;
+  const energiaAlvoKcal = energiaCalculadaKcal ? faixaEnergeticaMaisProxima(energiaCalculadaKcal) : null;
 
   let proteinaG: number | null = null;
   let gorduraG: number | null = null;
@@ -180,14 +183,17 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
   if (!rmr && !input.gastoEnergeticoManual) {
     avisos.push("Para calcular o gasto pela Harris-Benedict, complete peso, altura, idade e sexo biológico.");
   }
-  if (rmr && energiaAlvoKcal && energiaAlvoKcal < rmr.kcal) {
-    avisos.push("A energia-alvo ficou abaixo da estimativa de repouso; revise clinicamente antes de criar o plano.");
+  if (rmr && energiaCalculadaKcal && energiaCalculadaKcal < rmr.kcal) {
+    avisos.push("A energia calculada ficou abaixo da estimativa de repouso; revise clinicamente antes de criar o plano.");
+  }
+  if (energiaCalculadaKcal && energiaAlvoKcal && energiaCalculadaKcal !== energiaAlvoKcal) {
+    avisos.push(`Estimativa clínica de ${energiaCalculadaKcal} kcal direcionada para a biblioteca pronta de ${energiaAlvoKcal} kcal.`);
   }
   if (carboidratoG !== null && input.pesoKg > 0 && carboidratoG / input.pesoKg < 1) {
     avisos.push("A disponibilidade de carboidratos ficou baixa para o peso informado; revise especialmente se houver treino frequente ou objetivo de performance.");
   }
   if (input.objetivo === "performance") {
-    avisos.push("Performance exige ajuste pelo volume e pela modalidade de treino; use esta matriz como ponto de partida, não como prescrição final.");
+    avisos.push("Performance exige ajuste pelo volume e pela modalidade de treino; use esta matriz como ponto de partida e distribua carboidratos em torno dos treinos quando necessário.");
   }
 
   const distribuicao: DistribuicaoRefeicao[] = matriz.refeicoes.map((refeicao) => ({
@@ -205,6 +211,7 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
     getOrigem,
     fatorAtividade,
     ajusteObjetivoPercentual: Math.round(ajuste * 100),
+    energiaCalculadaKcal,
     energiaAlvoKcal,
     proteinaG,
     carboidratoG,
