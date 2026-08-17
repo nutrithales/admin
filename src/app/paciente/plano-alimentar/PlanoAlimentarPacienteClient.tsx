@@ -12,7 +12,7 @@ import {
   Dumbbell,
   BookOpen,
   ClipboardCheck,
-  ChevronRight,
+  Leaf,
 } from "lucide-react";
 import type { PacientePlanoDashboard } from "@/services/paciente-plano.queries";
 
@@ -43,9 +43,14 @@ function dicaDaOpcao(refeicao: string, nomeOpcao?: string | null) {
   return "Deixe os ingredientes principais porcionados com antecedência e escolha a forma de preparo que melhor encaixa na sua rotina. A ideia é tornar esta opção fácil de repetir no dia a dia.";
 }
 
+function slugRefeicao(id: string) {
+  return `refeicao-${id}`;
+}
+
 export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDashboard }) {
   const [opcaoPorRefeicao, setOpcaoPorRefeicao] = useState<Record<string, number>>({});
   const [subAberta, setSubAberta] = useState<Record<string, boolean>>({});
+  const [vegetalAberto, setVegetalAberto] = useState<Record<string, boolean>>({});
   const [listaFinalAberta, setListaFinalAberta] = useState(false);
 
   const substituicoesPorItem = useMemo(() => {
@@ -53,6 +58,10 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
     for (const sub of plano.substituicoes) mapa.set(sub.itemId, [...(mapa.get(sub.itemId) ?? []), sub]);
     return mapa;
   }, [plano.substituicoes]);
+
+  const irParaRefeicao = (id: string) => {
+    document.getElementById(slugRefeicao(id))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-28 sm:space-y-6 sm:pb-8">
@@ -73,13 +82,28 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
         </div>
       </section>
 
+      <section className="rounded-[20px] border border-border bg-surface p-3 shadow-card sm:p-4">
+        <p className="px-1 text-[10px] font-black uppercase tracking-[0.14em] text-muted sm:text-xs">Ir direto para</p>
+        <div className="mt-2 flex snap-x gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          {plano.refeicoes.map((refeicao) => (
+            <button
+              key={`atalho-${refeicao.id}`}
+              onClick={() => irParaRefeicao(refeicao.id)}
+              className="min-h-11 shrink-0 snap-start rounded-full border border-border bg-bg-alt px-4 py-2 text-sm font-bold text-ink transition active:scale-[0.98]"
+            >
+              {refeicao.nome}
+            </button>
+          ))}
+        </div>
+      </section>
+
       {plano.refeicoes.map((refeicao) => {
         const opcaoAtiva = opcaoPorRefeicao[refeicao.id] ?? refeicao.opcoes[0]?.numero ?? 1;
         const opcao = refeicao.opcoes.find((item) => item.numero === opcaoAtiva) ?? refeicao.opcoes[0];
         if (!opcao) return null;
 
         return (
-          <section key={refeicao.id} className="overflow-hidden rounded-[22px] border border-border bg-surface shadow-card sm:rounded-[24px]">
+          <section id={slugRefeicao(refeicao.id)} key={refeicao.id} className="scroll-mt-4 overflow-hidden rounded-[22px] border border-border bg-surface shadow-card sm:rounded-[24px]">
             <div className="border-b border-border px-4 py-3.5 sm:px-5 sm:py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -109,6 +133,12 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
               {opcao.itens.map((item) => {
                 const subs = substituicoesPorItem.get(item.id) ?? [];
                 const aberta = subAberta[item.id] ?? false;
+                const tipoA = item.papelMacro === "livre";
+                const tipoB = item.papelMacro === "vegetal_b";
+                const ehVegetal = tipoA || tipoB;
+                const vegetais = tipoA ? plano.vegetais.tipoA : tipoB ? plano.vegetais.tipoB : [];
+                const vegAberto = vegetalAberto[item.id] ?? false;
+
                 return (
                   <div key={item.id} className="rounded-2xl bg-bg-alt-2 p-3.5 sm:p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -127,7 +157,30 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
                       </div>
                     </div>
 
-                    {subs.length > 0 && (
+                    {ehVegetal && vegetais.length > 0 && (
+                      <div className="mt-3 border-t border-border pt-2.5">
+                        <button
+                          onClick={() => setVegetalAberto((prev) => ({ ...prev, [item.id]: !vegAberto }))}
+                          className="flex min-h-11 w-full items-center justify-between gap-2 text-left text-sm font-bold text-ink active:opacity-70"
+                          aria-expanded={vegAberto}
+                        >
+                          <span className="flex items-center gap-2"><Leaf className="size-4 text-brand-dark" /> Ver opções de {item.nome}</span>
+                          {vegAberto ? <ChevronUp className="size-4 text-muted" /> : <ChevronDown className="size-4 text-muted" />}
+                        </button>
+                        {vegAberto && (
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            {vegetais.map((veg, index) => (
+                              <div key={`${item.id}-veg-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2.5 text-sm">
+                                <span className="font-semibold leading-5 text-ink">{veg.nome}</span>
+                                {tipoB && veg.porcaoG != null && <span className="shrink-0 font-black text-brand-dark">{Math.round(veg.porcaoG)} g</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!ehVegetal && subs.length > 0 && (
                       <div className="mt-3 border-t border-border pt-2.5">
                         <button
                           onClick={() => setSubAberta((prev) => ({ ...prev, [item.id]: !aberta }))}
@@ -193,7 +246,7 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
                 {plano.refeicoes.map((refeicao) => {
                   const blocos = refeicao.opcoes
                     .flatMap((opcao) => opcao.itens.map((item) => ({ opcao, item, subs: substituicoesPorItem.get(item.id) ?? [] })))
-                    .filter((x) => x.subs.length > 0);
+                    .filter((x) => x.subs.length > 0 && x.item.papelMacro !== "livre" && x.item.papelMacro !== "vegetal_b");
                   if (!blocos.length) return null;
                   return (
                     <div key={`lista-${refeicao.id}`}>
