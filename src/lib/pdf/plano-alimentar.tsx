@@ -1,9 +1,6 @@
 import "server-only";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
-// O @react-pdf/renderer v4 suporta fontes externas em TTF/WOFF e espera
-// `src` como URL ou caminho absoluto no Node. Os arquivos Galano disponíveis
-// neste projeto são OTF; até existir uma versão compatível, usamos Helvetica.
 const FONTE_DISPLAY = "Helvetica";
 
 const COR_BRAND = "#1ADC7F";
@@ -54,6 +51,7 @@ const styles = StyleSheet.create({
 export interface PlanoPdfItem {
   nome: string;
   quantidade_g?: number;
+  quantidade_texto?: string;
   ingredientes?: { nome: string; quantidade_g: number }[];
 }
 
@@ -124,7 +122,7 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
                   <View key={j} style={styles.itemRow}>
                     <Text style={styles.itemName}>
                       {item.nome}
-                      {item.quantidade_g != null ? <Text style={styles.itemQuantidade}> ({Math.round(item.quantidade_g)}g)</Text> : ""}
+                      {item.quantidade_texto ? <Text style={styles.itemQuantidade}> ({item.quantidade_texto})</Text> : item.quantidade_g != null ? <Text style={styles.itemQuantidade}> ({Math.round(item.quantidade_g)}g)</Text> : ""}
                     </Text>
                     {item.ingredientes?.map((ing, k) => <Text key={k} style={styles.ingredienteLine}>• {ing.nome} ({Math.round(ing.quantidade_g)}g)</Text>)}
                   </View>
