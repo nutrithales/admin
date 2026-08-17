@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 
 export default function PatientLoginPage() {
   const [email, setEmail] = useState("");
@@ -16,9 +17,9 @@ export default function PatientLoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/paciente/pre-consulta` },
+      options: { emailRedirectTo: `${window.location.origin}/paciente` },
     });
-    setMessage(error ? "Não foi possível enviar o acesso. Confira o e-mail informado." : "Enviamos um link seguro para o seu e-mail. Abra-o para acessar o formulário.");
+    setMessage(error ? "Não foi possível enviar o acesso. Confira o e-mail informado." : "Enviamos um link seguro para o seu e-mail. Abra-o para acessar sua área do paciente.");
     setLoading(false);
   }
 
@@ -26,7 +27,7 @@ export default function PatientLoginPage() {
     <main className="min-h-screen bg-bg px-4 py-10 sm:py-16">
       <div className="mx-auto max-w-md">
         <div className="mb-7 text-center">
-          <span className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-brand text-xl font-black text-ink-deep shadow-brand">TR</span>
+          <img src={BRAND_LOGO_DATA_URI} alt="Nutri Thales Rosa" className="mx-auto h-auto w-36 object-contain" />
           <p className="mt-5 text-sm font-bold uppercase tracking-[0.18em] text-brand-dark">Nutri Thales Rosa</p>
           <h1 className="mt-2 text-3xl font-black text-ink">Área do paciente</h1>
           <p className="mt-2 text-sm leading-6 text-muted">Use o mesmo e-mail informado no agendamento. Você receberá um link de acesso sem precisar lembrar uma senha.</p>
