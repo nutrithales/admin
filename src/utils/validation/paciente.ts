@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Formulários enviam número vazio como "" — trata como ausente em vez de
+// Formulários enviam número vazio como "" - trata como ausente em vez de
 // falhar o coerce (que transformaria "" em NaN).
 const optionalNumber = z.preprocess(
   (v) => (v === "" || v === null || v === undefined ? undefined : v),
@@ -18,6 +18,7 @@ export const pacienteSchema = z.object({
     .optional()
     .or(z.literal(""))
     .refine((v) => !v || !Number.isNaN(new Date(`${v}T12:00:00`).getTime()), "Data de nascimento inválida."),
+  sexo_biologico: z.enum(["masculino", "feminino"]).optional().or(z.literal("")),
   plano: z.string().trim().optional().or(z.literal("")),
   status: z.enum(["ativo", "inativo", "pendente"]),
   data_inicio: z.string().trim().optional().or(z.literal("")),
@@ -36,7 +37,7 @@ export const pacienteSchema = z.object({
 
 export type PacienteFormValues = z.infer<typeof pacienteSchema>;
 
-/** Standard mod-11 CPF checksum — rejects obviously fake numbers
+/** Standard mod-11 CPF checksum - rejects obviously fake numbers
  * (all-same-digit, wrong check digits) without a full validity lookup. */
 export function isValidCPF(rawCpf: string): boolean {
   const cpf = rawCpf.replace(/\D/g, "");
@@ -55,7 +56,7 @@ export function isValidCPF(rawCpf: string): boolean {
   return true;
 }
 
-/** Public self-registration form — patients only supply identity data;
+/** Public self-registration form - patients only supply identity data;
  * plano/status/data_inicio are the admin's call, so they're not exposed
  * here and every new signup lands as "pendente" server-side. */
 export const pacienteSelfRegisterSchema = z.object({
@@ -66,7 +67,7 @@ export const pacienteSelfRegisterSchema = z.object({
     .trim()
     .refine((v) => v.replace(/\D/g, "").length >= 10, "Informe um telefone válido com DDD."),
   cpf: z.string().trim().refine(isValidCPF, "CPF inválido."),
-  // Honeypot: real users never fill this hidden field — anything here means a bot.
+  // Honeypot: real users never fill this hidden field - anything here means a bot.
   website: z.string().max(0).optional().or(z.literal("")),
 });
 
