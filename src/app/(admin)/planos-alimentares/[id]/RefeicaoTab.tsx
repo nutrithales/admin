@@ -44,8 +44,6 @@ function macrosDosItens(itens: PlanoItemComDados[]) {
   );
 }
 
-/** O resumo da refeição e do dia usa a Opção 1 como referência. As opções
- * 2 e 3 são alternativas equivalentes e nunca devem ser somadas entre si. */
 export function macrosDaRefeicao(refeicao: PlanoRefeicaoComItens) {
   const referencia = refeicao.itens.filter((item) => (item.opcao_numero ?? 1) === 1);
   return macrosDosItens(referencia.length ? referencia : refeicao.itens);
@@ -73,15 +71,27 @@ function ItemRow({
   onSubstituirIngrediente: (ing: IngredienteComAlimento) => void;
 }) {
   const macros = arredondarMacros(macrosDoItem(item));
+  const ehTipoA = item.papel_macro === "livre";
+  const ehTipoB = item.papel_macro === "vegetal_b";
+  const ehVegetalAgrupado = ehTipoA || ehTipoB;
+  const nomeExibicao = ehTipoA
+    ? "Vegetais Tipo A"
+    : ehTipoB
+      ? "Vegetais Tipo B"
+      : item.receita?.nome ?? item.alimento?.nome;
 
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           {item.receita ? <ChefHat className="size-4 shrink-0 text-brand-dark" /> : <Apple className="size-4 shrink-0 text-brand-dark" />}
-          <p className="truncate font-semibold text-ink">{item.receita?.nome ?? item.alimento?.nome}</p>
+          <p className="truncate font-semibold text-ink">{nomeExibicao}</p>
         </div>
-        {item.receita ? (
+        {ehTipoA ? (
+          <p className="mt-1 text-xs text-muted">Livre — escolha entre as opções da lista de Vegetais Tipo A.</p>
+        ) : ehTipoB ? (
+          <p className="mt-1 text-xs text-muted">1 porção — escolha uma opção da lista de Vegetais Tipo B.</p>
+        ) : item.receita ? (
           <ul className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted">
             {item.ingredientes.map((ing) => (
               <li key={ing.id} className="flex items-center gap-1.5">
@@ -107,16 +117,18 @@ function ItemRow({
             {formatarQuantidadeComMedida(item.quantidade_g, item.alimento?.medidas_caseiras)}
           </p>
         )}
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <Badge tone="muted">{macros.kcal} kcal</Badge>
-          <Badge tone="muted">{macros.proteina_g}g P</Badge>
-          <Badge tone="muted">{macros.carboidrato_g}g C</Badge>
-          <Badge tone="muted">{macros.gordura_g}g G</Badge>
-        </div>
+        {!ehVegetalAgrupado && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Badge tone="muted">{macros.kcal} kcal</Badge>
+            <Badge tone="muted">{macros.proteina_g}g P</Badge>
+            <Badge tone="muted">{macros.carboidrato_g}g C</Badge>
+            <Badge tone="muted">{macros.gordura_g}g G</Badge>
+          </div>
+        )}
       </div>
       {editavel && (
         <div className="flex shrink-0 items-center gap-1">
-          {item.alimento && (
+          {item.alimento && !ehVegetalAgrupado && (
             <button
               type="button"
               onClick={onSubstituirItem}
@@ -271,27 +283,11 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
 
       {editandoMeta && (
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-3 sm:grid-cols-4">
-          <FieldGroup>
-            <Label>Kcal</Label>
-            <Input type="number" value={metaKcal} onChange={(e) => setMetaKcal(e.target.value)} />
-          </FieldGroup>
-          <FieldGroup>
-            <Label>Proteína (g)</Label>
-            <Input type="number" value={metaProteina} onChange={(e) => setMetaProteina(e.target.value)} />
-          </FieldGroup>
-          <FieldGroup>
-            <Label>Carboidrato (g)</Label>
-            <Input type="number" value={metaCarboidrato} onChange={(e) => setMetaCarboidrato(e.target.value)} />
-          </FieldGroup>
-          <FieldGroup>
-            <Label>Gordura (g)</Label>
-            <Input type="number" value={metaGordura} onChange={(e) => setMetaGordura(e.target.value)} />
-          </FieldGroup>
-          <div className="col-span-2 flex items-end sm:col-span-4">
-            <Button type="button" size="sm" loading={savingMeta} onClick={handleSalvarMeta}>
-              Salvar meta
-            </Button>
-          </div>
+          <FieldGroup><Label>Kcal</Label><Input type="number" value={metaKcal} onChange={(e) => setMetaKcal(e.target.value)} /></FieldGroup>
+          <FieldGroup><Label>Proteína (g)</Label><Input type="number" value={metaProteina} onChange={(e) => setMetaProteina(e.target.value)} /></FieldGroup>
+          <FieldGroup><Label>Carboidrato (g)</Label><Input type="number" value={metaCarboidrato} onChange={(e) => setMetaCarboidrato(e.target.value)} /></FieldGroup>
+          <FieldGroup><Label>Gordura (g)</Label><Input type="number" value={metaGordura} onChange={(e) => setMetaGordura(e.target.value)} /></FieldGroup>
+          <div className="col-span-2 flex items-end sm:col-span-4"><Button type="button" size="sm" loading={savingMeta} onClick={handleSalvarMeta}>Salvar meta</Button></div>
         </div>
       )}
 
@@ -307,13 +303,7 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
                   <p className="font-semibold text-ink">{opcao.nome || (opcao.numero === 1 ? "Principal" : "Alternativa")}</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 text-xs text-muted">
-                  <span>{opcao.macros.kcal} kcal</span>
-                  <span>•</span>
-                  <span>{opcao.macros.proteina_g}g P</span>
-                  <span>•</span>
-                  <span>{opcao.macros.carboidrato_g}g C</span>
-                  <span>•</span>
-                  <span>{opcao.macros.gordura_g}g G</span>
+                  <span>{opcao.macros.kcal} kcal</span><span>•</span><span>{opcao.macros.proteina_g}g P</span><span>•</span><span>{opcao.macros.carboidrato_g}g C</span><span>•</span><span>{opcao.macros.gordura_g}g G</span>
                 </div>
               </div>
               <div className="flex flex-col gap-4">
@@ -323,25 +313,8 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
                     item={item}
                     editavel={editavel}
                     onRemove={() => handleRemove(item.id)}
-                    onSubstituirItem={() =>
-                      item.alimento &&
-                      setAlvoSubstituicao({
-                        tipo: "item",
-                        id: item.id,
-                        alimentoId: item.alimento.id,
-                        nome: item.alimento.nome,
-                        quantidadeG: item.quantidade_g ?? 0,
-                      })
-                    }
-                    onSubstituirIngrediente={(ing) =>
-                      setAlvoSubstituicao({
-                        tipo: "ingrediente",
-                        id: ing.id,
-                        alimentoId: ing.alimento.id,
-                        nome: ing.alimento.nome,
-                        quantidadeG: ing.quantidade_g_final,
-                      })
-                    }
+                    onSubstituirItem={() => item.alimento && setAlvoSubstituicao({ tipo: "item", id: item.id, alimentoId: item.alimento.id, nome: item.alimento.nome, quantidadeG: item.quantidade_g ?? 0 })}
+                    onSubstituirIngrediente={(ing) => setAlvoSubstituicao({ tipo: "ingrediente", id: ing.id, alimentoId: ing.alimento.id, nome: ing.alimento.nome, quantidadeG: ing.quantidade_g_final })}
                   />
                 ))}
               </div>
@@ -352,35 +325,16 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
 
       {editavel && (
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)} className="w-fit">
-            <Plus className="size-4" /> Adicionar à Opção 1
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setTextoLivreOpen(true)} className="w-fit">
-            <Sparkles className="size-4" /> Montar Opção 1 por texto (IA)
-          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)} className="w-fit"><Plus className="size-4" /> Adicionar à Opção 1</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setTextoLivreOpen(true)} className="w-fit"><Sparkles className="size-4" /> Montar Opção 1 por texto (IA)</Button>
         </div>
       )}
 
       <AddItemModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} planoRefeicaoId={refeicao.id} planoId={planoId} />
-
-      <MontarTextoLivreModal
-        open={textoLivreOpen}
-        onClose={() => setTextoLivreOpen(false)}
-        onMontado={refresh}
-        planoRefeicaoId={refeicao.id}
-        planoId={planoId}
-        nomeRefeicao={refeicao.nome}
-      />
+      <MontarTextoLivreModal open={textoLivreOpen} onClose={() => setTextoLivreOpen(false)} onMontado={refresh} planoRefeicaoId={refeicao.id} planoId={planoId} nomeRefeicao={refeicao.nome} />
 
       {alvoSubstituicao && (
-        <SubstituirModal
-          open={!!alvoSubstituicao}
-          onClose={() => setAlvoSubstituicao(null)}
-          alimentoId={alvoSubstituicao.alimentoId}
-          alimentoNome={alvoSubstituicao.nome}
-          quantidadeG={alvoSubstituicao.quantidadeG}
-          onConfirm={handleConfirmarSubstituicao}
-        />
+        <SubstituirModal open={!!alvoSubstituicao} onClose={() => setAlvoSubstituicao(null)} alimentoId={alvoSubstituicao.alimentoId} alimentoNome={alvoSubstituicao.nome} quantidadeG={alvoSubstituicao.quantidadeG} onConfirm={handleConfirmarSubstituicao} />
       )}
     </div>
   );
