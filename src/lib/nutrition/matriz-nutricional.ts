@@ -114,16 +114,36 @@ const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string;
   },
 };
 
+const MATRIZES_PERFORMANCE: Record<NumeroRefeicoes, { nome: string; percentual: number }[]> = {
+  4: [
+    { nome: "Café da manhã", percentual: 25 },
+    { nome: "Almoço", percentual: 30 },
+    { nome: "Pré-treino", percentual: 20 },
+    { nome: "Jantar", percentual: 25 },
+  ],
+  5: [
+    { nome: "Café da manhã", percentual: 20 },
+    { nome: "Lanche da manhã", percentual: 10 },
+    { nome: "Almoço", percentual: 25 },
+    { nome: "Pré-treino", percentual: 20 },
+    { nome: "Jantar", percentual: 25 },
+  ],
+  6: [
+    { nome: "Café da manhã", percentual: 20 },
+    { nome: "Lanche da manhã", percentual: 10 },
+    { nome: "Almoço", percentual: 25 },
+    { nome: "Pré-treino", percentual: 20 },
+    { nome: "Jantar", percentual: 20 },
+    { nome: "Ceia", percentual: 5 },
+  ],
+};
+
 function faixaEnergeticaMaisProxima(valor: number) {
   return FAIXAS_ENERGETICAS_MATRIZ.reduce((melhor, atual) =>
     Math.abs(atual - valor) < Math.abs(melhor - valor) ? atual : melhor,
   );
 }
 
-/**
- * Harris-Benedict revisada por Roza & Shizgal (1984).
- * Peso em kg, altura em cm e idade em anos.
- */
 function calcularRmr(input: MatrizInput): { kcal: number; metodo: MatrizResultado["metodoRmr"] } | null {
   if (
     input.pesoKg <= 0 ||
@@ -186,24 +206,19 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
   if (rmr && energiaCalculadaKcal && energiaCalculadaKcal < rmr.kcal) {
     avisos.push("A energia calculada ficou abaixo da estimativa de repouso; revise clinicamente antes de criar o plano.");
   }
-  if (energiaCalculadaKcal && energiaAlvoKcal && energiaCalculadaKcal !== energiaAlvoKcal) {
-    avisos.push(`Estimativa clínica de ${energiaCalculadaKcal} kcal direcionada para a biblioteca pronta de ${energiaAlvoKcal} kcal.`);
-  }
   if (carboidratoG !== null && input.pesoKg > 0 && carboidratoG / input.pesoKg < 1) {
-    avisos.push("A disponibilidade de carboidratos ficou baixa para o peso informado; revise especialmente se houver treino frequente ou objetivo de performance.");
-  }
-  if (input.objetivo === "performance") {
-    avisos.push("Performance exige ajuste pelo volume e pela modalidade de treino; use esta matriz como ponto de partida e distribua carboidratos em torno dos treinos quando necessário.");
+    avisos.push("A disponibilidade de carboidratos ficou baixa para o peso informado; revise especialmente se houver treino frequente.");
   }
 
-  const distribuicao: DistribuicaoRefeicao[] = matriz.refeicoes.map((refeicao) => ({
+  const refeicoes = input.objetivo === "performance" ? MATRIZES_PERFORMANCE[input.numeroRefeicoes] : matriz.refeicoes;
+  const distribuicao: DistribuicaoRefeicao[] = refeicoes.map((refeicao) => ({
     ...refeicao,
     kcal: energiaAlvoKcal ? Math.round((energiaAlvoKcal * refeicao.percentual) / 100) : 0,
   }));
 
   return {
     codigo: matriz.codigo,
-    nome: matriz.nome,
+    nome: input.objetivo === "performance" ? `${matriz.nome} - Performance` : matriz.nome,
     numeroRefeicoes: input.numeroRefeicoes,
     rmrKcal: rmr?.kcal ?? null,
     metodoRmr: rmr?.metodo ?? null,
