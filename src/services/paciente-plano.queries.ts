@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { getPlanoEstruturado } from "@/services/planos-estruturados.queries";
 
 export interface PacientePlanoSubstituicao {
   itemId: string;
@@ -60,35 +61,21 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: paciente }, { data: plano }] = await Promise.all([
+  const [{ data: paciente }, { data: planoResumo }] = await Promise.all([
     supabase.from("pacientes").select("id, nome").eq("auth_id", user.id).maybeSingle(),
     supabase
       .from("planos_estruturados")
-      .select("id, titulo, observacoes, meta_kcal, meta_proteina_g, meta_carboidrato_g, meta_gordura_g, protocolo_id, status, created_at")
+      .select("id")
       .eq("auth_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
   ]);
 
-  if (!paciente || !plano) return null;
+  if (!paciente || !planoResumo) return null;
 
-  const [{ data: protocolo }, { data: refeicoes }] = await Promise.all([
-    plano.protocolo_id
-      ? supabase.from("protocolos").select("nome").eq("id", plano.protocolo_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase
-      .from("plano_refeicoes")
-      .select(`id, nome, ordem, observacoes,
-        itens:plano_refeicao_itens(
-          id, ordem, quantidade_g, opcao_numero, opcao_nome, papel_macro, grupo_substituicao_id,
-          alimento:alimentos(id, nome),
-          receita:receitas(id, nome),
-          ingredientes:plano_refeicao_item_ingredientes(quantidade_g_final, ordem, alimento:alimentos(id, nome))
-        )`)
-      .eq("plano_estruturado_id", plano.id)
-      .order("ordem", { ascending: true }),
-  ]);
+  const plano = await getPlanoEstruturado(planoResumo.id);
+  if (!plano || plano.auth_id !== user.id) return null;
 
   const rpcClient = supabase as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -101,53 +88,48 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
     quantidadeG: Number(row.quantidade_substituto_g),
   }));
 
-  const refeicoesFormatadas: PacientePlanoRefeicao[] = (refeicoes ?? []).map((refeicao) => {
-    const grupos = new Map<number, PacientePlanoOpcao>();
-    const itens = [...(refeicao.itens ?? [])].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes]
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((refeicao) => {
+      const grupos = new Map<number, PacientePlanoOpcao>();
+      const itens = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
 
-    for (const item of itens) {
-      const numero = item.opcao_numero ?? 1;
-      const atual = grupos.get(numero) ?? { numero, nome: item.opcao_nome, itens: [] };
-      const tipoA = item.papel_macro === "livre";
-      const tipoB = item.papel_macro === "vegetal_b";
-      const alimento = item.alimento as unknown as { id: string; nome: string } | null;
-      const receita = item.receita as unknown as { id: string; nome: string } | null;
-      const ingredientes = (item.ingredientes ?? []) as unknown as Array<{
-        quantidade_g_final: number;
-        ordem: number | null;
-        alimento: { id: string; nome: string };
-      }>;
+      for (const item of itens) {
+        const numero = item.opcao_numero ?? 1;
+        const atual: PacientePlanoOpcao = grupos.get(numero) ?? { numero, nome: item.opcao_nome ?? null, itens: [] };
+        const tipoA = item.papel_macro === "livre";
+        const tipoB = item.papel_macro === "vegetal_b";
 
-      atual.itens.push({
-        id: item.id,
-        nome: tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : receita?.nome ?? alimento?.nome ?? "Item",
-        quantidadeTexto: tipoA ? "livre" : tipoB ? "1 porção" : undefined,
-        quantidadeG: !tipoA && !tipoB && alimento ? Number(item.quantidade_g ?? 0) || undefined : undefined,
-        papelMacro: item.papel_macro,
-        grupoSubstituicaoId: item.grupo_substituicao_id,
-        ingredientes: receita
-          ? ingredientes
-              .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-              .map((ing) => ({ nome: ing.alimento.nome, quantidadeG: Number(ing.quantidade_g_final) }))
-          : undefined,
-      });
-      grupos.set(numero, atual);
-    }
+        atual.itens.push({
+          id: item.id,
+          nome: tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : item.receita?.nome ?? item.alimento?.nome ?? "Item",
+          quantidadeTexto: tipoA ? "livre" : tipoB ? "1 porção" : undefined,
+          quantidadeG: !tipoA && !tipoB && item.alimento ? Number(item.quantidade_g ?? 0) || undefined : undefined,
+          papelMacro: item.papel_macro,
+          grupoSubstituicaoId: item.grupo_substituicao_id,
+          ingredientes: item.receita
+            ? [...item.ingredientes]
+                .sort((a, b) => a.ordem - b.ordem)
+                .map((ing) => ({ nome: ing.alimento.nome, quantidadeG: Number(ing.quantidade_g_final) }))
+            : undefined,
+        });
+        grupos.set(numero, atual);
+      }
 
-    return {
-      id: refeicao.id,
-      nome: refeicao.nome,
-      ordem: refeicao.ordem,
-      observacoes: refeicao.observacoes,
-      opcoes: [...grupos.values()].sort((a, b) => a.numero - b.numero),
-    };
-  });
+      return {
+        id: refeicao.id,
+        nome: refeicao.nome,
+        ordem: refeicao.ordem,
+        observacoes: refeicao.observacoes,
+        opcoes: [...grupos.values()].sort((a, b) => a.numero - b.numero),
+      };
+    });
 
   return {
     id: plano.id,
     titulo: plano.titulo || "Plano alimentar",
-    pacienteNome: paciente.nome,
-    protocoloNome: protocolo?.nome ?? null,
+    pacienteNome: paciente.nome || "Paciente",
+    protocoloNome: plano.protocolo?.nome ?? null,
     observacoes: plano.observacoes,
     metas: {
       kcal: plano.meta_kcal,
