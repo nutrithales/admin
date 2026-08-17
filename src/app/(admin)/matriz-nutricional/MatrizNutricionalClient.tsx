@@ -8,6 +8,9 @@ import {
   ClipboardPlus,
   Info,
   TriangleAlert,
+  TrendingDown,
+  TrendingUp,
+  Activity,
   UtensilsCrossed,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -68,6 +71,93 @@ function n(valor: string) {
 
 function formatarData(data: string) {
   return new Intl.DateTimeFormat("pt-BR").format(new Date(data));
+}
+
+function kg(valor: number) {
+  return valor.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+function projetarResultados(
+  objetivo: ObjetivoMatriz,
+  pesoKg: number | undefined,
+  getKcal: number | null | undefined,
+  metaKcal: number | undefined,
+  treinoFrequencia: number | null | undefined,
+) {
+  if (!pesoKg || !getKcal || !metaKcal) return null;
+
+  const diferencaPercentual = (metaKcal - getKcal) / getKcal;
+
+  if (objetivo === "emagrecimento") {
+    const intensidade = Math.min(1, Math.max(0.55, Math.abs(diferencaPercentual) / 0.15));
+    const ritmoMin = pesoKg * 0.003 * intensidade;
+    const ritmoMax = pesoKg * 0.006 * intensidade;
+    return {
+      titulo: "Tendência esperada de redução de peso",
+      subtitulo: `Aproximadamente ${kg(ritmoMin)} a ${kg(ritmoMax)} kg por semana, se a aderência e o gasto permanecerem próximos do estimado.`,
+      tom: "down" as const,
+      horizontes: [4, 8, 12].map((semanas) => ({
+        semanas,
+        texto: `${kg(ritmoMin * semanas)} a ${kg(ritmoMax * semanas)} kg de redução`,
+      })),
+      nota: "A velocidade real pode variar com retenção hídrica, ciclo menstrual, treino, sono, adesão e adaptação metabólica. O objetivo é preservar massa magra, não acelerar a balança.",
+    };
+  }
+
+  if (objetivo === "hipertrofia") {
+    const ritmoMin = pesoKg * 0.001;
+    const ritmoMax = pesoKg * 0.0025;
+    return {
+      titulo: "Tendência esperada de ganho de peso",
+      subtitulo: `Meta conservadora de aproximadamente ${kg(ritmoMin)} a ${kg(ritmoMax)} kg por semana.`,
+      tom: "up" as const,
+      horizontes: [4, 8, 12].map((semanas) => ({
+        semanas,
+        texto: `${kg(ritmoMin * semanas)} a ${kg(ritmoMax * semanas)} kg de ganho de peso`,
+      })),
+      nota: "Ganho de peso não significa ganho equivalente de músculo. A resposta depende principalmente de treinamento, experiência, sono, genética e aderência ao superávit.",
+    };
+  }
+
+  if (objetivo === "recomposicao") {
+    return {
+      titulo: "Tendência esperada de recomposição corporal",
+      subtitulo: "O peso pode mudar pouco mesmo com melhora relevante da composição corporal.",
+      tom: "stable" as const,
+      horizontes: [
+        { semanas: 4, texto: "Primeiros sinais em medidas, fotos e desempenho" },
+        { semanas: 8, texto: "Melhor leitura da tendência de gordura e massa magra" },
+        { semanas: 12, texto: "Janela mais adequada para avaliar mudança corporal consolidada" },
+      ],
+      nota: "Priorize percentual de gordura, circunferências, evolução de cargas e avaliação física em vez de usar apenas o peso.",
+    };
+  }
+
+  if (objetivo === "performance") {
+    return {
+      titulo: "Resultados esperados para performance",
+      subtitulo: "A estratégia prioriza disponibilidade energética, pré-treino e recuperação sem buscar mudança rápida de peso.",
+      tom: "performance" as const,
+      horizontes: [
+        { semanas: 4, texto: "Melhor tolerância à rotina de treinos e menor oscilação de energia" },
+        { semanas: 8, texto: "Maior consistência de recuperação e execução dos treinos" },
+        { semanas: 12, texto: "Janela para comparar desempenho, recuperação e composição corporal" },
+      ],
+      nota: `${treinoFrequencia ? `${treinoFrequencia} sessões semanais cadastradas. ` : ""}A melhora esportiva não pode ser prevista em percentual apenas pela dieta e deve ser acompanhada junto à carga de treinamento, sono e recuperação.",
+    };
+  }
+
+  return {
+    titulo: objetivo === "manutencao" ? "Tendência esperada de manutenção" : "Tendência esperada de saúde geral",
+    subtitulo: "A estratégia busca estabilidade de peso com melhor organização alimentar e adequação nutricional.",
+    tom: "stable" as const,
+    horizontes: [
+      { semanas: 4, texto: "Estabilizar rotina, fome, energia e ingestão" },
+      { semanas: 8, texto: "Consolidar aderência e estabilidade de peso" },
+      { semanas: 12, texto: "Reavaliar necessidade energética e composição corporal" },
+    ],
+    nota: "Mudanças de peso fora do esperado devem levar à revisão do gasto energético, rotina e aderência antes de alterar o plano.",
+  };
 }
 
 export function MatrizNutricionalClient({
@@ -164,10 +254,13 @@ export function MatrizNutricionalClient({
     setMetaGordura(resultado.gorduraG ? String(resultado.gorduraG) : "");
   }, [resultado]);
 
-  const protocoloMatriz = useMemo(
-    () => matrizes.find((m) => m.numeroRefeicoes === numeroRefeicoes) ?? null,
-    [matrizes, numeroRefeicoes],
-  );
+  const protocoloMatriz = useMemo(() => {
+    const candidatos = matrizes.filter((m) => m.numeroRefeicoes === numeroRefeicoes);
+    if (objetivo === "performance") {
+      return candidatos.find((m) => m.nome.toLowerCase().includes("performance")) ?? candidatos[0] ?? null;
+    }
+    return candidatos.find((m) => !m.nome.toLowerCase().includes("performance")) ?? candidatos[0] ?? null;
+  }, [matrizes, numeroRefeicoes, objetivo]);
 
   const kcalMeta = n(metaKcal);
   const proteinaMeta = n(metaProteina);
@@ -185,6 +278,11 @@ export function MatrizNutricionalClient({
     ...refeicao,
     kcal: kcalMeta ? Math.round((kcalMeta * refeicao.percentual) / 100) : refeicao.kcal,
   }));
+
+  const projecao = useMemo(
+    () => projetarResultados(objetivo, n(peso), resultado?.getKcal, kcalMeta, paciente?.treinoFrequenciaSemanal),
+    [objetivo, peso, resultado?.getKcal, kcalMeta, paciente?.treinoFrequenciaSemanal],
+  );
 
   async function criarPlano() {
     if (!paciente || !protocoloMatriz || !kcalMeta || !proteinaMeta || !carboMeta || !gorduraMeta) {
@@ -429,6 +527,35 @@ export function MatrizNutricionalClient({
                   <div className="rounded-xl border border-border p-3"><span className="text-muted">Composição:</span> <strong>{massaMagraDerivada ? `${massaMagraDerivada} kg MLG` : "não disponível"}</strong></div>
                 </div>
               </div>
+
+              {projecao && (
+                <div className="rounded-2xl border border-border bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-xl bg-bg-alt p-2 text-brand">
+                      {projecao.tom === "down" ? <TrendingDown className="size-5" /> : projecao.tom === "up" ? <TrendingUp className="size-5" /> : <Activity className="size-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-ink">Resultados esperados</p>
+                        <Badge tone="muted">estimativa clínica</Badge>
+                      </div>
+                      <p className="mt-1 font-medium text-ink">{projecao.titulo}</p>
+                      <p className="mt-1 text-sm text-muted">{projecao.subtitulo}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                    {projecao.horizontes.map((item) => (
+                      <div key={item.semanas} className="rounded-xl bg-bg-alt p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">{item.semanas} semanas</p>
+                        <p className="mt-1 text-sm font-medium text-ink">{item.texto}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="mt-3 text-xs leading-relaxed text-muted">{projecao.nota}</p>
+                </div>
+              )}
 
               {resultado.avisos.length > 0 && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
