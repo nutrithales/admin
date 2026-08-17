@@ -23,20 +23,27 @@ export async function createPacienteComDemografiaAction(
     return { success: false, message: "Informe a data de nascimento do paciente." };
   }
 
+  if (!values.sexo_biologico) {
+    return { success: false, message: "Informe o sexo biológico do paciente." };
+  }
+
   const result = await createPacienteAction(values);
   if (!result.success) return result;
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("pacientes")
-    .update({ data_nascimento: values.data_nascimento })
+    .update({
+      data_nascimento: values.data_nascimento,
+      sexo_biologico: values.sexo_biologico,
+    } as never)
     .eq("email", values.email);
 
   if (error) {
     return {
       ...result,
       success: false,
-      message: `Paciente criado, mas não foi possível salvar a data de nascimento: ${error.message}`,
+      message: `Paciente criado, mas não foi possível salvar os dados demográficos: ${error.message}`,
     };
   }
 
@@ -57,13 +64,16 @@ export async function updatePacienteComDemografiaAction(
   const supabase = await createClient();
   const { error } = await supabase
     .from("pacientes")
-    .update({ data_nascimento: values.data_nascimento || null })
+    .update({
+      data_nascimento: values.data_nascimento || null,
+      sexo_biologico: values.sexo_biologico || null,
+    } as never)
     .eq("id", id);
 
   if (error) {
     return {
       success: false,
-      message: `Dados principais atualizados, mas a data de nascimento não pôde ser salva: ${error.message}`,
+      message: `Dados principais atualizados, mas os dados demográficos não puderam ser salvos: ${error.message}`,
     };
   }
 
