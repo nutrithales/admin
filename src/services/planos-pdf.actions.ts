@@ -6,11 +6,84 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { assertAdmin } from "@/lib/supabase/assert-admin";
 import { createClient } from "@/lib/supabase/server";
 import { getPlanoEstruturado } from "@/services/planos-estruturados.queries";
-import { PlanoAlimentarPdf, type PlanoPdfData } from "@/lib/pdf/plano-alimentar";
+import {
+  PlanoAlimentarPdf,
+  type PlanoPdfData,
+  type PlanoPdfSubstituicaoGrupo,
+} from "@/lib/pdf/plano-alimentar";
 import type { ActionResult } from "@/services/pacientes.actions";
 
 type PdfDocumentElement = Parameters<typeof renderToBuffer>[0];
 const BUCKET = "planos";
+
+interface SubstituicaoRpcRow {
+  refeicao_id: string;
+  refeicao_nome: string;
+  refeicao_ordem: number;
+  opcao_numero: number;
+  opcao_nome: string | null;
+  item_id: string;
+  alimento_origem_id: string;
+  alimento_origem_nome: string;
+  quantidade_origem_g: number;
+  grupo_codigo: string;
+  grupo_nome: string;
+  alimento_substituto_id: string;
+  alimento_substituto_nome: string;
+  quantidade_substituto_g: number;
+}
+
+async function carregarSubstituicoesAmpliadas(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  planoId: string,
+): Promise<PlanoPdfSubstituicaoGrupo[]> {
+  const rpcClient = supabase as unknown as {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+
+  const { data, error } = await rpcClient.rpc("substituicoes_ampliadas_plano", { p_plano_id: planoId });
+  if (error) throw new Error(`Erro ao calcular substituições: ${error.message}`);
+
+  const linhas = (data ?? []) as SubstituicaoRpcRow[];
+  const grupos = new Map<string, PlanoPdfSubstituicaoGrupo>();
+
+  for (const linha of linhas) {
+    const chave = `${linha.refeicao_id}:${linha.opcao_numero}:${linha.item_id}`;
+    const atual = grupos.get(chave);
+    if (atual) {
+      atual.substituicoes.push({
+        nome: linha.alimento_substituto_nome,
+        quantidadeG: Number(linha.quantidade_substituto_g),
+      });
+      continue;
+    }
+
+    grupos.set(chave, {
+      refeicao: linha.refeicao_nome,
+      refeicaoOrdem: Number(linha.refeicao_ordem),
+      opcaoNumero: Number(linha.opcao_numero),
+      opcaoNome: linha.opcao_nome,
+      alimentoOrigem: linha.alimento_origem_nome,
+      quantidadeOrigemG: Number(linha.quantidade_origem_g),
+      grupoNome: linha.grupo_nome,
+      substituicoes: [
+        {
+          nome: linha.alimento_substituto_nome,
+          quantidadeG: Number(linha.quantidade_substituto_g),
+        },
+      ],
+    });
+  }
+
+  return [...grupos.values()].sort((a, b) =>
+    a.refeicaoOrdem - b.refeicaoOrdem ||
+    a.opcaoNumero - b.opcaoNumero ||
+    a.alimentoOrigem.localeCompare(b.alimentoOrigem, "pt-BR"),
+  );
+}
 
 export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promise<ActionResult> {
   await assertAdmin();
@@ -22,11 +95,14 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
     return { success: false, message: "Adicione pelo menos um item ao plano antes de exportar." };
   }
 
-  const { data: config } = await supabase
-    .from("configuracoes_consultorio")
-    .select("nome_consultorio")
-    .eq("id", true)
-    .maybeSingle();
+  const [{ data: config }, substituicoes] = await Promise.all([
+    supabase
+      .from("configuracoes_consultorio")
+      .select("nome_consultorio")
+      .eq("id", true)
+      .maybeSingle(),
+    carregarSubstituicoesAmpliadas(supabase, planoEstruturadoId),
+  ]);
 
   const dadosPdf: PlanoPdfData = {
     clinica: { nome: config?.nome_consultorio || "Nutri Thales Rosa" },
@@ -39,6 +115,7 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
       gordura_g: plano.meta_gordura_g,
     },
     observacoes: plano.observacoes,
+    substituicoes,
     refeicoes: [...plano.refeicoes]
       .sort((a, b) => a.ordem - b.ordem)
       .map((refeicao) => {
@@ -124,5 +201,5 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
 
   revalidatePath("/planos-alimentares");
   revalidatePath(`/planos-alimentares/${planoEstruturadoId}`);
-  return { success: true, message: "PDF exportado e disponível para o paciente." };
+  return { success: true, message: "PDF exportado com lista ampliada de substituições." };
 }
