@@ -102,7 +102,10 @@ export function MatrizNutricionalClient({
   const idade = calcularIdade(paciente?.dataNascimento ?? null);
 
   useEffect(() => {
-    if (!paciente) return;
+    if (!paciente) {
+      setSexo("");
+      return;
+    }
     const avaliacao = paciente.avaliacao;
     const pesoPreferido = avaliacao?.pesoKg ?? paciente.pesoKg;
     const alturaPreferida = avaliacao?.alturaCm ?? paciente.alturaCm;
@@ -115,6 +118,7 @@ export function MatrizNutricionalClient({
     setMassaMagra(avaliacao?.massaMagraKg != null ? String(avaliacao.massaMagraKg) : "");
     setObjetivo(objetivoValido(paciente.objetivo));
     setNivelAtividade(atividadeValida(paciente.nivelAtividade));
+    setSexo(paciente.sexoBiologico ?? "");
   }, [paciente]);
 
   const massaMagraDerivada = useMemo(() => {
@@ -190,7 +194,7 @@ export function MatrizNutricionalClient({
     if (!dadosHarrisCompletos) {
       toast({
         kind: "error",
-        title: "Harris–Benedict incompleta",
+        title: "Harris-Benedict incompleta",
         description: "Peso, altura, idade e sexo biológico são necessários para calcular o gasto energético.",
       });
       return;
@@ -224,7 +228,7 @@ export function MatrizNutricionalClient({
       .join(" ");
 
     const resposta = await createPlanoEstruturadoAction(paciente.authId, protocoloMatriz.id, {
-      titulo: `${resultado?.nome ?? "Matriz nutricional"} — ${paciente.nome}`,
+      titulo: `${resultado?.nome ?? "Matriz nutricional"} - ${paciente.nome}`,
       meta_kcal: Math.round(kcalMeta),
       meta_proteina_g: Math.round(proteinaMeta),
       meta_carboidrato_g: Math.round(carboMeta),
@@ -250,7 +254,7 @@ export function MatrizNutricionalClient({
     <div>
       <PageHeader
         title="Matriz Nutricional"
-        description="Cruza objetivo, composição corporal, atividade e número de refeições. O gasto energético é calculado pela Harris–Benedict revisada (1984), e a decisão final continua sendo clínica."
+        description="Cruza objetivo, composição corporal, atividade e número de refeições. O gasto energético é calculado pela Harris-Benedict revisada (1984), e a decisão final continua sendo clínica."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
@@ -308,9 +312,9 @@ export function MatrizNutricionalClient({
                   value={String(numeroRefeicoes)}
                   onChange={(e) => setNumeroRefeicoes(Number(e.target.value) as NumeroRefeicoes)}
                 >
-                  <option value="4">4 refeições — Matriz A</option>
-                  <option value="5">5 refeições — Matriz B</option>
-                  <option value="6">6 refeições — Matriz C</option>
+                  <option value="4">4 refeições - Matriz A</option>
+                  <option value="5">5 refeições - Matriz B</option>
+                  <option value="6">6 refeições - Matriz C</option>
                 </Select>
               </FieldGroup>
             </div>
@@ -368,7 +372,7 @@ export function MatrizNutricionalClient({
             </div>
 
             <div className="rounded-xl border border-border bg-bg-alt p-3 text-xs text-muted">
-              <p className="font-semibold text-ink">Harris–Benedict revisada (Roza & Shizgal, 1984)</p>
+              <p className="font-semibold text-ink">Harris-Benedict revisada (Roza & Shizgal, 1984)</p>
               <p className="mt-1">Homens: 88,362 + 13,397 × peso + 4,799 × altura − 5,677 × idade.</p>
               <p>Mulheres: 447,593 + 9,247 × peso + 3,098 × altura − 4,330 × idade.</p>
               <p className="mt-1">A TMB estimada é multiplicada pelo fator de atividade para chegar ao GET.</p>
@@ -404,13 +408,13 @@ export function MatrizNutricionalClient({
                     <p className="mt-1 text-sm text-muted">
                       {resultado.energiaAlvoKcal
                         ? `${resultado.energiaAlvoKcal} kcal como ponto de partida`
-                        : "Complete os dados da Harris–Benedict para calcular a energia"}
+                        : "Complete os dados da Harris-Benedict para calcular a energia"}
                     </p>
                   </div>
 
                   <div className="text-right text-sm text-muted">
-                    <p>TMB: {resultado.rmrKcal ? `${resultado.rmrKcal} kcal` : "—"}</p>
-                    <p>GET: {resultado.getKcal ? `${resultado.getKcal} kcal` : "—"}</p>
+                    <p>TMB: {resultado.rmrKcal ? `${resultado.rmrKcal} kcal` : "-"}</p>
+                    <p>GET: {resultado.getKcal ? `${resultado.getKcal} kcal` : "-"}</p>
                     {resultado.metodoRmr && <p className="text-xs">{resultado.metodoRmr}</p>}
                   </div>
                 </div>
@@ -437,7 +441,7 @@ export function MatrizNutricionalClient({
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-ink">Metas finais — editáveis</p>
+                  <p className="text-sm font-semibold text-ink">Metas finais - editáveis</p>
                   {macrosValidos ? (
                     <span className="flex items-center gap-1 text-xs font-medium text-green-700"><CheckCircle2 className="size-3.5" /> Macros conferidos</span>
                   ) : (
