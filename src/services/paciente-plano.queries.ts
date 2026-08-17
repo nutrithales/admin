@@ -9,6 +9,11 @@ export interface PacientePlanoSubstituicao {
   quantidadeG: number;
 }
 
+export interface PacientePlanoVegetal {
+  nome: string;
+  porcaoG?: number | null;
+}
+
 export interface PacientePlanoItem {
   id: string;
   nome: string;
@@ -47,6 +52,10 @@ export interface PacientePlanoDashboard {
   };
   refeicoes: PacientePlanoRefeicao[];
   substituicoes: PacientePlanoSubstituicao[];
+  vegetais: {
+    tipoA: PacientePlanoVegetal[];
+    tipoB: PacientePlanoVegetal[];
+  };
 }
 
 interface RpcSubRow {
@@ -54,6 +63,13 @@ interface RpcSubRow {
   grupo_nome: string;
   alimento_substituto_nome: string;
   quantidade_substituto_g: number;
+}
+
+interface RpcVegetalRow {
+  tipo: "VEG_A" | "VEG_B";
+  nome: string;
+  porcao_g: number | null;
+  ordem: number;
 }
 
 async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashboard | null> {
@@ -70,13 +86,24 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
   const rpcClient = supabase as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
   };
-  const { data: subData } = await rpcClient.rpc("substituicoes_ampliadas_plano", { p_plano_id: plano.id });
+
+  const [{ data: subData }, { data: vegetalData }] = await Promise.all([
+    rpcClient.rpc("substituicoes_ampliadas_plano", { p_plano_id: plano.id }),
+    rpcClient.rpc("listas_vegetais_dashboard_plano", { p_plano_id: plano.id }),
+  ]);
+
   const substituicoes: PacientePlanoSubstituicao[] = ((subData ?? []) as RpcSubRow[]).map((row) => ({
     itemId: row.item_id,
     grupo: row.grupo_nome,
     nome: row.alimento_substituto_nome,
     quantidadeG: Number(row.quantidade_substituto_g),
   }));
+
+  const vegetaisRows = ((vegetalData ?? []) as RpcVegetalRow[]).sort((a, b) => a.ordem - b.ordem);
+  const vegetais = {
+    tipoA: vegetaisRows.filter((row) => row.tipo === "VEG_A").map((row) => ({ nome: row.nome, porcaoG: null })),
+    tipoB: vegetaisRows.filter((row) => row.tipo === "VEG_B").map((row) => ({ nome: row.nome, porcaoG: row.porcao_g == null ? null : Number(row.porcao_g) })),
+  };
 
   const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes]
     .sort((a, b) => a.ordem - b.ordem)
@@ -129,6 +156,7 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
     },
     refeicoes: refeicoesFormatadas,
     substituicoes,
+    vegetais,
   };
 }
 
@@ -143,13 +171,7 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
 
   const [{ data: paciente }, { data: planoResumo }] = await Promise.all([
     supabase.from("pacientes").select("id, nome").eq("auth_id", user.id).maybeSingle(),
-    supabase
-      .from("planos_estruturados")
-      .select("id")
-      .eq("auth_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    supabase.from("planos_estruturados").select("id").eq("auth_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   if (!paciente || !planoResumo) return null;
