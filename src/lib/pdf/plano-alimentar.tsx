@@ -44,6 +44,15 @@ const styles = StyleSheet.create({
   observacoesBox: { marginTop: 22, padding: 14, backgroundColor: COR_BG_ALT_2, borderRadius: 10, borderLeft: `3px solid ${COR_BRAND}` },
   observacoesTitle: { fontFamily: FONTE_DISPLAY, fontWeight: 700, fontSize: 10.5, marginBottom: 5, color: COR_BRAND_ESCURO },
   observacoesText: { fontSize: 9.5, lineHeight: 1.55, color: COR_INK },
+  anexoIntro: { fontSize: 9.5, lineHeight: 1.45, color: COR_MUTED, marginBottom: 16 },
+  anexoRefeicao: { marginBottom: 18 },
+  anexoRefeicaoTitulo: { fontFamily: FONTE_DISPLAY, fontWeight: 700, fontSize: 13, color: COR_INK_PROFUNDO, borderBottom: `2px solid ${COR_BRAND}`, paddingBottom: 5, marginBottom: 9 },
+  anexoOpcao: { fontSize: 8, color: COR_BRAND_ESCURO, fontWeight: 700, textTransform: "uppercase", marginBottom: 6 },
+  anexoGrupo: { padding: 9, marginBottom: 8, borderRadius: 7, border: `1px solid ${COR_BORDA}`, backgroundColor: COR_BG_ALT_2 },
+  anexoOrigem: { fontSize: 9.2, fontWeight: 700, color: COR_INK_PROFUNDO, marginBottom: 3 },
+  anexoGrupoNome: { fontSize: 7.8, color: COR_MUTED, marginBottom: 6 },
+  anexoSub: { fontSize: 8.5, color: COR_INK, marginBottom: 3 },
+  anexoNota: { fontSize: 7.8, color: COR_MUTED, lineHeight: 1.4, marginTop: 8 },
   footer: { position: "absolute", bottom: 18, left: 36, right: 36, flexDirection: "row", justifyContent: "space-between", borderTop: `1px solid ${COR_BORDA}`, paddingTop: 8 },
   footerText: { fontSize: 7.5, color: COR_MUTED_CLARO },
 });
@@ -67,6 +76,17 @@ export interface PlanoPdfRefeicao {
   opcoes: PlanoPdfOpcao[];
 }
 
+export interface PlanoPdfSubstituicaoGrupo {
+  refeicao: string;
+  refeicaoOrdem: number;
+  opcaoNumero: number;
+  opcaoNome?: string | null;
+  alimentoOrigem: string;
+  quantidadeOrigemG: number;
+  grupoNome: string;
+  substituicoes: { nome: string; quantidadeG: number }[];
+}
+
 export interface PlanoPdfData {
   clinica: { nome: string };
   paciente: { nome: string };
@@ -79,9 +99,25 @@ export interface PlanoPdfData {
   };
   observacoes?: string | null;
   refeicoes: PlanoPdfRefeicao[];
+  substituicoes?: PlanoPdfSubstituicaoGrupo[];
+}
+
+function Rodape({ nome }: { nome: string }) {
+  return (
+    <View style={styles.footer} fixed>
+      <Text style={styles.footerText}>{nome}</Text>
+      <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+    </View>
+  );
 }
 
 export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
+  const refeicoesSubstituicao = new Map<string, PlanoPdfSubstituicaoGrupo[]>();
+  for (const grupo of data.substituicoes ?? []) {
+    const chave = `${grupo.refeicaoOrdem}:${grupo.refeicao}`;
+    refeicoesSubstituicao.set(chave, [...(refeicoesSubstituicao.get(chave) ?? []), grupo]);
+  }
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -144,11 +180,54 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
           </View>
         )}
 
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>{data.clinica.nome}</Text>
-          <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
-        </View>
+        <Rodape nome={data.clinica.nome} />
       </Page>
+
+      {(data.substituicoes?.length ?? 0) > 0 && (
+        <Page size="A4" style={styles.page} wrap>
+          <View style={styles.header} fixed>
+            <Text style={styles.clinicName}>{data.clinica.nome}</Text>
+            <Text style={styles.headerTag}>Substituições</Text>
+          </View>
+          <View style={styles.headerRule} fixed />
+
+          <View style={styles.titleBlock}>
+            <Text style={styles.title}>Lista ampliada de substituições</Text>
+            <Text style={styles.subtitle}>Porções calculadas a partir deste plano para {data.paciente.nome}</Text>
+          </View>
+          <Text style={styles.anexoIntro}>
+            Use as quantidades indicadas para substituir o alimento correspondente dentro da mesma refeição e opção. As equivalências são calculadas a partir da porção prescrita no plano e podem ser diferentes entre almoço, jantar, café da manhã e lanches.
+          </Text>
+
+          {[...refeicoesSubstituicao.entries()].map(([chave, grupos]) => (
+            <View key={chave} style={styles.anexoRefeicao}>
+              <Text style={styles.anexoRefeicaoTitulo}>{grupos[0].refeicao}</Text>
+              {[...new Set(grupos.map((g) => g.opcaoNumero))].sort((a, b) => a - b).map((opcaoNumero) => {
+                const gruposOpcao = grupos.filter((g) => g.opcaoNumero === opcaoNumero);
+                return (
+                  <View key={opcaoNumero}>
+                    <Text style={styles.anexoOpcao}>Opção {opcaoNumero}{gruposOpcao[0]?.opcaoNome ? ` - ${gruposOpcao[0].opcaoNome}` : ""}</Text>
+                    {gruposOpcao.map((grupo, index) => (
+                      <View key={`${grupo.alimentoOrigem}-${index}`} style={styles.anexoGrupo} wrap={false}>
+                        <Text style={styles.anexoOrigem}>{grupo.alimentoOrigem}: {Math.round(grupo.quantidadeOrigemG)} g</Text>
+                        <Text style={styles.anexoGrupoNome}>{grupo.grupoNome}</Text>
+                        {grupo.substituicoes.map((sub, j) => (
+                          <Text key={`${sub.nome}-${j}`} style={styles.anexoSub}>• {sub.nome}: {Math.round(sub.quantidadeG)} g</Text>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+
+          <Text style={styles.anexoNota}>
+            As substituições são referências práticas de equivalência dentro de cada grupo alimentar. Preferências, tolerância gastrointestinal, treino, restrições e contexto clínico continuam prevalecendo sobre a troca automática.
+          </Text>
+          <Rodape nome={data.clinica.nome} />
+        </Page>
+      )}
     </Document>
   );
 }
