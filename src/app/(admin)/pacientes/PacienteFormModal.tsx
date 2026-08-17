@@ -20,6 +20,7 @@ const emptyForm: PacienteFormValues = {
   telefone: "",
   cpf: "",
   data_nascimento: "",
+  sexo_biologico: "",
   plano: "",
   status: "ativo",
   data_inicio: "",
@@ -52,12 +53,17 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
     setErrors({});
     setGeneratedPassword(null);
     if (paciente) {
+      const pacienteComSexo = paciente as Tables<"pacientes"> & { sexo_biologico?: string | null };
       setValues({
         nome: paciente.nome ?? "",
         email: paciente.email ?? "",
         telefone: paciente.telefone ?? "",
         cpf: paciente.cpf ?? "",
         data_nascimento: paciente.data_nascimento ?? "",
+        sexo_biologico:
+          pacienteComSexo.sexo_biologico === "masculino" || pacienteComSexo.sexo_biologico === "feminino"
+            ? pacienteComSexo.sexo_biologico
+            : "",
         plano: paciente.plano ?? "",
         status:
           paciente.status === "inativo" || paciente.status === "pendente"
@@ -95,6 +101,11 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
 
     if (!paciente && !payload.data_nascimento) {
       setErrors((prev) => ({ ...prev, data_nascimento: "Informe a data de nascimento." }));
+      return;
+    }
+
+    if (!paciente && !payload.sexo_biologico) {
+      setErrors((prev) => ({ ...prev, sexo_biologico: "Informe o sexo biológico." }));
       return;
     }
 
@@ -162,11 +173,27 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
           </FieldGroup>
         </div>
 
-        <FieldGroup>
-          <Label htmlFor="data_nascimento">Data de nascimento{paciente ? "" : " *"}</Label>
-          <Input id="data_nascimento" type="date" value={values.data_nascimento ?? ""} onChange={(e) => setField("data_nascimento", e.target.value)} error={errors.data_nascimento} />
-          <p className="text-xs text-muted">Usada para calcular automaticamente a idade na Matriz Nutricional.</p>
-        </FieldGroup>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FieldGroup>
+            <Label htmlFor="data_nascimento">Data de nascimento{paciente ? "" : " *"}</Label>
+            <Input id="data_nascimento" type="date" value={values.data_nascimento ?? ""} onChange={(e) => setField("data_nascimento", e.target.value)} error={errors.data_nascimento} />
+            <p className="text-xs text-muted">Usada para calcular automaticamente a idade na Matriz Nutricional.</p>
+          </FieldGroup>
+          <FieldGroup>
+            <Label htmlFor="sexo_biologico">Sexo biológico{paciente ? "" : " *"}</Label>
+            <Select
+              id="sexo_biologico"
+              value={values.sexo_biologico ?? ""}
+              onChange={(e) => setField("sexo_biologico", e.target.value as "masculino" | "feminino" | "")}
+            >
+              <option value="">Selecione</option>
+              <option value="feminino">Feminino</option>
+              <option value="masculino">Masculino</option>
+            </Select>
+            {errors.sexo_biologico && <p className="text-xs text-danger">{errors.sexo_biologico}</p>}
+            <p className="text-xs text-muted">Usado no cálculo da Harris-Benedict na Matriz Nutricional.</p>
+          </FieldGroup>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FieldGroup>
@@ -220,8 +247,10 @@ export function PacienteFormModal({ open, onClose, onSaved, paciente }: Paciente
           <Select id="objetivo" value={values.objetivo} onChange={(e) => setField("objetivo", e.target.value)}>
             <option value="">Selecione</option>
             <option value="emagrecimento">Emagrecimento</option>
+            <option value="recomposicao">Recomposição corporal</option>
             <option value="hipertrofia">Hipertrofia</option>
             <option value="manutencao">Manutenção</option>
+            <option value="performance">Performance</option>
             <option value="saude_geral">Saúde geral</option>
           </Select>
         </FieldGroup>
