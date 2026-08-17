@@ -143,7 +143,7 @@ function projetarResultados(
         { semanas: 8, texto: "Maior consistência de recuperação e execução dos treinos" },
         { semanas: 12, texto: "Janela para comparar desempenho, recuperação e composição corporal" },
       ],
-      nota: `${treinoFrequencia ? `${treinoFrequencia} sessões semanais cadastradas. ` : ""}A melhora esportiva não pode ser prevista em percentual apenas pela dieta e deve ser acompanhada junto à carga de treinamento, sono e recuperação.",
+      nota: `${treinoFrequencia ? `${treinoFrequencia} sessões semanais cadastradas. ` : ""}A melhora esportiva não pode ser prevista em percentual apenas pela dieta e deve ser acompanhada junto à carga de treinamento, sono e recuperação.`,
     };
   }
 
