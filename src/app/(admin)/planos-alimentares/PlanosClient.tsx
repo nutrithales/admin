@@ -96,7 +96,7 @@ export function PlanosClient({
       key: "paciente",
       header: "Paciente",
       sortValue: (p) => p.paciente_nome?.toLowerCase() ?? "",
-      render: (p) => p.paciente_nome ?? <span className="text-muted-light">—</span>,
+      render: (p) => p.paciente_nome ?? <span className="text-muted-light">-</span>,
     },
     {
       key: "status",
@@ -121,6 +121,9 @@ export function PlanosClient({
             </button>
           }
         >
+          <DropdownItem onClick={() => router.push(`/planos-alimentares/${p.id}/preview-paciente`)}>
+            <Eye className="size-4" /> Ver como paciente
+          </DropdownItem>
           <DropdownItem onClick={() => router.push(`/planos-alimentares/${p.id}`)}>
             <ArrowRight className="size-4" /> Abrir builder
           </DropdownItem>
@@ -143,7 +146,7 @@ export function PlanosClient({
       key: "paciente",
       header: "Paciente",
       sortValue: (p) => p.paciente?.nome?.toLowerCase() ?? "",
-      render: (p) => p.paciente?.nome ?? <span className="text-muted-light">—</span>,
+      render: (p) => p.paciente?.nome ?? <span className="text-muted-light">-</span>,
     },
     {
       key: "tipo",
@@ -154,7 +157,7 @@ export function PlanosClient({
       key: "data_envio",
       header: "Enviado em",
       sortValue: (p) => p.data_envio ?? "",
-      render: (p) => (p.data_envio ? new Date(p.data_envio).toLocaleDateString("pt-BR") : "—"),
+      render: (p) => (p.data_envio ? new Date(p.data_envio).toLocaleDateString("pt-BR") : "-"),
     },
     {
       key: "actions",
@@ -205,7 +208,7 @@ export function PlanosClient({
           <EmptyState
             icon={Wand2}
             title="Nenhum plano estruturado ainda"
-            description="Monte o primeiro plano escolhendo um paciente e um protocolo — as quantidades são calculadas automaticamente."
+            description="Monte o primeiro plano escolhendo um paciente e um protocolo - as quantidades são calculadas automaticamente."
             action={
               <Button onClick={() => setNovoEstruturadoOpen(true)}>
                 <Wand2 className="size-4" /> Montar plano estruturado
