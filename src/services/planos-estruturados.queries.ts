@@ -23,6 +23,7 @@ export type PlanoItemComDados = Tables<"plano_refeicao_itens"> & {
   opcao_numero?: number;
   opcao_nome?: string | null;
   papel_macro?: string | null;
+  grupo_substituicao_id?: string | null;
   receita: Tables<"receitas"> | null;
   alimento: AlimentoResumo | null;
   ingredientes: IngredienteComAlimento[];
