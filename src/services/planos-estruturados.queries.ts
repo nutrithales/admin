@@ -18,10 +18,11 @@ type AlimentoResumo = Pick<
 export type IngredienteComAlimento = Tables<"plano_refeicao_item_ingredientes"> & { alimento: AlimentoResumo };
 
 export type PlanoItemComDados = Tables<"plano_refeicao_itens"> & {
-  /** Colunas adicionadas pela migração de múltiplas opções. Mantidas aqui
-   * explicitamente até a próxima regeneração automática de database.types. */
+  /** Colunas adicionadas pelas migrações clínicas e de múltiplas opções.
+   * Mantidas explicitamente até a próxima regeneração de database.types. */
   opcao_numero?: number;
   opcao_nome?: string | null;
+  papel_macro?: string | null;
   receita: Tables<"receitas"> | null;
   alimento: AlimentoResumo | null;
   ingredientes: IngredienteComAlimento[];
