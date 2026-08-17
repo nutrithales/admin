@@ -58,13 +58,18 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
               nome: itens.find((item) => item.opcao_nome)?.opcao_nome ?? null,
               itens: [...itens]
                 .sort((a, b) => a.ordem - b.ordem)
-                .map((item) => ({
-                  nome: item.receita?.nome ?? item.alimento?.nome ?? "Item",
-                  quantidade_g: item.alimento ? (item.quantidade_g ?? undefined) : undefined,
-                  ingredientes: item.receita
-                    ? item.ingredientes.map((ing) => ({ nome: ing.alimento.nome, quantidade_g: ing.quantidade_g_final }))
-                    : undefined,
-                })),
+                .map((item) => {
+                  const tipoA = item.papel_macro === "livre";
+                  const tipoB = item.papel_macro === "vegetal_b";
+                  return {
+                    nome: tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : item.receita?.nome ?? item.alimento?.nome ?? "Item",
+                    quantidade_texto: tipoA ? "livre" : tipoB ? "1 porção" : undefined,
+                    quantidade_g: !tipoA && !tipoB && item.alimento ? (item.quantidade_g ?? undefined) : undefined,
+                    ingredientes: item.receita
+                      ? item.ingredientes.map((ing) => ({ nome: ing.alimento.nome, quantidade_g: ing.quantidade_g_final }))
+                      : undefined,
+                  };
+                }),
             })),
         };
       }),
