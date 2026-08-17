@@ -9,17 +9,9 @@ import { getPlanoEstruturado } from "@/services/planos-estruturados.queries";
 import { PlanoAlimentarPdf, type PlanoPdfData } from "@/lib/pdf/plano-alimentar";
 import type { ActionResult } from "@/services/pacientes.actions";
 
-// Deriva o tipo esperado diretamente da assinatura de `renderToBuffer`, em
-// vez de importar `DocumentProps` (que pode não estar exportado conforme a
-// versão) — evita depender de um nome de tipo que não dá pra confirmar sem
-// rodar o build.
 type PdfDocumentElement = Parameters<typeof renderToBuffer>[0];
-
 const BUCKET = "planos";
 
-/** Reaproveita literalmente o padrão de upload + limpeza compensatória de
- * `planos.actions.ts`: o PDF exportado vira/atualiza uma linha em
- * `planos_alimentares` apontando pro plano estruturado que a gerou. */
 export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promise<ActionResult> {
   await assertAdmin();
   const supabase = await createClient();
@@ -49,27 +41,37 @@ export async function exportarPlanoPdfAction(planoEstruturadoId: string): Promis
     observacoes: plano.observacoes,
     refeicoes: [...plano.refeicoes]
       .sort((a, b) => a.ordem - b.ordem)
-      .map((refeicao) => ({
-        nome: refeicao.nome,
-        observacoes: refeicao.observacoes,
-        itens: [...refeicao.itens]
-          .sort((a, b) => a.ordem - b.ordem)
-          .map((item) => ({
-            nome: item.receita?.nome ?? item.alimento?.nome ?? "Item",
-            quantidade_g: item.alimento ? (item.quantidade_g ?? undefined) : undefined,
-            ingredientes: item.receita
-              ? item.ingredientes.map((ing) => ({ nome: ing.alimento.nome, quantidade_g: ing.quantidade_g_final }))
-              : undefined,
-          })),
-      })),
+      .map((refeicao) => {
+        const grupos = new Map<number, typeof refeicao.itens>();
+        for (const item of refeicao.itens) {
+          const numero = item.opcao_numero ?? 1;
+          grupos.set(numero, [...(grupos.get(numero) ?? []), item]);
+        }
+
+        return {
+          nome: refeicao.nome,
+          observacoes: refeicao.observacoes,
+          opcoes: [...grupos.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([numero, itens]) => ({
+              numero,
+              nome: itens.find((item) => item.opcao_nome)?.opcao_nome ?? null,
+              itens: [...itens]
+                .sort((a, b) => a.ordem - b.ordem)
+                .map((item) => ({
+                  nome: item.receita?.nome ?? item.alimento?.nome ?? "Item",
+                  quantidade_g: item.alimento ? (item.quantidade_g ?? undefined) : undefined,
+                  ingredientes: item.receita
+                    ? item.ingredientes.map((ing) => ({ nome: ing.alimento.nome, quantidade_g: ing.quantidade_g_final }))
+                    : undefined,
+                })),
+            })),
+        };
+      }),
   };
 
   let buffer: Buffer;
   try {
-    // `PlanoAlimentarPdf` internamente sempre renderiza um `<Document>` — o
-    // React-PDF só tipa `renderToBuffer` pra aceitar o elemento Document
-    // diretamente, daí a asserção (o componente wrapper é 100% compatível
-    // em runtime, só o wrapper de props é que confunde o TS).
     const documentElement = createElement(PlanoAlimentarPdf, { data: dadosPdf }) as unknown as PdfDocumentElement;
     buffer = await renderToBuffer(documentElement);
   } catch (err) {
