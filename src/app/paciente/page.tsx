@@ -92,108 +92,107 @@ export default async function PacienteDashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#EEF2EF] sm:px-4 sm:py-8">
-      <div className="mx-auto min-h-screen w-full max-w-[500px] bg-[#F8FAF8] pb-[calc(28px+env(safe-area-inset-bottom))] sm:min-h-0 sm:overflow-hidden sm:rounded-[34px] sm:border sm:border-black/[0.055] sm:shadow-[0_30px_90px_rgba(14,26,20,0.12)]">
-        <header className="flex items-center justify-between px-5 pt-[calc(18px+env(safe-area-inset-top))] sm:pt-6">
-          <img src={BRAND_LOGO} alt="Nutri Thales Rosa" className="h-auto w-[104px] object-contain" />
-          <div className="grid size-10 place-items-center rounded-full bg-[#0E1A14] text-[13px] font-black text-white shadow-[0_8px_22px_rgba(14,26,20,0.14)]">
+      <div className="mx-auto min-h-screen w-full max-w-[500px] bg-[#F8FAF8] pb-[calc(24px+env(safe-area-inset-bottom))] sm:min-h-0 sm:overflow-hidden sm:rounded-[32px] sm:border sm:border-black/[0.055] sm:shadow-[0_30px_90px_rgba(14,26,20,0.12)]">
+        <header className="flex items-center justify-between px-5 pt-[calc(14px+env(safe-area-inset-top))] sm:pt-6">
+          <img src={BRAND_LOGO} alt="Nutri Thales Rosa" className="h-auto w-[84px] object-contain" />
+          <div className="grid size-9 place-items-center rounded-full bg-[#0E1A14] text-[12px] font-black text-white shadow-[0_6px_18px_rgba(14,26,20,0.12)]">
             {primeiroNome.charAt(0).toUpperCase()}
           </div>
         </header>
 
         <div className="px-5">
-          <section className="pb-1 pt-9">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#159F60]">Área do paciente</p>
-            <h1 className="mt-2 text-[35px] font-black leading-[0.98] tracking-[-0.045em] text-[#101713]">Olá, {primeiroNome}</h1>
-            <p className="mt-3 max-w-[350px] text-[14px] leading-6 text-[#6F7B74]">Tudo que faz parte do seu acompanhamento está organizado aqui.</p>
+          <section className="pb-1 pt-6">
+            <h1 className="text-[32px] font-black leading-[0.98] tracking-[-0.043em] text-[#101713]">Olá, {primeiroNome}</h1>
+            <p className="mt-2 max-w-[330px] text-[13px] leading-5 text-[#748078]">Seus recursos e próximos passos estão aqui.</p>
           </section>
 
-          <section className="mt-5 overflow-hidden rounded-[26px] bg-[#0E1A14] text-white shadow-[0_18px_40px_rgba(14,26,20,0.16)]">
-            <div className="p-5">
+          <section className="mt-4 overflow-hidden rounded-[23px] bg-[#0E1A14] text-white shadow-[0_16px_34px_rgba(14,26,20,0.14)]">
+            <div className="p-4.5 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.13em] text-[#6FF0AC]">Acompanhamento</p>
-                  <h2 className="mt-1.5 truncate text-[20px] font-black tracking-[-0.02em]">{paciente.plano || "Ativo"}</h2>
+                  <p className="text-[9px] font-black uppercase tracking-[0.13em] text-[#6FF0AC]">Acompanhamento</p>
+                  <h2 className="mt-1 truncate text-[18px] font-black tracking-[-0.02em]">{paciente.plano || "Ativo"}</h2>
                 </div>
-                <span className="shrink-0 rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-bold text-white/68">
+                <span className="shrink-0 rounded-full bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold text-white/68">
                   {consultasIncluidas ? `${Math.min(totalRealizadas, consultasIncluidas)}/${consultasIncluidas}` : "Ativo"}
                 </span>
               </div>
 
               {consultasIncluidas ? (
                 <>
-                  <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
                     <div className="h-full rounded-full bg-[#19DD7F]" style={{ width: `${progresso}%` }} />
                   </div>
-                  <p className="mt-2 text-[11px] text-white/48">{Math.min(totalRealizadas, consultasIncluidas)} de {consultasIncluidas} consultas realizadas</p>
+                  <p className="mt-1.5 text-[10px] text-white/48">{Math.min(totalRealizadas, consultasIncluidas)} de {consultasIncluidas} consultas realizadas</p>
                 </>
               ) : null}
             </div>
 
-            <div className="border-t border-white/[0.08] bg-white/[0.035] px-5 py-4">
-              <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.07] text-[#6FF0AC]">
-                  <CalendarDays className="size-[17px]" />
+            <div className="border-t border-white/[0.08] bg-white/[0.035] px-4 py-3.5">
+              <div className="flex items-center gap-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-[11px] bg-white/[0.07] text-[#6FF0AC]">
+                  <CalendarDays className="size-[16px]" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.11em] text-white/44">Próxima consulta</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.11em] text-white/44">Próxima consulta</p>
                   {proximaConsulta && consultaFormatada ? (
                     <>
-                      <p className="mt-1 text-[14px] font-black leading-5 text-white">{consultaFormatada}</p>
-                      {consultaMeta ? <p className="mt-0.5 text-[11px] text-white/45">{consultaMeta}</p> : null}
+                      <p className="mt-0.5 text-[13px] font-black leading-5 text-white">{consultaFormatada}</p>
+                      {consultaMeta ? <p className="mt-0.5 text-[10px] text-white/45">{consultaMeta}</p> : null}
                     </>
                   ) : (
-                    <p className="mt-1 text-[13px] font-bold text-white/72">Nenhuma consulta futura agendada</p>
+                    <p className="mt-0.5 text-[12px] font-bold text-white/72">Nenhuma consulta futura agendada</p>
                   )}
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="mt-7">
-            <div className="mb-3 flex items-end justify-between">
+          <section className="mt-6">
+            <div className="mb-3 flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#87928C]">Seus recursos</p>
-                <h2 className="mt-1 text-[19px] font-black tracking-[-0.025em] text-[#101713]">Acessos rápidos</h2>
+                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Seus recursos</p>
+                <h2 className="mt-0.5 text-[18px] font-black tracking-[-0.025em] text-[#101713]">Acessos rápidos</h2>
               </div>
-              <span className="pb-0.5 text-[10px] font-bold text-[#9AA39D]">Toque para abrir</span>
+              <span className="pb-0.5 text-[9px] font-bold text-[#9AA39D]">Toque para abrir</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <QuickCard href="/paciente/plano-alimentar" icon={<Utensils className="size-[19px]" />} title="Plano alimentar" active={Boolean(plano)} status={plano ? "Disponível" : "Em breve"} />
-              <QuickCard href="/paciente/treinos" icon={<Dumbbell className="size-[19px]" />} title="Treinos" active={treinoLiberado} status={treinoLiberado ? "Disponível" : "Em breve"} />
-              {suplementacaoLiberada ? <QuickCard href="/paciente/suplementacao" icon={<Bolt className="size-[19px]" />} title="Suplementação" active status={`${totalSuplementos} ${totalSuplementos === 1 ? "item" : "itens"}`} /> : null}
-              {preConsultaPendente ? <QuickCard href="/paciente/pre-consulta" icon={<ClipboardList className="size-[19px]" />} title="Pré-consulta" active status="Pendente" /> : null}
+              <QuickCard href="/paciente/plano-alimentar" icon={<Utensils className="size-[18px]" />} title="Plano alimentar" active={Boolean(plano)} status={plano ? "Disponível" : "Em breve"} />
+              <QuickCard href="/paciente/treinos" icon={<Dumbbell className="size-[18px]" />} title="Treinos" active={treinoLiberado} status={treinoLiberado ? "Disponível" : "Em breve"} />
+              {suplementacaoLiberada ? <QuickCard href="/paciente/suplementacao" icon={<Bolt className="size-[18px]" />} title="Suplementação" active status={`${totalSuplementos} ${totalSuplementos === 1 ? "item" : "itens"}`} /> : null}
+              {preConsultaPendente ? <QuickCard href="/paciente/pre-consulta" icon={<ClipboardList className="size-[18px]" />} title="Pré-consulta" active status="Pendente" /> : null}
               {(paginas || []).map((pagina: any) => (
-                <QuickCard key={`${pagina.titulo}-${pagina.ordem}`} href={pagina.url_pagina || "#"} icon={<FileText className="size-[19px]" />} title={pagina.titulo || "Material"} active={Boolean(pagina.url_pagina)} status="Material" external={Boolean(pagina.url_pagina?.startsWith("http"))} />
+                <QuickCard key={`${pagina.titulo}-${pagina.ordem}`} href={pagina.url_pagina || "#"} icon={<FileText className="size-[18px]" />} title={pagina.titulo || "Material"} active={Boolean(pagina.url_pagina)} status="Material" external={Boolean(pagina.url_pagina?.startsWith("http"))} />
               ))}
             </div>
           </section>
 
-          <section className="mt-7">
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#87928C]">Acompanhamento contínuo</p>
+          <section className="mt-6">
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Acompanhamento contínuo</p>
             <div className="mt-3 grid gap-3">
-              <div className="rounded-[20px] border border-black/[0.05] bg-white p-4 shadow-[0_8px_24px_rgba(14,26,20,0.035)]">
+              <div className="rounded-[18px] border border-black/[0.05] bg-white p-3.5 shadow-[0_6px_18px_rgba(14,26,20,0.03)]">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[13px] bg-[#EDF7F1] text-[#159F60]"><CheckCircle2 className="size-[18px]" /></span>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-[#EDF7F1] text-[#159F60]"><CheckCircle2 className="size-[17px]" /></span>
                   <div className="min-w-0">
                     <p className="text-[13px] font-black text-[#101713]">Check-in</p>
                     {ultimoCheckin ? (
-                      <p className="mt-1 text-[12px] leading-5 text-[#7D8882]">{ultimoCheckin.respondido_em ? "Último check-in respondido" : "Seu último check-in está disponível"}{formatDataCurta(ultimoCheckin.semana) ? ` · ${formatDataCurta(ultimoCheckin.semana)}` : ""}</p>
+                      <p className="mt-0.5 text-[11px] leading-4 text-[#7D8882]">{ultimoCheckin.respondido_em ? "Último check-in respondido" : "Seu último check-in está disponível"}{formatDataCurta(ultimoCheckin.semana) ? ` · ${formatDataCurta(ultimoCheckin.semana)}` : ""}</p>
                     ) : (
-                      <p className="mt-1 text-[12px] leading-5 text-[#7D8882]">Quando houver um novo check-in, ele aparecerá aqui.</p>
+                      <p className="mt-0.5 text-[11px] leading-4 text-[#7D8882]">Quando houver um novo check-in, ele aparecerá aqui.</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-black/[0.05] bg-white p-4 shadow-[0_8px_24px_rgba(14,26,20,0.035)]">
+              <div className="rounded-[18px] border border-black/[0.05] bg-white p-3.5 shadow-[0_6px_18px_rgba(14,26,20,0.03)]">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[13px] bg-[#EDF7F1] text-[#159F60]"><MessageCircle className="size-[18px]" /></span>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-[#EDF7F1] text-[#159F60]"><MessageCircle className="size-[17px]" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-black text-[#101713]">Precisa de ajuda?</p>
-                    <p className="mt-0.5 text-[11px] leading-5 text-[#7D8882]">Fale com o consultório pelo WhatsApp.</p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-[#7D8882]">Fale com o consultório pelo WhatsApp.</p>
                   </div>
-                  <a href="https://wa.me/5541987347625" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#0E1A14] px-3.5 py-2 text-[11px] font-black text-white">Falar</a>
+                  <a href="https://wa.me/5541987347625" target="_blank" rel="noopener noreferrer" className="self-center rounded-full bg-[#0E1A14] px-3.5 py-2 text-[11px] font-black text-white">Falar</a>
                 </div>
               </div>
             </div>
@@ -206,14 +205,14 @@ export default async function PacienteDashboardPage() {
 
 function QuickCard({ href, icon, title, active, status, external }: { href: string; icon: React.ReactNode; title: string; active: boolean; status: string; external?: boolean }) {
   const content = (
-    <div className={`group min-h-[120px] rounded-[21px] border p-4 transition active:scale-[0.985] ${active ? "border-black/[0.055] bg-white shadow-[0_10px_28px_rgba(14,26,20,0.045)]" : "border-black/[0.035] bg-[#EFF3F0] opacity-55"}`}>
+    <div className={`group min-h-[106px] rounded-[19px] border p-3.5 transition active:scale-[0.985] ${active ? "border-black/[0.055] bg-white shadow-[0_8px_22px_rgba(14,26,20,0.04)]" : "border-[#E0E6E2] bg-[#F5F7F5]"}`}>
       <div className="flex items-start justify-between gap-3">
-        <span className={`flex size-10 items-center justify-center rounded-[13px] ${active ? "bg-[#EAF8F0] text-[#159F60]" : "bg-white/65 text-[#87928C]"}`}>{icon}</span>
-        {active ? <ChevronRight className="size-4 text-[#A2ACA6] transition group-hover:translate-x-0.5" /> : null}
+        <span className={`flex size-9 items-center justify-center rounded-[12px] ${active ? "bg-[#EAF8F0] text-[#159F60]" : "bg-white text-[#7F8B84] ring-1 ring-[#E3E8E4]"}`}>{icon}</span>
+        {active ? <ChevronRight className="size-4 text-[#A2ACA6] transition group-hover:translate-x-0.5" /> : <span className="rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-[#87928C] ring-1 ring-[#E3E8E4]">Em breve</span>}
       </div>
-      <div className="mt-4">
-        <p className="text-[14px] font-black leading-5 text-[#101713]">{title}</p>
-        <p className={`mt-1 text-[10px] font-bold uppercase tracking-[0.075em] ${active ? "text-[#159F60]" : "text-[#9AA39D]"}`}>{status}</p>
+      <div className="mt-3">
+        <p className={`text-[13px] font-black leading-5 ${active ? "text-[#101713]" : "text-[#5F6B64]"}`}>{title}</p>
+        {active ? <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[#159F60]">{status}</p> : null}
       </div>
     </div>
   );
