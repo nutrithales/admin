@@ -13,6 +13,7 @@ import {
   Info,
   Leaf,
   Droplets,
+  LayoutDashboard,
 } from "lucide-react";
 import type { PacientePlanoDashboard } from "@/services/paciente-plano.queries";
 
@@ -60,7 +61,7 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
   const irParaRefeicao = (id: string) => irPara(slugRefeicao(id));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-3.5 pb-28 sm:space-y-6 sm:pb-8">
+    <div id="topo-plano" className="mx-auto max-w-3xl space-y-3.5 pb-28 sm:space-y-6 sm:pb-8">
       <section className="overflow-hidden rounded-[24px] bg-ink-deep text-white shadow-dark sm:rounded-[30px]">
         <div className="p-4 sm:p-7">
           <div className="flex items-start gap-3">
@@ -202,7 +203,12 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
                             {vegetais.map((veg, index) => (
                               <div key={`${item.id}-veg-${index}`} className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border/70 bg-white px-3 py-2.5 text-sm">
                                 <span className="font-bold leading-5 text-ink">{veg.nome}</span>
-                                {tipoB && veg.porcaoG != null && <span className="shrink-0 rounded-lg bg-brand-light px-2 py-1 text-xs font-black text-brand-dark">{Math.round(veg.porcaoG)} g</span>}
+                                {tipoB && veg.porcaoG != null && (
+                                  <span className="shrink-0 text-right">
+                                    <span className="block rounded-lg bg-brand-light px-2 py-1 text-xs font-black text-brand-dark">{Math.round(veg.porcaoG)} g</span>
+                                    {veg.medidaCaseira && <span className="mt-1 block max-w-[145px] text-[11px] font-semibold leading-4 text-muted">{veg.medidaCaseira}</span>}
+                                  </span>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -314,11 +320,12 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
       )}
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-white/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-10px_30px_rgba(4,20,12,0.10)] backdrop-blur-xl sm:hidden" aria-label="Navegação do plano">
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
-          <MobileNavLink href="/paciente" icon={Home} label="Início" />
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+          <MobileNavButton onClick={() => irPara("topo-plano")} icon={Home} label="Início" />
           <MobileNavButton onClick={() => irPara("refeicoes")} icon={Utensils} label="Refeições" active />
           <MobileNavButton onClick={() => irPara("substituicoes")} icon={RefreshCw} label="Trocas" />
           <MobileNavButton onClick={() => irPara("orientacoes")} icon={Info} label="Orientações" />
+          <MobileNavLink href="/paciente" icon={LayoutDashboard} label="Área" />
         </div>
       </nav>
     </div>
