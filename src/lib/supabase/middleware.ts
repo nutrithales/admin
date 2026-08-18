@@ -69,7 +69,6 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (!patient) {
-      await supabase.auth.signOut();
       const url = request.nextUrl.clone();
       url.pathname = "/paciente/login";
       url.searchParams.set("error", "not-patient");
@@ -104,10 +103,17 @@ export async function updateSession(request: NextRequest) {
       .select("id")
       .eq("auth_id", user.id)
       .maybeSingle();
-    const url = request.nextUrl.clone();
-    url.pathname = patient ? "/paciente" : "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+
+    if (patient) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/paciente";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
+    // Uma sessão administrativa não deve sequestrar a entrada da Área do Paciente.
+    // Mantemos a tela de login do paciente visível para validação e novo acesso.
+    return response;
   }
 
   return response;
