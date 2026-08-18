@@ -17,6 +17,7 @@ export const navItems: NavItem[] = [
   { label: "Refeições", href: "/refeicoes", icon: Salad },
   { label: "Protocolos", href: "/protocolos", icon: ListChecks },
   { label: "Treinos", href: "/treinos", icon: Dumbbell },
+  { label: "Exercícios", href: "/exercicios", icon: Dumbbell },
   { label: "Biblioteca", href: "/biblioteca", icon: BookOpen },
   { label: "Agenda", href: "/agenda", icon: CalendarClock },
   { label: "Consultas", href: "/consultas", icon: CalendarClock },
