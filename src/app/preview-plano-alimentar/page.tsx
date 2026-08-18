@@ -7,50 +7,55 @@ export const metadata = { title: "Prévia do Plano Alimentar" };
 
 const planoExemplo: PacientePlanoDashboard = {
   id: "preview",
-  titulo: "Plano alimentar de exemplo",
+  titulo: "Plano alimentar",
   pacienteNome: "Paciente Exemplo",
-  protocoloNome: "Matriz B - 5 refeições",
+  protocoloNome: null,
   observacoes: "Use este plano como guia principal. Em caso de dúvida sobre horários, substituições ou tolerância alimentar, siga as orientações combinadas em consulta.",
   metas: { kcal: 2200, proteinaG: 125, carboidratoG: 285, gorduraG: 62 },
   refeicoes: [
+    { id: "pre", nome: "Pré-treino", ordem: 0, opcoes: [
+      { numero: 1, nome: "Pão com doce de leite", itens: [{ id: "pre-pao", nome: "Pão", quantidadeG: 25, medidaCaseira: "≈ 1 fatia" }, { id: "pre-doce", nome: "Doce de leite", quantidadeG: 20, medidaCaseira: "≈ 1 colher de sobremesa" }]},
+      { numero: 2, nome: "Banana com pasta de amendoim", itens: [{ id: "pre-banana", nome: "Banana", quantidadeG: 100, medidaCaseira: "≈ 1 unidade média" }, { id: "pre-pasta", nome: "Pasta de amendoim", quantidadeG: 10, medidaCaseira: "≈ 1 colher de sobremesa rasa" }]},
+    ]},
     { id: "cafe", nome: "Café da manhã", ordem: 1, observacoes: "Você pode alternar entre as opções conforme sua rotina.", opcoes: [
       { numero: 1, nome: "Pão com ovos e fruta", itens: [
-        { id: "cafe-pao", nome: "Pão integral", quantidadeG: 50 }, { id: "cafe-ovos", nome: "Ovos", quantidadeG: 100 }, { id: "cafe-banana", nome: "Banana", quantidadeG: 80 },
+        { id: "cafe-pao", nome: "Pão integral", quantidadeG: 50, medidaCaseira: "≈ 2 fatias" }, { id: "cafe-ovos", nome: "Ovos", quantidadeG: 100, medidaCaseira: "≈ 2 unidades" }, { id: "cafe-banana", nome: "Banana", quantidadeG: 80, medidaCaseira: "≈ 1 unidade pequena" },
       ]},
       { numero: 2, nome: "Iogurte, fruta e whey", itens: [
-        { id: "cafe-iogurte", nome: "Iogurte natural desnatado", quantidadeG: 170 }, { id: "cafe-whey", nome: "Whey protein", quantidadeG: 25 }, { id: "cafe-aveia", nome: "Aveia", quantidadeG: 30 }, { id: "cafe-mamao", nome: "Mamão", quantidadeG: 120 },
+        { id: "cafe-iogurte", nome: "Iogurte natural desnatado", quantidadeG: 170, medidaCaseira: "≈ 1 pote" }, { id: "cafe-whey", nome: "Whey protein", quantidadeG: 25, medidaCaseira: "≈ 1 dosador" }, { id: "cafe-aveia", nome: "Aveia", quantidadeG: 30, medidaCaseira: "≈ 3 colheres de sopa" }, { id: "cafe-mamao", nome: "Mamão", quantidadeG: 120, medidaCaseira: "≈ 1/2 unidade pequena" },
       ]},
     ]},
-    { id: "almoco", nome: "Almoço", ordem: 2, observacoes: "Vegetais Tipo A são livres. Vegetais Tipo B: 1 porção.", opcoes: [
+    { id: "almoco", nome: "Almoço", ordem: 2, observacoes: "Organize proteína e carboidrato em porções para facilitar a semana.", opcoes: [
       { numero: 1, nome: "Prato com feijão", itens: [
-        { id: "almoco-arroz", nome: "Arroz branco cozido", quantidadeG: 140 }, { id: "almoco-feijao", nome: "Feijão carioca", quantidadeG: 80 }, { id: "almoco-frango", nome: "Peito de frango grelhado", quantidadeG: 130 }, { id: "almoco-vega", nome: "Vegetais Tipo A", quantidadeTexto: "livre", papelMacro: "livre" }, { id: "almoco-vegb", nome: "Vegetais Tipo B", quantidadeTexto: "1 porção", papelMacro: "vegetal_b" },
+        { id: "almoco-arroz", nome: "Arroz branco cozido", quantidadeG: 140, medidaCaseira: "≈ 4 colheres de sopa cheias" }, { id: "almoco-feijao", nome: "Feijão carioca", quantidadeG: 80, medidaCaseira: "≈ 1 concha pequena" }, { id: "almoco-frango", nome: "Peito de frango grelhado", quantidadeG: 130, medidaCaseira: "≈ 1 filé médio" }, { id: "almoco-vega", nome: "Vegetais Tipo A", quantidadeTexto: "livre", papelMacro: "livre" }, { id: "almoco-vegb", nome: "Vegetais Tipo B", quantidadeTexto: "1 porção", papelMacro: "vegetal_b" },
       ]},
       { numero: 2, nome: "Prato sem feijão", itens: [
-        { id: "almoco2-arroz", nome: "Arroz branco cozido", quantidadeG: 160 }, { id: "almoco2-carne", nome: "Patinho moído", quantidadeG: 130 }, { id: "almoco2-vega", nome: "Vegetais Tipo A", quantidadeTexto: "livre", papelMacro: "livre" },
+        { id: "almoco2-arroz", nome: "Arroz branco cozido", quantidadeG: 160, medidaCaseira: "≈ 5 colheres de sopa" }, { id: "almoco2-carne", nome: "Patinho moído", quantidadeG: 130, medidaCaseira: "≈ 5 colheres de sopa" }, { id: "almoco2-vega", nome: "Vegetais Tipo A", quantidadeTexto: "livre", papelMacro: "livre" }, { id: "almoco2-vegb", nome: "Vegetais Tipo B", quantidadeTexto: "1 porção", papelMacro: "vegetal_b" },
       ]},
     ]},
-    { id: "pre", nome: "Pré-treino", ordem: 3, opcoes: [
-      { numero: 1, nome: "Pão com doce de leite", itens: [{ id: "pre-pao", nome: "Pão", quantidadeG: 50 }, { id: "pre-doce", nome: "Doce de leite", quantidadeG: 20 }]},
-      { numero: 2, nome: "Banana com pasta de amendoim", itens: [{ id: "pre-banana", nome: "Banana", quantidadeG: 100 }, { id: "pre-pasta", nome: "Pasta de amendoim", quantidadeG: 10 }]},
-    ]},
-    { id: "jantar", nome: "Jantar", ordem: 4, opcoes: [
-      { numero: 1, nome: "Prato com feijão", itens: [{ id: "jantar-arroz", nome: "Arroz branco cozido", quantidadeG: 100 }, { id: "jantar-feijao", nome: "Feijão carioca", quantidadeG: 80 }, { id: "jantar-frango", nome: "Peito de frango grelhado", quantidadeG: 120 }, { id: "jantar-vega", nome: "Vegetais Tipo A", quantidadeTexto: "livre", papelMacro: "livre" }]},
+    { id: "jantar", nome: "Jantar", ordem: 3, opcoes: [
+      { numero: 1, nome: "Prato com feijão", itens: [{ id: "jantar-arroz", nome: "Arroz branco cozido", quantidadeG: 100, medidaCaseira: "≈ 3 colheres de sopa" }, { id: "jantar-feijao", nome: "Feijão carioca", quantidadeG: 80, medidaCaseira: "≈ 1 concha pequena" }, { id: "jantar-frango", nome: "Peito de frango grelhado", quantidadeG: 120, medidaCaseira: "≈ 1 filé médio" }, { id: "jantar-vega", nome: "Vegetais Tipo A", quantidadeTexto: "livre", papelMacro: "livre" }, { id: "jantar-vegb", nome: "Vegetais Tipo B", quantidadeTexto: "1 porção", papelMacro: "vegetal_b" }]},
     ]},
   ],
   substituicoes: [
-    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Batata inglesa cozida", quantidadeG: 300 },
-    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Batata-doce cozida", quantidadeG: 250 },
-    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Mandioca cozida", quantidadeG: 170 },
-    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Macarrão cozido", quantidadeG: 180 },
-    { itemId: "almoco-frango", grupo: "Proteínas de almoço e jantar", nome: "Tilápia grelhada", quantidadeG: 160 },
-    { itemId: "almoco-frango", grupo: "Proteínas de almoço e jantar", nome: "Patinho grelhado", quantidadeG: 125 },
-    { itemId: "almoco-frango", grupo: "Proteínas de almoço e jantar", nome: "Lombo suíno", quantidadeG: 135 },
-    { itemId: "cafe-banana", grupo: "Frutas", nome: "Mamão", quantidadeG: 160 },
-    { itemId: "cafe-banana", grupo: "Frutas", nome: "Maçã", quantidadeG: 110 },
-    { itemId: "cafe-banana", grupo: "Frutas", nome: "Morangos", quantidadeG: 220 },
-    { itemId: "jantar-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Batata inglesa cozida", quantidadeG: 215 },
-    { itemId: "jantar-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Mandioca cozida", quantidadeG: 120 },
+    { itemId: "pre-pao", grupo: "Carboidratos de café e lanches", nome: "Tapioca", quantidadeG: 17, medidaCaseira: "≈ 1/3 unidade média" },
+    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Batata inglesa cozida", quantidadeG: 300, medidaCaseira: "≈ 2 unidades médias" },
+    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Batata-doce cozida", quantidadeG: 250, medidaCaseira: "≈ 1 unidade grande" },
+    { itemId: "almoco-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Mandioca cozida", quantidadeG: 170, medidaCaseira: "≈ 3 pedaços" },
+    { itemId: "almoco-frango", grupo: "Proteínas de almoço e jantar", nome: "Tilápia grelhada", quantidadeG: 160, medidaCaseira: "≈ 1 filé grande" },
+    { itemId: "almoco-frango", grupo: "Proteínas de almoço e jantar", nome: "Patinho grelhado", quantidadeG: 125, medidaCaseira: "≈ 1 bife médio" },
+    { itemId: "cafe-banana", grupo: "Frutas", nome: "Mamão", quantidadeG: 160, medidaCaseira: "≈ 1/2 unidade" },
+    { itemId: "cafe-banana", grupo: "Frutas", nome: "Maçã", quantidadeG: 110, medidaCaseira: "≈ 1 unidade pequena" },
+    { itemId: "jantar-arroz", grupo: "Carboidratos de almoço e jantar", nome: "Batata inglesa cozida", quantidadeG: 215, medidaCaseira: "≈ 1 unidade grande" },
   ],
+  vegetais: {
+    tipoA: [
+      { nome: "Alface" }, { nome: "Rúcula" }, { nome: "Agrião" }, { nome: "Pepino" }, { nome: "Tomate" }, { nome: "Abobrinha" }, { nome: "Berinjela" }, { nome: "Brócolis" }, { nome: "Couve-flor" }, { nome: "Repolho" }, { nome: "Couve" }, { nome: "Cogumelos" },
+    ],
+    tipoB: [
+      { nome: "Cenoura cozida", porcaoG: 80 }, { nome: "Beterraba cozida", porcaoG: 80 }, { nome: "Abóbora cabotiá cozida", porcaoG: 100 }, { nome: "Ervilha fresca cozida", porcaoG: 60 }, { nome: "Milho cozido", porcaoG: 60 }, { nome: "Vagem cozida", porcaoG: 100 },
+    ],
+  },
 };
 
 export default function PreviewPlanoAlimentarPublicoPage() {
