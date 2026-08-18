@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, BatteryCharging, Bolt, Capsule, Droplets, Info, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BatteryCharging, Bolt, Droplets, Info, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Suplementação" };
@@ -21,7 +21,7 @@ function IconeCategoria({ categoria = "" }: { categoria?: string }) {
   if (texto.includes("eletról")) return <Droplets className="size-5" />;
   if (texto.includes("energia") || texto.includes("pré")) return <Bolt className="size-5" />;
   if (texto.includes("recuper")) return <BatteryCharging className="size-5" />;
-  return <Capsule className="size-5" />;
+  return <Info className="size-5" />;
 }
 
 export default async function SuplementacaoPacientePage() {
@@ -51,7 +51,7 @@ export default async function SuplementacaoPacientePage() {
 
         <section className="mt-4 overflow-hidden rounded-[28px] bg-ink-deep p-5 text-white shadow-dark sm:p-7">
           <div className="flex items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink-deep"><Capsule className="size-5" /></span>
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink-deep"><Bolt className="size-5" /></span>
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-brand">Corrida</p>
               <h1 className="mt-1 text-2xl font-black leading-tight sm:text-3xl">{data.titulo}</h1>
