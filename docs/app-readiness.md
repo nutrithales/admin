@@ -59,9 +59,9 @@ As tabelas principais auditadas estão com RLS habilitado.
 
 ## Achados iniciais
 
-### 1. Branch principal do repositório
+### 1. Branch de produção confirmada
 
-O repositório está atualmente configurado com `claude/nutri-admin-panel-wup8zh-akxeob` como default branch. Antes de reorganizar branches, confirmar qual branch está conectada à produção na Vercel.
+O repositório está configurado com `claude/nutri-admin-panel-wup8zh-akxeob` como default branch e a Vercel está efetivamente publicando essa mesma branch em produção para o projeto `admin`. Portanto, nenhuma reorganização de branch será feita agora. O trabalho de App Readiness seguirá isolado em `chatgpt/app-readiness` até revisão e merge controlado.
 
 ### 2. Redirecionamento do login do paciente
 
@@ -103,7 +103,7 @@ Next.js       Next.js                  React Native
 - [x] Mapear camada Supabase.
 - [x] Revisar estrutura geral do schema.
 - [x] Rodar Security Advisor.
-- [ ] Confirmar branch efetivamente usada pela Vercel.
+- [x] Confirmar branch efetivamente usada pela Vercel.
 - [ ] Mapear policies RLS das tabelas consumidas pelo paciente.
 - [ ] Mapear uso das funções `SECURITY DEFINER` antes de alterar grants.
 - [ ] Revisar Storage/buckets e políticas de arquivos.
