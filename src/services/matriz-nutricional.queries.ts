@@ -29,6 +29,11 @@ export interface MatrizProtocoloOption {
   numeroRefeicoes: number;
 }
 
+function ehPreTreino(nome: string) {
+  const normalizado = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return normalizado.includes("pre-treino") || normalizado.includes("pre treino");
+}
+
 export async function listDadosMatrizNutricional(): Promise<{
   pacientes: MatrizPacienteOption[];
   matrizes: MatrizProtocoloOption[];
@@ -72,7 +77,7 @@ export async function listDadosMatrizNutricional(): Promise<{
         .order("data", { ascending: false }),
       supabase
         .from("protocolos")
-        .select("id, nome, refeicoes:protocolo_refeicoes(id)")
+        .select("id, nome, refeicoes:protocolo_refeicoes(id, nome)")
         .eq("ativo", true)
         .like("nome", "Matriz NTR -%")
         .order("nome", { ascending: true }),
@@ -122,7 +127,7 @@ export async function listDadosMatrizNutricional(): Promise<{
     matrizes: (protocolos ?? []).map((protocolo) => ({
       id: protocolo.id,
       nome: protocolo.nome,
-      numeroRefeicoes: protocolo.refeicoes?.length ?? 0,
+      numeroRefeicoes: protocolo.refeicoes?.filter((refeicao) => !ehPreTreino(refeicao.nome)).length ?? 0,
     })),
   };
 }
