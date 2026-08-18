@@ -20,7 +20,7 @@ type Exercicio = {
 };
 
 const emptyForm = {
-  nome: "", aliases: "", categoria: "Musculação", grupo_muscular_principal: "", grupos_musculares_secundarios: "",
+  nome: "", aliases: "", categoria: "Composto", grupo_muscular_principal: "", grupos_musculares_secundarios: "",
   padrao_movimento: "", equipamento: "", nivel: "Intermediário", unilateral: false, instrucoes: "", dicas_execucao: "",
   erros_comuns: "", observacoes: "", youtube_url: "", youtube_titulo: "", youtube_canal: "", video_verificado: false, ativo: true,
 };
@@ -43,6 +43,10 @@ export default function ExerciciosPage() {
   const [search, setSearch] = useState("");
   const [musculo, setMusculo] = useState("");
   const [equipamento, setEquipamento] = useState("");
+  const [padrao, setPadrao] = useState("");
+  const [nivel, setNivel] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [lateralidade, setLateralidade] = useState("todos");
   const [video, setVideo] = useState("todos");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Exercicio | null>(null);
@@ -59,14 +63,29 @@ export default function ExerciciosPage() {
     setRows((data ?? []) as Exercicio[]);
   }
 
-  const musculos = Array.from(new Set(rows.map(r => r.grupo_muscular_principal).filter(Boolean) as string[])).sort();
-  const equipamentos = Array.from(new Set(rows.map(r => r.equipamento).filter(Boolean) as string[])).sort();
+  const options = (field: keyof Exercicio) => Array.from(new Set(rows.map(r => r[field]).filter(v => typeof v === "string" && v) as string[])).sort();
+  const musculos = options("grupo_muscular_principal");
+  const equipamentos = options("equipamento");
+  const padroes = options("padrao_movimento");
+  const niveis = options("nivel");
+  const categorias = options("categoria");
+
   const filtered = rows.filter(r => {
     const q = search.trim().toLowerCase();
-    const text = [r.nome, ...(r.aliases ?? []), r.grupo_muscular_principal, r.equipamento].filter(Boolean).join(" ").toLowerCase();
-    return (!q || text.includes(q)) && (!musculo || r.grupo_muscular_principal === musculo) && (!equipamento || r.equipamento === equipamento) &&
+    const text = [r.nome, ...(r.aliases ?? []), r.grupo_muscular_principal, ...(r.grupos_musculares_secundarios ?? []), r.equipamento, r.padrao_movimento, r.categoria, r.nivel].filter(Boolean).join(" ").toLowerCase();
+    return (!q || text.includes(q)) &&
+      (!musculo || r.grupo_muscular_principal === musculo) &&
+      (!equipamento || r.equipamento === equipamento) &&
+      (!padrao || r.padrao_movimento === padrao) &&
+      (!nivel || r.nivel === nivel) &&
+      (!categoria || r.categoria === categoria) &&
+      (lateralidade === "todos" || (lateralidade === "unilateral" ? r.unilateral : !r.unilateral)) &&
       (video === "todos" || (video === "verificado" ? r.video_verificado : video === "com" ? !!r.youtube_url : !r.youtube_url));
   });
+
+  function clearFilters() {
+    setSearch(""); setMusculo(""); setEquipamento(""); setPadrao(""); setNivel(""); setCategoria(""); setLateralidade("todos"); setVideo("todos");
+  }
 
   function startNew() { setEditing(null); setForm(emptyForm); setOpen(true); }
   function edit(r: Exercicio) {
@@ -111,28 +130,35 @@ export default function ExerciciosPage() {
   }
 
   return <div>
-    <PageHeader title="Exercícios" description="Biblioteca central de exercícios, orientações técnicas e vídeos para prescrição dos treinos." actions={<Button onClick={startNew}><Plus className="size-4" /> Novo exercício</Button>} />
+    <PageHeader title="Exercícios" description="Biblioteca central de exercícios, classificação técnica e vídeos para prescrição dos treinos." actions={<Button onClick={startNew}><Plus className="size-4" /> Novo exercício</Button>} />
 
-    <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <Card><CardContent className="pt-6"><p className="text-xs text-muted">Total</p><p className="text-2xl font-bold">{rows.length}</p></CardContent></Card>
+      <Card><CardContent className="pt-6"><p className="text-xs text-muted">Exibidos</p><p className="text-2xl font-bold">{filtered.length}</p></CardContent></Card>
       <Card><CardContent className="pt-6"><p className="text-xs text-muted">Ativos</p><p className="text-2xl font-bold">{rows.filter(r => r.ativo).length}</p></CardContent></Card>
       <Card><CardContent className="pt-6"><p className="text-xs text-muted">Com vídeo</p><p className="text-2xl font-bold">{rows.filter(r => r.youtube_url).length}</p></CardContent></Card>
       <Card><CardContent className="pt-6"><p className="text-xs text-muted">Vídeos verificados</p><p className="text-2xl font-bold">{rows.filter(r => r.video_verificado).length}</p></CardContent></Card>
     </div>
 
-    <Card className="mb-5"><CardContent className="pt-6"><div className="grid gap-3 md:grid-cols-4">
-      <div className="md:col-span-2"><Label>Buscar</Label><div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"/><Input className="pl-9" value={search} onChange={e => setSearch(e.target.value)} placeholder="Nome, alias, músculo ou equipamento..."/></div></div>
+    <Card className="mb-5"><CardContent className="pt-6"><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="md:col-span-2"><Label>Buscar</Label><div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"/><Input className="pl-9" value={search} onChange={e => setSearch(e.target.value)} placeholder="Nome, alias, músculo, padrão ou equipamento..."/></div></div>
       <div><Label>Grupo muscular</Label><Select value={musculo} onChange={e => setMusculo(e.target.value)}><option value="">Todos</option>{musculos.map(x => <option key={x}>{x}</option>)}</Select></div>
-      <div><Label>Vídeo</Label><Select value={video} onChange={e => setVideo(e.target.value)}><option value="todos">Todos</option><option value="verificado">Verificados</option><option value="com">Com vídeo</option><option value="sem">Sem vídeo</option></Select></div>
       <div><Label>Equipamento</Label><Select value={equipamento} onChange={e => setEquipamento(e.target.value)}><option value="">Todos</option>{equipamentos.map(x => <option key={x}>{x}</option>)}</Select></div>
+      <div><Label>Padrão de movimento</Label><Select value={padrao} onChange={e => setPadrao(e.target.value)}><option value="">Todos</option>{padroes.map(x => <option key={x}>{x}</option>)}</Select></div>
+      <div><Label>Nível</Label><Select value={nivel} onChange={e => setNivel(e.target.value)}><option value="">Todos</option>{niveis.map(x => <option key={x}>{x}</option>)}</Select></div>
+      <div><Label>Tipo</Label><Select value={categoria} onChange={e => setCategoria(e.target.value)}><option value="">Todos</option>{categorias.map(x => <option key={x}>{x}</option>)}</Select></div>
+      <div><Label>Lateralidade</Label><Select value={lateralidade} onChange={e => setLateralidade(e.target.value)}><option value="todos">Todos</option><option value="bilateral">Bilateral</option><option value="unilateral">Unilateral</option></Select></div>
+      <div><Label>Vídeo</Label><Select value={video} onChange={e => setVideo(e.target.value)}><option value="todos">Todos</option><option value="verificado">Verificados</option><option value="com">Com vídeo</option><option value="sem">Sem vídeo</option></Select></div>
+      <div className="flex items-end"><Button variant="outline" className="w-full" onClick={clearFilters}>Limpar filtros</Button></div>
     </div></CardContent></Card>
 
     {loading ? <Card><CardContent className="py-12 text-center text-sm text-muted">Carregando exercícios...</CardContent></Card> :
     <div className="space-y-3">{filtered.map(r => <Card key={r.id} className={!r.ativo ? "opacity-60" : ""}><CardContent className="pt-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 gap-4">
         <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-bg-alt"><Dumbbell className="size-5 text-brand-dark"/></div>
-        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold">{r.nome}</h3>{r.video_verificado && <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700"><CheckCircle2 className="size-3"/> Vídeo verificado</span>}{!r.ativo && <span className="rounded-full bg-bg-alt px-2 py-1 text-[11px] text-muted">Inativo</span>}</div>
-        <p className="mt-1 text-sm text-muted">{[r.grupo_muscular_principal,r.equipamento,r.padrao_movimento,r.nivel].filter(Boolean).join(" · ") || "Sem classificação"}</p>
+        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold">{r.nome}</h3>{r.video_verificado && <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-[11px] font-bold text-green-700"><CheckCircle2 className="size-3"/> Vídeo verificado</span>}{r.unilateral && <span className="rounded-full bg-bg-alt px-2 py-1 text-[11px] text-muted">Unilateral</span>}{!r.ativo && <span className="rounded-full bg-bg-alt px-2 py-1 text-[11px] text-muted">Inativo</span>}</div>
+        <p className="mt-1 text-sm text-muted">{[r.grupo_muscular_principal,r.equipamento,r.padrao_movimento,r.nivel,r.categoria].filter(Boolean).join(" · ") || "Sem classificação"}</p>
+        {!!r.grupos_musculares_secundarios?.length && <p className="mt-1 text-xs text-muted">Secundários: {r.grupos_musculares_secundarios.join(", ")}</p>}
         {r.youtube_url && <a className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-dark hover:underline" href={r.youtube_url} target="_blank" rel="noreferrer"><Video className="size-4"/> {r.youtube_titulo || "Ver vídeo"}{r.youtube_canal ? ` · ${r.youtube_canal}` : ""}<ExternalLink className="size-3"/></a>}</div>
       </div>
       <div className="flex shrink-0 gap-2"><Button variant="outline" onClick={() => edit(r)}><Pencil className="size-4"/> Editar</Button><Button variant="outline" onClick={() => void archive(r)}><Trash2 className="size-4"/> {r.ativo ? "Desativar" : "Reativar"}</Button></div>
@@ -142,10 +168,12 @@ export default function ExerciciosPage() {
       <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm({...form,nome:e.target.value})} placeholder="Ex.: Agachamento livre com barra"/></div>
       <div><Label>Aliases</Label><Input value={form.aliases} onChange={e => setForm({...form,aliases:e.target.value})} placeholder="Separados por vírgula"/></div>
       <div className="grid gap-4 sm:grid-cols-2"><div><Label>Grupo muscular principal</Label><Input value={form.grupo_muscular_principal} onChange={e => setForm({...form,grupo_muscular_principal:e.target.value})}/></div><div><Label>Secundários</Label><Input value={form.grupos_musculares_secundarios} onChange={e => setForm({...form,grupos_musculares_secundarios:e.target.value})} placeholder="Glúteos, posteriores..."/></div></div>
-      <div className="grid gap-4 sm:grid-cols-3"><div><Label>Equipamento</Label><Input value={form.equipamento} onChange={e => setForm({...form,equipamento:e.target.value})}/></div><div><Label>Padrão de movimento</Label><Input value={form.padrao_movimento} onChange={e => setForm({...form,padrao_movimento:e.target.value})}/></div><div><Label>Nível</Label><Select value={form.nivel} onChange={e => setForm({...form,nivel:e.target.value})}><option>Iniciante</option><option>Intermediário</option><option>Avançado</option></Select></div></div>
+      <div className="grid gap-4 sm:grid-cols-2"><div><Label>Tipo</Label><Select value={form.categoria} onChange={e => setForm({...form,categoria:e.target.value})}><option>Composto</option><option>Isolador/Acessório</option><option>Core/Estabilidade</option><option>Potência/Condicionamento</option></Select></div><div><Label>Nível</Label><Select value={form.nivel} onChange={e => setForm({...form,nivel:e.target.value})}><option>Iniciante</option><option>Intermediário</option><option>Avançado</option></Select></div></div>
+      <div className="grid gap-4 sm:grid-cols-2"><div><Label>Equipamento</Label><Input value={form.equipamento} onChange={e => setForm({...form,equipamento:e.target.value})}/></div><div><Label>Padrão de movimento</Label><Input value={form.padrao_movimento} onChange={e => setForm({...form,padrao_movimento:e.target.value})}/></div></div>
       <div><Label>Instruções</Label><Textarea value={form.instrucoes} onChange={e => setForm({...form,instrucoes:e.target.value})}/></div>
       <div><Label>Dicas de execução</Label><Textarea value={form.dicas_execucao} onChange={e => setForm({...form,dicas_execucao:e.target.value})}/></div>
       <div><Label>Erros comuns</Label><Textarea value={form.erros_comuns} onChange={e => setForm({...form,erros_comuns:e.target.value})}/></div>
+      <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm({...form,observacoes:e.target.value})}/></div>
       <div className="rounded-xl border border-border p-4"><h3 className="mb-3 flex items-center gap-2 font-bold"><Video className="size-4"/> YouTube</h3><div className="space-y-3"><div><Label>URL do vídeo</Label><Input value={form.youtube_url} onChange={e => setForm({...form,youtube_url:e.target.value,video_verificado:false})} placeholder="https://www.youtube.com/watch?v=..."/></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Título</Label><Input value={form.youtube_titulo} onChange={e => setForm({...form,youtube_titulo:e.target.value})}/></div><div><Label>Canal</Label><Input value={form.youtube_canal} onChange={e => setForm({...form,youtube_canal:e.target.value})}/></div></div><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.video_verificado} onChange={e => setForm({...form,video_verificado:e.target.checked})}/> Vídeo conferido e adequado para o aluno</label></div></div>
       <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.unilateral} onChange={e => setForm({...form,unilateral:e.target.checked})}/> Exercício unilateral</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.ativo} onChange={e => setForm({...form,ativo:e.target.checked})}/> Ativo</label></div>
       <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button disabled={saving || !form.nome.trim()} onClick={() => void save()}>{saving ? "Salvando..." : "Salvar exercício"}</Button></div>
