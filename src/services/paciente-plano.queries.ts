@@ -194,9 +194,9 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
 
   return {
     id: plano.id,
-    titulo: plano.titulo || "Plano alimentar",
+    titulo: "Plano alimentar",
     pacienteNome: paciente?.nome || "Paciente",
-    protocoloNome: plano.protocolo?.nome ?? null,
+    protocoloNome: null,
     observacoes: plano.observacoes,
     metas: { kcal: plano.meta_kcal, proteinaG: plano.meta_proteina_g, carboidratoG: plano.meta_carboidrato_g, gorduraG: plano.meta_gordura_g },
     refeicoes: refeicoesFormatadas,
@@ -216,11 +216,11 @@ export async function getPlanoAlimentarPacienteAtual(): Promise<PacientePlanoDas
 
   const [{ data: paciente }, { data: planoResumo }] = await Promise.all([
     supabase.from("pacientes").select("id, nome").eq("auth_id", user.id).maybeSingle(),
-    supabase.from("planos_estruturados").select("id").eq("auth_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("planos_estruturados").select("id").eq("auth_id", user.id).eq("status", "finalizado").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   if (!paciente || !planoResumo) return null;
   const plano = await getPlanoEstruturado(planoResumo.id);
-  if (!plano || plano.auth_id !== user.id) return null;
+  if (!plano || plano.auth_id !== user.id || plano.status !== "finalizado") return null;
   return montarDashboardPlano(plano.id);
 }
