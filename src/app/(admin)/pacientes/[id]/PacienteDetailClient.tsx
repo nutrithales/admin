@@ -17,6 +17,7 @@ import { AvaliacoesTab } from "./AvaliacoesTab";
 import { PreConsultaTab } from "./PreConsultaTab";
 import { AdministrativoTab } from "./AdministrativoTab";
 import { TreinosTab } from "./TreinosTab";
+import { AccessAreaPacienteCard } from "./AccessAreaPacienteCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 
@@ -95,6 +96,13 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
           <Card key={label}><CardContent className="flex items-center gap-3 pt-6"><div className="rounded-full bg-brand-light p-3 text-brand-dark"><Icon className="size-5" /></div><div><p className="text-xs font-semibold text-muted">{label}</p><p className="text-xl font-bold text-ink">{value}</p><p className="text-xs text-muted">{detail}</p></div></CardContent></Card>
         ))}
       </div>
+
+      <AccessAreaPacienteCard
+        pacienteId={paciente.id}
+        email={paciente.email}
+        authId={paciente.auth_id}
+        status={paciente.status}
+      />
 
       <Tabs
         className="mb-6"
