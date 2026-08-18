@@ -63,6 +63,7 @@ export default async function PacienteDashboardPage() {
     { data: proximaConsulta },
     { count: consultasRealizadas },
     { data: ultimoCheckin },
+    { data: preConsulta },
     { data: paginas },
   ] = await Promise.all([
     sb
@@ -101,6 +102,14 @@ export default async function PacienteDashboardPage() {
       .limit(1)
       .maybeSingle(),
     sb
+      .from("formularios_pre_consulta")
+      .select("id,status,solicitado_em")
+      .eq("auth_id", user.id)
+      .eq("status", "pendente")
+      .order("solicitado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    sb
       .from("paginas_paciente")
       .select("titulo,url_pagina,icone,ordem")
       .eq("user_id", user.id)
@@ -113,6 +122,7 @@ export default async function PacienteDashboardPage() {
   const primeiroNome = paciente.nome?.split(" ")[0] ?? "Paciente";
   const treinoLiberado = Boolean(paciente.treino_liberado);
   const suplementacaoLiberada = Boolean(suplementacao);
+  const preConsultaPendente = Boolean(preConsulta);
   const totalSuplementos = Array.isArray(suplementacao?.itens) ? suplementacao.itens.length : 0;
   const consultaFormatada = formatConsulta(proximaConsulta?.data ?? null);
   const consultaMeta = [proximaConsulta?.tipo, proximaConsulta?.modalidade].filter(Boolean).join(" · ");
@@ -221,13 +231,15 @@ export default async function PacienteDashboardPage() {
                     description="Estratégia e orientações de uso liberadas."
                   />
                 ) : null}
-                <QuickCard
-                  href="/paciente/pre-consulta"
-                  icon={<ClipboardList className="size-5" />}
-                  title="Pré-consulta"
-                  active
-                  description="Informações solicitadas antes do atendimento."
-                />
+                {preConsultaPendente ? (
+                  <QuickCard
+                    href="/paciente/pre-consulta"
+                    icon={<ClipboardList className="size-5" />}
+                    title="Pré-consulta"
+                    active
+                    description="Você tem informações pendentes para preencher antes do atendimento."
+                  />
+                ) : null}
                 <QuickCard
                   href="/paciente/treinos"
                   icon={<Dumbbell className="size-5" />}
