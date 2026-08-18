@@ -6,6 +6,20 @@ export type ConsultaComProntuario = Tables<"consultas"> & {
   prontuario: Tables<"consulta_prontuarios"> | null;
 };
 
+type ConsultaComProntuarioRaw = Tables<"consultas"> & {
+  prontuario:
+    | Tables<"consulta_prontuarios">
+    | Tables<"consulta_prontuarios">[]
+    | null;
+};
+
+function normalizarProntuario(
+  prontuario: ConsultaComProntuarioRaw["prontuario"],
+): Tables<"consulta_prontuarios"> | null {
+  if (!prontuario) return null;
+  return Array.isArray(prontuario) ? prontuario[0] ?? null : prontuario;
+}
+
 /** Todas as consultas de um paciente, com o prontuário privado anexado
  * quando existir — usado na aba "Prontuário" da página de detalhe. */
 export async function listConsultasComProntuario(authId: string): Promise<ConsultaComProntuario[]> {
@@ -17,7 +31,9 @@ export async function listConsultasComProntuario(authId: string): Promise<Consul
     .order("data", { ascending: false });
 
   if (error) throw new Error(`Erro ao carregar consultas: ${error.message}`);
-  return ((data ?? []) as unknown as (Tables<"consultas"> & { prontuario: Tables<"consulta_prontuarios">[] })[]).map(
-    (c) => ({ ...c, prontuario: c.prontuario[0] ?? null }),
-  );
+
+  return ((data ?? []) as unknown as ConsultaComProntuarioRaw[]).map((consulta) => ({
+    ...consulta,
+    prontuario: normalizarProntuario(consulta.prontuario),
+  }));
 }
