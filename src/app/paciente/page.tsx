@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, FileText, Utensils, Dumbbell, ChevronRight } from "lucide-react";
+import { ClipboardList, FileText, Utensils, Dumbbell, ChevronRight, Bolt, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import { getPlanoAlimentarPacienteAtual } from "@/services/paciente-plano.queries";
@@ -17,13 +17,20 @@ export default async function PacienteDashboardPage() {
   const [{ data: paciente }, plano, { data: suplementacao }] = await Promise.all([
     sb.from("pacientes").select("nome,treino_liberado").eq("auth_id", user.id).maybeSingle(),
     getPlanoAlimentarPacienteAtual(),
-    sb.from("suplementacao_paciente").select("id").eq("auth_id", user.id).eq("ativo", true).maybeSingle(),
+    sb.from("suplementacao_paciente")
+      .select("id,titulo,introducao,itens")
+      .eq("auth_id", user.id)
+      .eq("ativo", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   if (!paciente) redirect("/paciente/login?error=not-patient");
 
   const primeiroNome = paciente.nome?.split(" ")[0] ?? "";
   const treinoLiberado = Boolean(paciente.treino_liberado);
   const suplementacaoLiberada = Boolean(suplementacao);
+  const totalSuplementos = Array.isArray(suplementacao?.itens) ? suplementacao.itens.length : 0;
 
   return (
     <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
@@ -39,6 +46,35 @@ export default async function PacienteDashboardPage() {
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Acesse seu plano alimentar, suplementação, formulários, treinos e materiais do acompanhamento sempre que precisar.</p>
         </section>
 
+        {suplementacaoLiberada && (
+          <Link href="/paciente/suplementacao" className="group mt-6 block">
+            <section className="overflow-hidden rounded-[26px] border border-brand/40 bg-brand-light shadow-card transition group-hover:-translate-y-0.5 group-hover:shadow-image">
+              <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex min-w-0 items-start gap-4">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand text-ink-deep">
+                    <Bolt className="size-6" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-dark">Suplementação ativa</p>
+                      <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-bold text-brand-dark">
+                        {totalSuplementos} {totalSuplementos === 1 ? "item" : "itens"}
+                      </span>
+                    </div>
+                    <h2 className="mt-1 text-xl font-black text-ink sm:text-2xl">{suplementacao.titulo || "Sua estratégia de suplementação"}</h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                      {suplementacao.introducao || "Consulte os suplementos liberados e as orientações de uso da sua estratégia atual."}
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-ink-deep px-4 text-sm font-black text-white transition group-hover:gap-3">
+                  Ver suplementação <ArrowRight className="size-4" />
+                </span>
+              </div>
+            </section>
+          </Link>
+        )}
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <PortalCard
             href="/paciente/plano-alimentar"
@@ -48,16 +84,6 @@ export default async function PacienteDashboardPage() {
             description={plano ? "Consulte refeições, opções e substituições calculadas para o seu plano." : "Seu plano aparecerá aqui quando for liberado."}
             destaque={Boolean(plano)}
           />
-          {suplementacaoLiberada && (
-            <PortalCard
-              href="/paciente/suplementacao"
-              icon={<FileText className="size-5" />}
-              eyebrow="Corrida"
-              title="Suplementação"
-              description="Consulte os suplementos da sua rotina de corrida e as orientações para encaixá-los na estratégia."
-              destaque
-            />
-          )}
           <PortalCard
             href="/paciente/pre-consulta"
             icon={<ClipboardList className="size-5" />}
