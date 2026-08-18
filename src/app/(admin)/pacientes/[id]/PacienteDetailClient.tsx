@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import type { Tables } from "@/types/database.types";
 import type { ConsultaComProntuario } from "@/services/prontuarios.queries";
+import { VisaoGeralTab } from "./VisaoGeralTab";
 import { ProntuarioTab } from "./ProntuarioTab";
 import { AvaliacoesTab } from "./AvaliacoesTab";
 import { PreConsultaTab } from "./PreConsultaTab";
@@ -15,15 +16,7 @@ import { AdministrativoTab } from "./AdministrativoTab";
 import { Card, CardContent } from "@/components/ui/Card";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 
-export function PacienteDetailClient({
-  paciente,
-  consultas,
-  avaliacoes,
-  preConsulta,
-  pendencias,
-  pagamentos,
-  historicoFluxo,
-}: {
+export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsulta, pendencias, pagamentos, historicoFluxo }: {
   paciente: Tables<"pacientes">;
   consultas: ConsultaComProntuario[];
   avaliacoes: Tables<"avaliacoes_fisicas">[];
@@ -32,7 +25,7 @@ export function PacienteDetailClient({
   pagamentos: Tables<"pagamentos">[];
   historicoFluxo: Tables<"fluxo_movimentacoes">[];
 }) {
-  const [tab, setTab] = useState("prontuario");
+  const [tab, setTab] = useState("visao-geral");
   const stats = computeConsultasStats(paciente, consultas);
   const completed = stats.realizadas;
   const scheduled = stats.agendadas;
@@ -46,7 +39,7 @@ export function PacienteDetailClient({
 
       <PageHeader
         title={paciente.nome ?? "Paciente"}
-        description="Área privada — prontuário e avaliações físicas nunca são visíveis ao paciente, exceto o que você decidir disponibilizar."
+        description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações e informações administrativas."
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -64,6 +57,7 @@ export function PacienteDetailClient({
         value={tab}
         onChange={setTab}
         items={[
+          { key: "visao-geral", label: "Visão geral" },
           { key: "prontuario", label: "Prontuário" },
           { key: "avaliacoes", label: "Avaliações físicas" },
           { key: "pre-consulta", label: "Pré-consulta" },
@@ -71,7 +65,9 @@ export function PacienteDetailClient({
         ]}
       />
 
-      {tab === "prontuario" ? (
+      {tab === "visao-geral" ? (
+        <VisaoGeralTab paciente={paciente} consultas={consultas} />
+      ) : tab === "prontuario" ? (
         <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
       ) : tab === "avaliacoes" ? (
         <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
