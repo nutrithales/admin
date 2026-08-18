@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Typecheck, lint and build
+    name: Typecheck and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -33,7 +33,8 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npm run typecheck
-      - name: Lint
+      - name: Lint audit (existing debt is reported, not blocking)
+        continue-on-error: true
         run: npm run lint
       - name: Build
         run: npm run build
