@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, FileText, Utensils, Dumbbell, ChevronRight } from "lucide-react";
+import { ClipboardList, FileText, Utensils, Dumbbell, ChevronRight, Capsule } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import { getPlanoAlimentarPacienteAtual } from "@/services/paciente-plano.queries";
@@ -14,14 +14,16 @@ export default async function PacienteDashboardPage() {
   if (!user) redirect("/paciente/login");
 
   const sb = supabase as any;
-  const [{ data: paciente }, plano] = await Promise.all([
+  const [{ data: paciente }, plano, { data: suplementacao }] = await Promise.all([
     sb.from("pacientes").select("nome,treino_liberado").eq("auth_id", user.id).maybeSingle(),
     getPlanoAlimentarPacienteAtual(),
+    sb.from("suplementacao_paciente").select("id").eq("auth_id", user.id).eq("ativo", true).maybeSingle(),
   ]);
   if (!paciente) redirect("/paciente/login?error=not-patient");
 
   const primeiroNome = paciente.nome?.split(" ")[0] ?? "";
   const treinoLiberado = Boolean(paciente.treino_liberado);
+  const suplementacaoLiberada = Boolean(suplementacao);
 
   return (
     <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
@@ -34,7 +36,7 @@ export default async function PacienteDashboardPage() {
         <section className="mt-8 rounded-[30px] bg-ink-deep p-6 text-white shadow-dark sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Bem-vindo{primeiroNome ? `, ${primeiroNome}` : ""}</p>
           <h1 className="mt-2 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">Seu acompanhamento em um só lugar.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Acesse seu plano alimentar, formulários, treinos e materiais do acompanhamento sempre que precisar.</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Acesse seu plano alimentar, suplementação, formulários, treinos e materiais do acompanhamento sempre que precisar.</p>
         </section>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -46,6 +48,16 @@ export default async function PacienteDashboardPage() {
             description={plano ? "Consulte refeições, opções e substituições calculadas para o seu plano." : "Seu plano aparecerá aqui quando for liberado."}
             destaque={Boolean(plano)}
           />
+          {suplementacaoLiberada && (
+            <PortalCard
+              href="/paciente/suplementacao"
+              icon={<Capsule className="size-5" />}
+              eyebrow="Corrida"
+              title="Suplementação"
+              description="Consulte os suplementos da sua rotina de corrida e as orientações para encaixá-los na estratégia."
+              destaque
+            />
+          )}
           <PortalCard
             href="/paciente/pre-consulta"
             icon={<ClipboardList className="size-5" />}
