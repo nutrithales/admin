@@ -10,7 +10,6 @@ import { MacroSummary } from "@/components/ui/MacroSummary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
 import { calcularMacrosTotais, arredondarMacros } from "@/lib/nutrition/calcular-macros";
-import { formatarQuantidadeComMedida } from "@/lib/nutrition/medida-caseira";
 import {
   removerItemDoPlanoAction,
   updateMetaRefeicaoAction,
@@ -21,6 +20,7 @@ import type { PlanoRefeicaoComItens, PlanoItemComDados, IngredienteComAlimento }
 import { AddItemModal } from "./AddItemModal";
 import { SubstituirModal } from "./SubstituirModal";
 import { MontarTextoLivreModal } from "./MontarTextoLivreModal";
+import { QuantidadeEditavel } from "./QuantidadeEditavel";
 
 export function macrosDoItem(item: PlanoItemComDados) {
   if (item.alimento && item.quantidade_g) {
@@ -59,12 +59,14 @@ interface AlvoSubstituicao {
 
 function ItemRow({
   item,
+  planoId,
   editavel,
   onRemove,
   onSubstituirItem,
   onSubstituirIngrediente,
 }: {
   item: PlanoItemComDados;
+  planoId: string;
   editavel: boolean;
   onRemove: () => void;
   onSubstituirItem: () => void;
@@ -88,16 +90,23 @@ function ItemRow({
           <p className="truncate font-semibold text-ink">{nomeExibicao}</p>
         </div>
         {ehTipoA ? (
-          <p className="mt-1 text-xs text-muted">Livre — escolha entre as opções da lista de Vegetais Tipo A.</p>
+          <p className="mt-1 text-xs text-muted">Livre - escolha entre as opções da lista de Vegetais Tipo A.</p>
         ) : ehTipoB ? (
-          <p className="mt-1 text-xs text-muted">1 porção — escolha uma opção da lista de Vegetais Tipo B.</p>
+          <p className="mt-1 text-xs text-muted">1 porção - escolha uma opção da lista de Vegetais Tipo B.</p>
         ) : item.receita ? (
-          <ul className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted">
+          <ul className="mt-1.5 flex flex-col gap-1.5 text-xs text-muted">
             {item.ingredientes.map((ing) => (
-              <li key={ing.id} className="flex items-center gap-1.5">
-                <span>
-                  {ing.alimento.nome} — {formatarQuantidadeComMedida(ing.quantidade_g_final, ing.alimento.medidas_caseiras)}
-                </span>
+              <li key={ing.id} className="flex flex-wrap items-center gap-1.5">
+                <span className="font-medium text-ink">{ing.alimento.nome}</span>
+                <span>-</span>
+                <QuantidadeEditavel
+                  tipo="ingrediente"
+                  id={ing.id}
+                  planoId={planoId}
+                  quantidadeG={ing.quantidade_g_final}
+                  medidasCaseiras={ing.alimento.medidas_caseiras}
+                  editavel={editavel}
+                />
                 {editavel && (
                   <button
                     type="button"
@@ -112,11 +121,18 @@ function ItemRow({
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="mt-1 text-xs text-muted">
-            {formatarQuantidadeComMedida(item.quantidade_g, item.alimento?.medidas_caseiras)}
-          </p>
-        )}
+        ) : item.alimento && item.quantidade_g ? (
+          <div className="mt-1 text-xs text-muted">
+            <QuantidadeEditavel
+              tipo="item"
+              id={item.id}
+              planoId={planoId}
+              quantidadeG={item.quantidade_g}
+              medidasCaseiras={item.alimento.medidas_caseiras}
+              editavel={editavel}
+            />
+          </div>
+        ) : null}
         {!ehVegetalAgrupado && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <Badge tone="muted">{macros.kcal} kcal</Badge>
@@ -272,7 +288,7 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
           disabled={!editavel}
-          placeholder="Dicas de preparo, substituições sugeridas, notas para deixar o plano mais premium — aparece no PDF, só nesta refeição."
+          placeholder="Dicas de preparo e organização específicas desta refeição."
         />
         {editavel && (
           <Button type="button" size="sm" variant="outline" loading={savingObservacoes} onClick={handleSalvarObservacoes} className="w-fit">
@@ -311,6 +327,7 @@ export function RefeicaoTab({ refeicao, planoId, editavel }: { refeicao: PlanoRe
                   <ItemRow
                     key={item.id}
                     item={item}
+                    planoId={planoId}
                     editavel={editavel}
                     onRemove={() => handleRemove(item.id)}
                     onSubstituirItem={() => item.alimento && setAlvoSubstituicao({ tipo: "item", id: item.id, alimentoId: item.alimento.id, nome: item.alimento.nome, quantidadeG: item.quantidade_g ?? 0 })}
