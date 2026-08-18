@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Info,
   Leaf,
+  Droplets,
 } from "lucide-react";
 import type { PacientePlanoDashboard } from "@/services/paciente-plano.queries";
 
@@ -84,7 +85,7 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
         <div className="flex items-center justify-between gap-3 px-1">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-dark sm:text-xs">Navegação rápida</p>
-            <p className="mt-0.5 text-xs font-semibold text-muted">Toque para ir direto à refeição</p>
+            <p className="mt-0.5 text-xs font-semibold text-muted">Toque para ir direto à refeição ou orientação</p>
           </div>
           <ClipboardList className="size-4 shrink-0 text-brand-dark" />
         </div>
@@ -105,6 +106,26 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
       {plano.refeicoes.map((refeicao, refeicaoIndex) => {
         const opcaoAtiva = opcaoPorRefeicao[refeicao.id] ?? refeicao.opcoes[0]?.numero ?? 1;
         const opcao = refeicao.opcoes.find((item) => item.numero === opcaoAtiva) ?? refeicao.opcoes[0];
+
+        if (!opcao && refeicao.observacoes) {
+          return (
+            <section id={slugRefeicao(refeicao.id)} key={refeicao.id} className="scroll-mt-3 overflow-hidden rounded-[22px] border border-brand/30 bg-surface shadow-card sm:rounded-[26px]">
+              <div className="bg-gradient-to-b from-brand-light/80 to-white px-4 py-4 sm:px-5 sm:py-5">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-dark shadow-sm"><Droplets className="size-5" /></span>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-dark sm:text-xs">Orientação do ciclo</p>
+                    <h2 className="mt-0.5 text-xl font-black leading-tight text-ink sm:text-2xl">{refeicao.nome}</h2>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 sm:p-5">
+                <p className="whitespace-pre-line text-sm leading-6 text-ink">{refeicao.observacoes}</p>
+              </div>
+            </section>
+          );
+        }
+
         if (!opcao) return null;
 
         return (
