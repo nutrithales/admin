@@ -95,6 +95,13 @@ function medidaCaseira(medidas: unknown, quantidadeG?: number | null): string | 
   return `≈ ${qtd} ${melhor.unidade.toLowerCase()}`;
 }
 
+function quantidadePorUnidadeParaFruta(nome: string, medida: string | null): string | null {
+  const normalizado = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const frutaPorUnidade = normalizado.includes("banana") || normalizado.includes("maca");
+  if (!frutaPorUnidade || !medida || !medida.toLowerCase().includes("unidade")) return null;
+  return medida.replace(/^≈\s*/, "");
+}
+
 function prioridadeRefeicaoPaciente(nome: string): number {
   const normalizado = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   return normalizado.includes("pre-treino") || normalizado.includes("pre treino") ? 0 : 1;
@@ -177,13 +184,16 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
       const tipoA = item.papel_macro === "livre";
       const tipoB = item.papel_macro === "vegetal_b";
       const quantidadeG = !tipoA && !tipoB && item.alimento ? Number(item.quantidade_g ?? 0) || undefined : undefined;
+      const nomeItem = tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : item.receita?.nome ?? item.alimento?.nome ?? "Item";
+      const medidaDoItem = item.alimento ? medidaCaseira(item.alimento.medidas_caseiras, quantidadeG) : null;
+      const quantidadePorUnidade = !tipoA && !tipoB ? quantidadePorUnidadeParaFruta(nomeItem, medidaDoItem) : null;
 
       atual.itens.push({
         id: item.id,
-        nome: tipoA ? "Vegetais Tipo A" : tipoB ? "Vegetais Tipo B" : item.receita?.nome ?? item.alimento?.nome ?? "Item",
-        quantidadeTexto: tipoA ? "livre" : tipoB ? "1 porção" : undefined,
+        nome: nomeItem,
+        quantidadeTexto: tipoA ? "livre" : tipoB ? "1 porção" : quantidadePorUnidade ?? undefined,
         quantidadeG,
-        medidaCaseira: item.alimento ? medidaCaseira(item.alimento.medidas_caseiras, quantidadeG) : null,
+        medidaCaseira: quantidadePorUnidade ? null : medidaDoItem,
         papelMacro: item.papel_macro,
         grupoSubstituicaoId: item.grupo_substituicao_id,
         ingredientes: item.receita
