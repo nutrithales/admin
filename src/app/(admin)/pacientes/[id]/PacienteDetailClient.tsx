@@ -16,6 +16,7 @@ import { ProntuarioTab } from "./ProntuarioTab";
 import { AvaliacoesTab } from "./AvaliacoesTab";
 import { PreConsultaTab } from "./PreConsultaTab";
 import { AdministrativoTab } from "./AdministrativoTab";
+import { TreinosTab } from "./TreinosTab";
 import { Card, CardContent } from "@/components/ui/Card";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 
@@ -70,7 +71,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
           title={paciente.nome ?? "Paciente"}
-          description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações e informações administrativas."
+          description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações, treinos e informações administrativas."
         />
         <Button
           type="button"
@@ -103,6 +104,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
           { key: "visao-geral", label: "Visão geral" },
           { key: "prontuario", label: "Prontuário" },
           { key: "avaliacoes", label: "Avaliações físicas" },
+          { key: "treinos", label: "Treinos" },
           { key: "pre-consulta", label: "Pré-consulta" },
           { key: "administrativo", label: "Administrativo (Clara)" },
         ]}
@@ -114,6 +116,8 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
         <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
       ) : tab === "avaliacoes" ? (
         <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
+      ) : tab === "treinos" ? (
+        <TreinosTab pacienteId={paciente.id} />
       ) : tab === "pre-consulta" ? (
         <PreConsultaTab formulario={preConsulta} paciente={paciente} />
       ) : (
