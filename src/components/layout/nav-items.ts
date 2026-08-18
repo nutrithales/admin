@@ -1,11 +1,12 @@
 import {
-  LayoutDashboard, Users, AppWindow, UtensilsCrossed, Apple, ChefHat, Salad, ListChecks, BookOpen, CalendarClock, ClipboardCheck, Sparkles, Settings, Bot, Workflow, ContactRound, FileText, ReceiptText, Calculator, type LucideIcon,
+  LayoutDashboard, Users, AppWindow, UtensilsCrossed, Apple, ChefHat, Salad, ListChecks, BookOpen, CalendarClock, ClipboardCheck, Sparkles, Settings, Bot, Workflow, ContactRound, FileText, ReceiptText, Calculator, Dumbbell, type LucideIcon,
 } from "lucide-react";
 export interface NavItem { label: string; href: string; icon: LucideIcon; }
 export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Marc.ia", href: "/clara", icon: Bot },
   { label: "Pacientes", href: "/pacientes", icon: Users },
+  { label: "Treinos", href: "/treinos", icon: Dumbbell },
   { label: "Leads", href: "/leads", icon: ContactRound },
   { label: "Fluxo", href: "/fluxo", icon: Workflow },
   { label: "Pagamentos", href: "/pagamentos", icon: ReceiptText },
