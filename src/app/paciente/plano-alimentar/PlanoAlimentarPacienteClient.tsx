@@ -247,10 +247,10 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
                 <p className="mt-2 text-sm leading-5 text-ink sm:leading-6">{dicaDaOpcao(refeicao.nome, opcao.nome)}</p>
               </div>
 
-              {refeicao.observacoes && (
+              {(opcao.observacoes || refeicao.observacoes) && (
                 <div className="rounded-[18px] border border-border bg-white p-3.5 sm:p-4">
                   <p className="text-[11px] font-black uppercase tracking-[0.12em] text-muted sm:text-xs">Observação da refeição</p>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-5 text-ink sm:leading-6">{refeicao.observacoes}</p>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-5 text-ink sm:leading-6">{opcao.observacoes || refeicao.observacoes}</p>
                 </div>
               )}
             </div>
