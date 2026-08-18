@@ -81,6 +81,11 @@ function medidaCaseira(medidas: unknown, quantidadeG?: number | null): string | 
   return `≈ ${qtd} ${String(melhor.unidade).toLowerCase()}`;
 }
 
+function prioridadeRefeicaoPaciente(nome: string): number {
+  const normalizado = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return normalizado.includes("pre-treino") || normalizado.includes("pre treino") ? 0 : 1;
+}
+
 interface RpcSubRow {
   item_id: string;
   grupo_nome: string;
@@ -129,7 +134,10 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
     tipoB: vegetaisRows.filter((row) => row.tipo === "VEG_B").map((row) => ({ nome: row.nome, porcaoG: row.porcao_g == null ? null : Number(row.porcao_g) })),
   };
 
-  const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes].sort((a, b) => a.ordem - b.ordem).map((refeicao) => {
+  const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes].sort((a, b) => {
+    const prioridade = prioridadeRefeicaoPaciente(a.nome) - prioridadeRefeicaoPaciente(b.nome);
+    return prioridade !== 0 ? prioridade : a.ordem - b.ordem;
+  }).map((refeicao) => {
     const grupos = new Map<number, PacientePlanoOpcao>();
     const itens = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
 
