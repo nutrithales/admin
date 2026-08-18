@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, ExternalLink, KeyRound, ShieldCheck } from "lucide-react";
+import { Copy, ExternalLink, KeyRound, MessageCircle, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -13,16 +13,27 @@ const PATIENT_AREA_URL = "https://nutrithales.com.br/paciente";
 type Props = {
   pacienteId: string;
   email: string | null;
+  telefone: string | null;
   authId: string | null;
   status: string | null;
 };
 
-export function AccessAreaPacienteCard({ pacienteId, email, authId, status }: Props) {
+function normalizeWhatsAppPhone(value: string | null) {
+  if (!value) return null;
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("55") && digits.length >= 12) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
+
+export function AccessAreaPacienteCard({ pacienteId, email, telefone, authId, status }: Props) {
   const { toast } = useToast();
   const [resetting, setResetting] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const hasAccess = Boolean(authId && email);
   const isInactive = status === "inativo";
+  const whatsappPhone = normalizeWhatsAppPhone(telefone);
 
   async function copyText(value: string, label: string) {
     try {
@@ -52,6 +63,22 @@ export function AccessAreaPacienteCard({ pacienteId, email, authId, status }: Pr
     setTemporaryPassword(result.password ?? null);
     toast({ kind: "success", title: "Nova senha gerada", description: result.message });
   }
+
+  function getWhatsAppUrl(password: string) {
+    if (!whatsappPhone || !email) return null;
+    const message = [
+      "Olá! Seguem seus dados de acesso à Área do Paciente:",
+      "",
+      `Login: ${email}`,
+      `Senha: ${password}`,
+      `Acesso: ${PATIENT_AREA_URL}`,
+      "",
+      "Se tiver qualquer dificuldade para entrar, me avise por aqui.",
+    ].join("\n");
+    return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+  }
+
+  const whatsappUrl = temporaryPassword ? getWhatsAppUrl(temporaryPassword) : null;
 
   return (
     <Card className="mb-6">
@@ -124,6 +151,18 @@ export function AccessAreaPacienteCard({ pacienteId, email, authId, status }: Pr
                 <Button type="button" size="sm" variant="outline" onClick={() => copyText(temporaryPassword, "Senha")}>
                   <Copy className="size-4" /> Copiar senha
                 </Button>
+                {whatsappUrl ? (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95"
+                  >
+                    <MessageCircle className="size-4" /> Enviar acesso no WhatsApp
+                  </a>
+                ) : (
+                  <span className="text-xs text-muted">Cadastre um telefone válido para habilitar o envio por WhatsApp.</span>
+                )}
               </div>
             </div>
           ) : null}
