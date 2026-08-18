@@ -30,6 +30,7 @@ export interface PacientePlanoItem {
 export interface PacientePlanoOpcao {
   numero: number;
   nome?: string | null;
+  observacoes?: string | null;
   itens: PacientePlanoItem[];
 }
 
@@ -163,10 +164,16 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
   }).map((refeicao) => {
     const grupos = new Map<number, PacientePlanoOpcao>();
     const itens = [...refeicao.itens].sort((a, b) => a.ordem - b.ordem);
+    const observacoesOpcoes = ((refeicao as typeof refeicao & { observacoes_opcoes?: Record<string, string> | null }).observacoes_opcoes ?? {});
 
     for (const item of itens) {
       const numero = item.opcao_numero ?? 1;
-      const atual: PacientePlanoOpcao = grupos.get(numero) ?? { numero, nome: item.opcao_nome ?? null, itens: [] };
+      const atual: PacientePlanoOpcao = grupos.get(numero) ?? {
+        numero,
+        nome: item.opcao_nome ?? null,
+        observacoes: observacoesOpcoes[String(numero)] ?? null,
+        itens: [],
+      };
       const tipoA = item.papel_macro === "livre";
       const tipoB = item.papel_macro === "vegetal_b";
       const quantidadeG = !tipoA && !tipoB && item.alimento ? Number(item.quantidade_g ?? 0) || undefined : undefined;
