@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, FileText, Utensils, Dumbbell, ChevronRight, Capsule } from "lucide-react";
+import { ClipboardList, FileText, Utensils, Dumbbell, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import { getPlanoAlimentarPacienteAtual } from "@/services/paciente-plano.queries";
@@ -51,7 +51,7 @@ export default async function PacienteDashboardPage() {
           {suplementacaoLiberada && (
             <PortalCard
               href="/paciente/suplementacao"
-              icon={<Capsule className="size-5" />}
+              icon={<FileText className="size-5" />}
               eyebrow="Corrida"
               title="Suplementação"
               description="Consulte os suplementos da sua rotina de corrida e as orientações para encaixá-los na estratégia."
