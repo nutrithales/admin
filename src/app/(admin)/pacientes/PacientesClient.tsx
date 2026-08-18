@@ -120,10 +120,16 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       header: "Nome",
       sortValue: (p) => (p.nome ?? "").toLowerCase(),
       render: (p) => (
-        <div>
-          <p className="font-semibold">{p.nome}</p>
+        <button
+          type="button"
+          onClick={() => router.push(`/pacientes/${p.id}`)}
+          className="group block w-full text-left"
+          aria-label={`Abrir ficha de ${p.nome ?? "paciente"}`}
+        >
+          <p className="font-semibold text-ink group-hover:text-brand-dark group-hover:underline">{p.nome}</p>
           <p className="text-xs text-muted">{p.email}</p>
-        </div>
+          <p className="mt-0.5 text-[11px] font-semibold text-brand-dark opacity-0 transition-opacity group-hover:opacity-100">Abrir ficha completa</p>
+        </button>
       ),
     },
     {
@@ -195,7 +201,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
           }
         >
           <DropdownItem onClick={() => router.push(`/pacientes/${p.id}`)}>
-            <FileText className="size-4" /> Prontuário e avaliações
+            <FileText className="size-4" /> Ficha completa
           </DropdownItem>
           <DropdownItem
             onClick={() => {
@@ -238,7 +244,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
     <div>
       <PageHeader
         title="Pacientes"
-        description="Gerencie o cadastro e o acesso dos seus pacientes."
+        description="Gerencie o cadastro e o acesso dos seus pacientes. Clique no nome para abrir a ficha completa."
         actions={
           <Button
             onClick={() => {
