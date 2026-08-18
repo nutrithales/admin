@@ -54,6 +54,13 @@ export async function updateSession(request: NextRequest) {
     (pathname === "/paciente" || pathname.startsWith("/paciente/")) &&
     pathname !== "/paciente/login";
 
+  if (!user && isPatientArea) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/paciente/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -111,8 +118,6 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Uma sessão administrativa não deve sequestrar a entrada da Área do Paciente.
-    // Mantemos a tela de login do paciente visível para validação e novo acesso.
     return response;
   }
 
