@@ -100,6 +100,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
       <AccessAreaPacienteCard
         pacienteId={paciente.id}
         email={paciente.email}
+        telefone={paciente.telefone}
         authId={paciente.auth_id}
         status={paciente.status}
       />
