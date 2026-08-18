@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { useToast } from "@/contexts/ToastContext";
 import { resetPacientePasswordAction } from "@/services/pacientes.actions";
 
-const PATIENT_AREA_URL = "https://nutrithales.com.br/paciente";
+const PATIENT_AREA_URL = "https://admin.nutrithales.com.br/paciente";
 
 type Props = {
   pacienteId: string;
@@ -118,7 +118,7 @@ export function AccessAreaPacienteCard({ pacienteId, email, telefone, authId, st
             <div className="rounded-lg border border-border bg-bg-alt p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">Link da Área do Paciente</p>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="min-w-0 truncate text-sm font-semibold text-ink">nutrithales.com.br/paciente</p>
+                <p className="min-w-0 truncate text-sm font-semibold text-ink">admin.nutrithales.com.br/paciente</p>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
