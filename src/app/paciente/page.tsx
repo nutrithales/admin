@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPlanoAlimentarPacienteAtual } from "@/services/paciente-plano.queries";
+import { PatientLogoutButton } from "./logout-button";
 
 const BRAND_LOGO = "https://www.nutrithales.com.br/assets/logo-thales.png";
 
@@ -95,8 +96,11 @@ export default async function PacienteDashboardPage() {
       <div className="mx-auto min-h-screen w-full max-w-[500px] bg-[#F8FAF8] pb-[calc(24px+env(safe-area-inset-bottom))] sm:min-h-0 sm:overflow-hidden sm:rounded-[32px] sm:border sm:border-black/[0.055] sm:shadow-[0_30px_90px_rgba(14,26,20,0.12)]">
         <header className="flex items-center justify-between px-5 pt-[calc(14px+env(safe-area-inset-top))] sm:pt-6">
           <img src={BRAND_LOGO} alt="Nutri Thales Rosa" className="h-auto w-[84px] object-contain" />
-          <div className="grid size-9 place-items-center rounded-full bg-[#0E1A14] text-[12px] font-black text-white shadow-[0_6px_18px_rgba(14,26,20,0.12)]">
-            {primeiroNome.charAt(0).toUpperCase()}
+          <div className="flex items-center gap-2">
+            <PatientLogoutButton />
+            <div className="grid size-9 place-items-center rounded-full bg-[#0E1A14] text-[12px] font-black text-white shadow-[0_6px_18px_rgba(14,26,20,0.12)]">
+              {primeiroNome.charAt(0).toUpperCase()}
+            </div>
           </div>
         </header>
 
@@ -107,7 +111,7 @@ export default async function PacienteDashboardPage() {
           </section>
 
           <section className="mt-4 overflow-hidden rounded-[23px] bg-[#0E1A14] text-white shadow-[0_16px_34px_rgba(14,26,20,0.14)]">
-            <div className="p-4.5 p-4">
+            <div className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[9px] font-black uppercase tracking-[0.13em] text-[#6FF0AC]">Acompanhamento</p>
