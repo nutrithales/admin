@@ -7,6 +7,9 @@ import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 
 export const metadata = { title: "Meus Treinos" };
 
+const VINICIUS_PATIENT_ID = "20c469e7-43c6-41c3-9f19-b5704ced772b";
+const VINICIUS_DASHBOARD_URL = "https://www.nutrithales.com.br/paciente/treinos/vinicius";
+
 type Treino = {
   id: string;
   nome: string;
@@ -45,6 +48,10 @@ export default async function PacienteTreinosPage() {
 
   if (!paciente) redirect("/paciente/login?error=not-patient");
   if (!paciente.treino_liberado) redirect("/paciente");
+
+  if (paciente.id === VINICIUS_PATIENT_ID) {
+    redirect(VINICIUS_DASHBOARD_URL);
+  }
 
   const { data: treinoData } = await sb
     .from("treino_programas")
