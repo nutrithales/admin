@@ -105,7 +105,7 @@ export async function updateSession(request: NextRequest) {
       .eq("auth_id", user.id)
       .maybeSingle();
     const url = request.nextUrl.clone();
-    url.pathname = patient ? "/paciente/pre-consulta" : "/";
+    url.pathname = patient ? "/paciente" : "/";
     url.search = "";
     return NextResponse.redirect(url);
   }
