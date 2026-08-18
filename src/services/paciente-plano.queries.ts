@@ -13,6 +13,7 @@ export interface PacientePlanoSubstituicao {
 export interface PacientePlanoVegetal {
   nome: string;
   porcaoG?: number | null;
+  medidaCaseira?: string | null;
 }
 
 export interface PacientePlanoItem {
@@ -117,6 +118,7 @@ interface RpcVegetalRow {
   nome: string;
   porcao_g: number | null;
   ordem: number;
+  medidas_caseiras?: unknown;
 }
 
 async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashboard | null> {
@@ -148,8 +150,11 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
 
   const vegetaisRows = ((vegetalData ?? []) as RpcVegetalRow[]).sort((a, b) => a.ordem - b.ordem);
   const vegetais = {
-    tipoA: vegetaisRows.filter((row) => row.tipo === "VEG_A").map((row) => ({ nome: row.nome, porcaoG: null })),
-    tipoB: vegetaisRows.filter((row) => row.tipo === "VEG_B").map((row) => ({ nome: row.nome, porcaoG: row.porcao_g == null ? null : Number(row.porcao_g) })),
+    tipoA: vegetaisRows.filter((row) => row.tipo === "VEG_A").map((row) => ({ nome: row.nome, porcaoG: null, medidaCaseira: null })),
+    tipoB: vegetaisRows.filter((row) => row.tipo === "VEG_B").map((row) => {
+      const porcaoG = row.porcao_g == null ? null : Number(row.porcao_g);
+      return { nome: row.nome, porcaoG, medidaCaseira: medidaCaseira(row.medidas_caseiras, porcaoG) };
+    }),
   };
 
   const refeicoesFormatadas: PacientePlanoRefeicao[] = [...plano.refeicoes].sort((a, b) => {
