@@ -32,53 +32,50 @@ export default function PatientLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb]">
-      <div className="mx-auto min-h-screen w-full max-w-md bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:my-8 sm:min-h-0 sm:overflow-hidden sm:rounded-[34px]">
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#5157d8] via-[#6259d8] to-[#7754ca] px-6 pb-16 pt-9 text-white">
-          <div className="absolute -right-12 -top-10 size-44 rounded-full bg-white/10" />
-          <div className="absolute -bottom-20 -left-16 size-52 rounded-full bg-white/10" />
-
-          <div className="relative">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-white shadow-lg shadow-black/10">
-                <img
-                  src={BRAND_LOGO_DATA_URI}
-                  alt="Nutri Thales Rosa"
-                  className="h-auto w-11 object-contain"
-                />
-              </div>
-              <span className="rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-white/90 backdrop-blur-sm">
-                Área do paciente
-              </span>
+    <main className="min-h-screen bg-[#F3F6F4] px-4 py-5 sm:flex sm:items-center sm:justify-center sm:py-10">
+      <div className="mx-auto w-full max-w-[430px] overflow-hidden rounded-[30px] border border-black/[0.06] bg-white shadow-[0_24px_70px_rgba(14,26,20,0.10)]">
+        <section className="bg-[#0E1A14] px-6 pb-8 pt-6 text-white sm:px-7 sm:pt-7">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex size-[62px] items-center justify-center rounded-[18px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+              <img
+                src={BRAND_LOGO_DATA_URI}
+                alt="Nutri Thales Rosa"
+                className="max-h-11 w-auto max-w-[50px] object-contain"
+              />
             </div>
+            <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75">
+              Área do paciente
+            </span>
+          </div>
 
-            <div className="mt-10 max-w-xs">
-              <p className="text-sm font-bold text-white/70">Bem-vindo</p>
-              <h1 className="mt-1 text-[34px] font-black leading-[1.02] tracking-[-0.035em]">
-                Seu acompanhamento, em um só lugar.
-              </h1>
-              <p className="mt-4 text-sm leading-6 text-white/75">
-                Acesse seu plano alimentar, treinos, check-ins e materiais liberados para você.
-              </p>
-            </div>
+          <div className="mt-9 max-w-[330px]">
+            <span className="inline-flex rounded-full bg-[#19DD7F]/12 px-2.5 py-1 text-[11px] font-black text-[#6FF0AC]">
+              Bem-vindo
+            </span>
+            <h1 className="mt-3 text-[34px] font-black leading-[0.98] tracking-[-0.04em] sm:text-[38px]">
+              Seu acompanhamento, do seu jeito.
+            </h1>
+            <p className="mt-4 text-sm leading-6 text-white/58">
+              Plano alimentar, treinos, check-ins e materiais em um único lugar.
+            </p>
           </div>
         </section>
 
-        <section className="relative -mt-7 rounded-t-[30px] bg-white px-6 pb-8 pt-7">
-          <div className="mb-6">
-            <h2 className="text-2xl font-black tracking-tight text-ink">Entrar</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Use o e-mail e a senha cadastrados no seu acompanhamento.
+        <section className="px-6 pb-6 pt-6 sm:px-7 sm:pb-7">
+          <div className="mb-5">
+            <h2 className="text-[24px] font-black tracking-[-0.025em] text-[#101713]">Entrar</h2>
+            <p className="mt-1.5 text-sm leading-6 text-[#6F7B74]">
+              Use os dados cadastrados no seu acompanhamento.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="patient-email" className="mb-2 block text-sm font-bold text-ink">
+              <label htmlFor="patient-email" className="mb-2 block text-[13px] font-black text-[#202923]">
                 E-mail
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
+                <Mail className="absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-[#78857D]" />
                 <input
                   id="patient-email"
                   type="email"
@@ -87,17 +84,17 @@ export default function PatientLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="voce@email.com"
-                  className="h-14 w-full rounded-2xl border border-border bg-[#fafafa] pl-12 pr-4 text-ink outline-none transition focus:border-[#6259d8] focus:bg-white focus:ring-4 focus:ring-[#6259d8]/10"
+                  className="h-[54px] w-full rounded-[16px] border border-[#DCE3DE] bg-[#F8FAF8] pl-11 pr-4 text-[15px] text-[#101713] outline-none transition placeholder:text-[#9AA39D] focus:border-[#19DD7F] focus:bg-white focus:ring-4 focus:ring-[#19DD7F]/10"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="patient-password" className="mb-2 block text-sm font-bold text-ink">
+              <label htmlFor="patient-password" className="mb-2 block text-[13px] font-black text-[#202923]">
                 Senha
               </label>
               <div className="relative">
-                <LockKeyhole className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
+                <LockKeyhole className="absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-[#78857D]" />
                 <input
                   id="patient-password"
                   type="password"
@@ -106,26 +103,26 @@ export default function PatientLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Sua senha"
-                  className="h-14 w-full rounded-2xl border border-border bg-[#fafafa] pl-12 pr-4 text-ink outline-none transition focus:border-[#6259d8] focus:bg-white focus:ring-4 focus:ring-[#6259d8]/10"
+                  className="h-[54px] w-full rounded-[16px] border border-[#DCE3DE] bg-[#F8FAF8] pl-11 pr-4 text-[15px] text-[#101713] outline-none transition placeholder:text-[#9AA39D] focus:border-[#19DD7F] focus:bg-white focus:ring-4 focus:ring-[#19DD7F]/10"
                 />
               </div>
             </div>
 
             {message ? (
-              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm leading-5 text-red-700">{message}</p>
+              <p className="rounded-[14px] bg-red-50 px-4 py-3 text-sm leading-5 text-red-700">{message}</p>
             ) : null}
 
             <button
               disabled={loading}
-              className="mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#171923] px-5 font-black text-white shadow-[0_12px_30px_rgba(23,25,35,0.16)] transition hover:bg-black disabled:opacity-60"
+              className="mt-1 flex h-[54px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#19DD7F] px-5 text-[15px] font-black text-[#07120C] shadow-[0_12px_26px_rgba(25,221,127,0.20)] transition hover:bg-[#16C973] active:scale-[0.99] disabled:opacity-60"
             >
-              <LogIn className="size-4" /> {loading ? "Entrando..." : "Acessar minha área"}
+              <LogIn className="size-[17px]" /> {loading ? "Entrando..." : "Entrar na minha área"}
             </button>
           </form>
 
-          <div className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-[#f6f7fb] px-4 py-3 text-center text-xs leading-5 text-muted">
-            <ShieldCheck className="size-4 shrink-0 text-[#6259d8]" />
-            Seus dados ficam protegidos e vinculados ao seu acompanhamento.
+          <div className="mt-5 flex items-center justify-center gap-2 rounded-[14px] bg-[#F3F6F4] px-3.5 py-3 text-center text-[11px] leading-5 text-[#718078]">
+            <ShieldCheck className="size-4 shrink-0 text-[#159F60]" />
+            Acesso protegido e vinculado ao seu acompanhamento.
           </div>
         </section>
       </div>
