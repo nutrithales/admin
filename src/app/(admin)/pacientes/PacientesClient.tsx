@@ -45,9 +45,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
   const [editing, setEditing] = useState<Paciente | null>(null);
   const [planoEditing, setPlanoEditing] = useState<Paciente | null>(null);
   const [deleting, setDeleting] = useState<Paciente | null>(null);
-  const [resetPassword, setResetPassword] = useState<{ nome: string; password: string } | null>(
-    null,
-  );
+  const [resetPassword, setResetPassword] = useState<{ nome: string; password: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sendingBulk, setSendingBulk] = useState(false);
 
@@ -120,10 +118,16 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       header: "Nome",
       sortValue: (p) => (p.nome ?? "").toLowerCase(),
       render: (p) => (
-        <div>
-          <p className="font-semibold">{p.nome}</p>
+        <button
+          type="button"
+          onClick={() => router.push(`/pacientes/${p.id}`)}
+          className="group block w-full text-left"
+          aria-label={`Abrir ficha de ${p.nome ?? "paciente"}`}
+        >
+          <p className="font-semibold text-ink group-hover:text-brand-dark group-hover:underline">{p.nome}</p>
           <p className="text-xs text-muted">{p.email}</p>
-        </div>
+          <p className="mt-0.5 text-[11px] font-semibold text-brand-dark opacity-0 transition-opacity group-hover:opacity-100">Abrir ficha completa</p>
+        </button>
       ),
     },
     {
@@ -147,9 +151,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       header: "Status",
       sortValue: (p) => p.status,
       render: (p) => (
-        <Badge
-          tone={p.status === "ativo" ? "success" : p.status === "pendente" ? "warning" : "muted"}
-        >
+        <Badge tone={p.status === "ativo" ? "success" : p.status === "pendente" ? "warning" : "muted"}>
           {p.status === "ativo" ? "Ativo" : p.status === "pendente" ? "Pendente" : "Inativo"}
         </Badge>
       ),
@@ -175,60 +177,22 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       key: "last_login_at",
       header: "Último login",
       sortValue: (p) => p.last_login_at ?? "",
-      render: (p) =>
-        p.last_login_at ? (
-          new Date(p.last_login_at).toLocaleDateString("pt-BR")
-        ) : (
-          <span className="text-muted-light">Nunca</span>
-        ),
+      render: (p) => p.last_login_at ? new Date(p.last_login_at).toLocaleDateString("pt-BR") : <span className="text-muted-light">Nunca</span>,
     },
     {
       key: "actions",
       header: "",
       className: "text-right",
       render: (p) => (
-        <Dropdown
-          trigger={
-            <button className="rounded-full p-1.5 text-muted hover:bg-bg-alt hover:text-ink">
-              <MoreHorizontal className="size-4" />
-            </button>
-          }
-        >
-          <DropdownItem onClick={() => router.push(`/pacientes/${p.id}`)}>
-            <FileText className="size-4" /> Prontuário e avaliações
-          </DropdownItem>
-          <DropdownItem
-            onClick={() => {
-              setEditing(p);
-              setFormOpen(true);
-            }}
-          >
-            <Pencil className="size-4" /> Editar
-          </DropdownItem>
-          <DropdownItem onClick={() => setPlanoEditing(p)}>
-            <Wallet className="size-4" /> Alterar plano
-          </DropdownItem>
-          <DropdownItem onClick={() => handleResetPassword(p)}>
-            <KeyRound className="size-4" /> Resetar senha
-          </DropdownItem>
+        <Dropdown trigger={<button className="rounded-full p-1.5 text-muted hover:bg-bg-alt hover:text-ink"><MoreHorizontal className="size-4" /></button>}>
+          <DropdownItem onClick={() => router.push(`/pacientes/${p.id}`)}><FileText className="size-4" /> Ficha completa</DropdownItem>
+          <DropdownItem onClick={() => { setEditing(p); setFormOpen(true); }}><Pencil className="size-4" /> Editar</DropdownItem>
+          <DropdownItem onClick={() => setPlanoEditing(p)}><Wallet className="size-4" /> Alterar plano</DropdownItem>
+          <DropdownItem onClick={() => handleResetPassword(p)}><KeyRound className="size-4" /> Resetar senha</DropdownItem>
           <DropdownItem onClick={() => handleToggleStatus(p)}>
-            {p.status === "ativo" ? (
-              <>
-                <Ban className="size-4" /> Desativar acesso
-              </>
-            ) : p.status === "pendente" ? (
-              <>
-                <CheckCircle2 className="size-4" /> Aprovar cadastro
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="size-4" /> Ativar acesso
-              </>
-            )}
+            {p.status === "ativo" ? <><Ban className="size-4" /> Desativar acesso</> : p.status === "pendente" ? <><CheckCircle2 className="size-4" /> Aprovar cadastro</> : <><CheckCircle2 className="size-4" /> Ativar acesso</>}
           </DropdownItem>
-          <DropdownItem onClick={() => setDeleting(p)} className="text-danger hover:bg-red-50">
-            <Trash2 className="size-4" /> Excluir
-          </DropdownItem>
+          <DropdownItem onClick={() => setDeleting(p)} className="text-danger hover:bg-red-50"><Trash2 className="size-4" /> Excluir</DropdownItem>
         </Dropdown>
       ),
     },
@@ -238,17 +202,8 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
     <div>
       <PageHeader
         title="Pacientes"
-        description="Gerencie o cadastro e o acesso dos seus pacientes."
-        actions={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <Plus className="size-4" /> Novo paciente
-          </Button>
-        }
+        description="Gerencie o cadastro e o acesso dos seus pacientes. Clique no nome para abrir a ficha completa."
+        actions={<Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-4" /> Novo paciente</Button>}
       />
 
       {pacientes.length === 0 ? (
@@ -256,11 +211,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
           icon={Users}
           title="Nenhum paciente cadastrado"
           description="Cadastre o primeiro paciente para liberar o acesso à plataforma."
-          action={
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="size-4" /> Novo paciente
-            </Button>
-          }
+          action={<Button onClick={() => setFormOpen(true)}><Plus className="size-4" /> Novo paciente</Button>}
         />
       ) : (
         <DataTable
@@ -271,37 +222,13 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
           searchFields={(p) => `${p.nome ?? ""} ${p.email ?? ""} ${p.cpf ?? ""}`}
           selectedKeys={selected}
           onSelectedKeysChange={setSelected}
-          toolbarRight={
-            selected.size > 0 ? (
-              <Button variant="secondary" onClick={handleBulkSendCredentials} loading={sendingBulk}>
-                <Mail className="size-4" />
-                {`Enviar credenciais (${selected.size})`}
-              </Button>
-            ) : undefined
-          }
+          toolbarRight={selected.size > 0 ? <Button variant="secondary" onClick={handleBulkSendCredentials} loading={sendingBulk}><Mail className="size-4" />{`Enviar credenciais (${selected.size})`}</Button> : undefined}
         />
       )}
 
-      <PacienteFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refresh}
-        paciente={editing}
-      />
-
-      <PlanoQuickEditModal
-        paciente={planoEditing}
-        onClose={() => setPlanoEditing(null)}
-        onSaved={refresh}
-      />
-
-      <PasswordRevealModal
-        open={!!resetPassword}
-        password={resetPassword?.password ?? null}
-        pacienteNome={resetPassword?.nome}
-        onClose={() => setResetPassword(null)}
-      />
-
+      <PacienteFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={refresh} paciente={editing} />
+      <PlanoQuickEditModal paciente={planoEditing} onClose={() => setPlanoEditing(null)} onSaved={refresh} />
+      <PasswordRevealModal open={!!resetPassword} password={resetPassword?.password ?? null} pacienteNome={resetPassword?.nome} onClose={() => setResetPassword(null)} />
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
