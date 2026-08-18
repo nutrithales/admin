@@ -1,0 +1,51 @@
+name: Production Safety
+
+on:
+  pull_request:
+    branches:
+      - claude/nutri-admin-panel-wup8zh-akxeob
+  push:
+    branches:
+      - claude/nutri-admin-panel-wup8zh-akxeob
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-production-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+  production-smoke:
+    name: Admin production smoke test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/claude/nutri-admin-panel-wup8zh-akxeob'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wait for deployment propagation
+        run: sleep 25
+      - name: Check admin domain
+        run: curl --fail --silent --show-error --location --retry 4 --retry-delay 5 --output /dev/null https://admin.nutrithales.com.br/
