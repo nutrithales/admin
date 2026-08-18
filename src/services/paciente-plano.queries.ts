@@ -60,30 +60,48 @@ export interface PacientePlanoDashboard {
   };
 }
 
-type Medida = { peso_g?: number; unidade?: string };
+type Medida = {
+  peso_g?: number;
+  unidade?: string;
+  gramas?: number;
+  nome?: string;
+};
+
+function normalizarMedida(m: Medida): { pesoG: number; unidade: string } | null {
+  const pesoG = Number(m?.peso_g ?? m?.gramas);
+  const unidade = m?.unidade ?? m?.nome;
+  if (!(pesoG > 0) || typeof unidade !== "string" || !unidade.trim()) return null;
+  return { pesoG, unidade: unidade.trim() };
+}
 
 function medidaCaseira(medidas: unknown, quantidadeG?: number | null): string | null {
   if (!quantidadeG || !Array.isArray(medidas) || medidas.length === 0) return null;
-  const validas = (medidas as Medida[]).filter((m) => Number(m?.peso_g) > 0 && typeof m?.unidade === "string");
+  const validas = (medidas as Medida[]).map(normalizarMedida).filter((m): m is { pesoG: number; unidade: string } => Boolean(m));
   if (!validas.length) return null;
 
   const pontuadas = validas.map((m) => {
-    const unidades = quantidadeG / Number(m.peso_g);
+    const unidades = quantidadeG / m.pesoG;
     const arred05 = Math.round(unidades * 2) / 2;
     const erro = Math.abs(unidades - arred05);
     const faixa = arred05 >= 0.5 && arred05 <= 8 ? 0 : 1;
-    return { ...m, unidades, arred05, score: faixa * 10 + erro };
+    return { ...m, arred05, score: faixa * 10 + erro };
   }).sort((a, b) => a.score - b.score);
 
   const melhor = pontuadas[0];
   if (!melhor || melhor.arred05 <= 0) return null;
   const qtd = melhor.arred05.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-  return `≈ ${qtd} ${String(melhor.unidade).toLowerCase()}`;
+  return `≈ ${qtd} ${melhor.unidade.toLowerCase()}`;
 }
 
 function prioridadeRefeicaoPaciente(nome: string): number {
   const normalizado = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   return normalizado.includes("pre-treino") || normalizado.includes("pre treino") ? 0 : 1;
+}
+
+function prioridadeItemPaciente(item: PacientePlanoItem): number {
+  if (item.papelMacro === "livre") return 80;
+  if (item.papelMacro === "vegetal_b") return 90;
+  return 10;
 }
 
 interface RpcSubRow {
@@ -166,7 +184,12 @@ async function montarDashboardPlano(planoId: string): Promise<PacientePlanoDashb
       grupos.set(numero, atual);
     }
 
-    return { id: refeicao.id, nome: refeicao.nome, ordem: refeicao.ordem, observacoes: refeicao.observacoes, opcoes: [...grupos.values()].sort((a, b) => a.numero - b.numero) };
+    const opcoes = [...grupos.values()].sort((a, b) => a.numero - b.numero).map((opcao) => ({
+      ...opcao,
+      itens: [...opcao.itens].sort((a, b) => prioridadeItemPaciente(a) - prioridadeItemPaciente(b)),
+    }));
+
+    return { id: refeicao.id, nome: refeicao.nome, ordem: refeicao.ordem, observacoes: refeicao.observacoes, opcoes };
   });
 
   return {
