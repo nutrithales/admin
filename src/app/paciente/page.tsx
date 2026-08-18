@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPlanoAlimentarPacienteAtual } from "@/services/paciente-plano.queries";
-import { PatientLogoutButton } from "./logout-button";
+import { PatientProfileMenu } from "./logout-button";
 
 const BRAND_LOGO = "https://www.nutrithales.com.br/assets/logo-thales.png";
 
@@ -91,26 +91,75 @@ export default async function PacienteDashboardPage() {
   const totalRealizadas = Math.max(0, Number(consultasRealizadas || 0) + consultasIniciais);
   const progresso = consultasIncluidas ? Math.min(100, Math.round((totalRealizadas / consultasIncluidas) * 100)) : 0;
 
+  const quickItems = [
+    {
+      key: "plano",
+      href: "/paciente/plano-alimentar",
+      icon: <Utensils className="size-[18px]" />,
+      title: "Plano alimentar",
+      active: Boolean(plano),
+      status: plano ? "Disponível" : "Em breve",
+      external: false,
+    },
+    {
+      key: "treino",
+      href: "/paciente/treinos",
+      icon: <Dumbbell className="size-[18px]" />,
+      title: "Treinos",
+      active: treinoLiberado,
+      status: treinoLiberado ? "Disponível" : "Em breve",
+      external: false,
+    },
+    ...(suplementacaoLiberada
+      ? [{
+          key: "suplementacao",
+          href: "/paciente/suplementacao",
+          icon: <Bolt className="size-[18px]" />,
+          title: "Suplementação",
+          active: true,
+          status: `${totalSuplementos} ${totalSuplementos === 1 ? "item" : "itens"}`,
+          external: false,
+        }]
+      : []),
+    ...(preConsultaPendente
+      ? [{
+          key: "pre-consulta",
+          href: "/paciente/pre-consulta",
+          icon: <ClipboardList className="size-[18px]" />,
+          title: "Pré-consulta",
+          active: true,
+          status: "Pendente",
+          external: false,
+        }]
+      : []),
+    ...(paginas || []).map((pagina: any, index: number) => ({
+      key: `${pagina.titulo}-${pagina.ordem}-${index}`,
+      href: pagina.url_pagina || "#",
+      icon: <FileText className="size-[18px]" />,
+      title: pagina.titulo || "Material",
+      active: Boolean(pagina.url_pagina),
+      status: "Material",
+      external: Boolean(pagina.url_pagina?.startsWith("http")),
+    })),
+  ];
+
+  const ultimoItemFull = quickItems.length % 2 === 1;
+
   return (
     <main className="min-h-screen bg-[#EEF2EF] sm:px-4 sm:py-8">
-      <div className="mx-auto min-h-screen w-full max-w-[500px] bg-[#F8FAF8] pb-[calc(24px+env(safe-area-inset-bottom))] sm:min-h-0 sm:overflow-hidden sm:rounded-[32px] sm:border sm:border-black/[0.055] sm:shadow-[0_30px_90px_rgba(14,26,20,0.12)]">
-        <header className="flex items-center justify-between px-5 pt-[calc(14px+env(safe-area-inset-top))] sm:pt-6">
-          <img src={BRAND_LOGO} alt="Nutri Thales Rosa" className="h-auto w-[84px] object-contain" />
-          <div className="flex items-center gap-2">
-            <PatientLogoutButton />
-            <div className="grid size-9 place-items-center rounded-full bg-[#0E1A14] text-[12px] font-black text-white shadow-[0_6px_18px_rgba(14,26,20,0.12)]">
-              {primeiroNome.charAt(0).toUpperCase()}
-            </div>
-          </div>
+      <div className="mx-auto min-h-screen w-full max-w-[500px] bg-[#F8FAF8] pb-[calc(22px+env(safe-area-inset-bottom))] sm:min-h-0 sm:overflow-hidden sm:rounded-[32px] sm:border sm:border-black/[0.055] sm:shadow-[0_30px_90px_rgba(14,26,20,0.12)]">
+        <header className="flex items-center justify-between px-5 pt-[calc(13px+env(safe-area-inset-top))] sm:pt-6">
+          <img src={BRAND_LOGO} alt="Nutri Thales Rosa" className="h-auto w-[74px] object-contain" />
+          <PatientProfileMenu initial={primeiroNome.charAt(0).toUpperCase()} />
         </header>
 
         <div className="px-5">
-          <section className="pb-1 pt-6">
-            <h1 className="text-[32px] font-black leading-[0.98] tracking-[-0.043em] text-[#101713]">Olá, {primeiroNome}</h1>
-            <p className="mt-2 max-w-[330px] text-[13px] leading-5 text-[#748078]">Seus recursos e próximos passos estão aqui.</p>
+          <section className="pb-0.5 pt-5">
+            <h1 className="text-[31px] font-black leading-[0.98] tracking-[-0.043em] text-[#101713]">Olá, {primeiroNome}</h1>
+            <p className="mt-1.5 max-w-[320px] text-[12px] leading-5 text-[#748078]">Seus recursos e próximos passos estão aqui.</p>
           </section>
 
-          <section className="mt-4 overflow-hidden rounded-[23px] bg-[#0E1A14] text-white shadow-[0_16px_34px_rgba(14,26,20,0.14)]">
+          <section className="mt-3.5 overflow-hidden rounded-[22px] bg-[#0E1A14] text-white shadow-[0_14px_30px_rgba(14,26,20,0.13)]">
             <div className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -124,7 +173,7 @@ export default async function PacienteDashboardPage() {
 
               {consultasIncluidas ? (
                 <>
-                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-white/10">
                     <div className="h-full rounded-full bg-[#19DD7F]" style={{ width: `${progresso}%` }} />
                   </div>
                   <p className="mt-1.5 text-[10px] text-white/48">{Math.min(totalRealizadas, consultasIncluidas)} de {consultasIncluidas} consultas realizadas</p>
@@ -132,7 +181,7 @@ export default async function PacienteDashboardPage() {
               ) : null}
             </div>
 
-            <div className="border-t border-white/[0.08] bg-white/[0.035] px-4 py-3.5">
+            <div className="border-t border-white/[0.08] bg-white/[0.035] px-4 py-3">
               <div className="flex items-center gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-[11px] bg-white/[0.07] text-[#6FF0AC]">
                   <CalendarDays className="size-[16px]" />
@@ -152,8 +201,8 @@ export default async function PacienteDashboardPage() {
             </div>
           </section>
 
-          <section className="mt-6">
-            <div className="mb-3 flex items-end justify-between gap-3">
+          <section className="mt-5">
+            <div className="mb-2.5 flex items-end justify-between gap-3">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Seus recursos</p>
                 <h2 className="mt-0.5 text-[18px] font-black tracking-[-0.025em] text-[#101713]">Acessos rápidos</h2>
@@ -162,19 +211,24 @@ export default async function PacienteDashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <QuickCard href="/paciente/plano-alimentar" icon={<Utensils className="size-[18px]" />} title="Plano alimentar" active={Boolean(plano)} status={plano ? "Disponível" : "Em breve"} />
-              <QuickCard href="/paciente/treinos" icon={<Dumbbell className="size-[18px]" />} title="Treinos" active={treinoLiberado} status={treinoLiberado ? "Disponível" : "Em breve"} />
-              {suplementacaoLiberada ? <QuickCard href="/paciente/suplementacao" icon={<Bolt className="size-[18px]" />} title="Suplementação" active status={`${totalSuplementos} ${totalSuplementos === 1 ? "item" : "itens"}`} /> : null}
-              {preConsultaPendente ? <QuickCard href="/paciente/pre-consulta" icon={<ClipboardList className="size-[18px]" />} title="Pré-consulta" active status="Pendente" /> : null}
-              {(paginas || []).map((pagina: any) => (
-                <QuickCard key={`${pagina.titulo}-${pagina.ordem}`} href={pagina.url_pagina || "#"} icon={<FileText className="size-[18px]" />} title={pagina.titulo || "Material"} active={Boolean(pagina.url_pagina)} status="Material" external={Boolean(pagina.url_pagina?.startsWith("http"))} />
+              {quickItems.map((item, index) => (
+                <QuickCard
+                  key={item.key}
+                  href={item.href}
+                  icon={item.icon}
+                  title={item.title}
+                  active={item.active}
+                  status={item.status}
+                  external={item.external}
+                  fullWidth={ultimoItemFull && index === quickItems.length - 1}
+                />
               ))}
             </div>
           </section>
 
-          <section className="mt-6">
+          <section className="mt-5">
             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Acompanhamento contínuo</p>
-            <div className="mt-3 grid gap-3">
+            <div className="mt-2.5 grid gap-3">
               <div className="rounded-[18px] border border-black/[0.05] bg-white p-3.5 shadow-[0_6px_18px_rgba(14,26,20,0.03)]">
                 <div className="flex items-start gap-3">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-[#EDF7F1] text-[#159F60]"><CheckCircle2 className="size-[17px]" /></span>
@@ -207,21 +261,21 @@ export default async function PacienteDashboardPage() {
   );
 }
 
-function QuickCard({ href, icon, title, active, status, external }: { href: string; icon: React.ReactNode; title: string; active: boolean; status: string; external?: boolean }) {
+function QuickCard({ href, icon, title, active, status, external, fullWidth }: { href: string; icon: React.ReactNode; title: string; active: boolean; status: string; external?: boolean; fullWidth?: boolean }) {
   const content = (
-    <div className={`group min-h-[106px] rounded-[19px] border p-3.5 transition active:scale-[0.985] ${active ? "border-black/[0.055] bg-white shadow-[0_8px_22px_rgba(14,26,20,0.04)]" : "border-[#E0E6E2] bg-[#F5F7F5]"}`}>
+    <div className={`group min-h-[102px] rounded-[19px] border p-3.5 transition active:scale-[0.985] ${fullWidth ? "col-span-2" : ""} ${active ? "border-black/[0.055] bg-white shadow-[0_8px_22px_rgba(14,26,20,0.04)]" : "border-[#E0E6E2] bg-[#F5F7F5]"}`}>
       <div className="flex items-start justify-between gap-3">
         <span className={`flex size-9 items-center justify-center rounded-[12px] ${active ? "bg-[#EAF8F0] text-[#159F60]" : "bg-white text-[#7F8B84] ring-1 ring-[#E3E8E4]"}`}>{icon}</span>
-        {active ? <ChevronRight className="size-4 text-[#A2ACA6] transition group-hover:translate-x-0.5" /> : <span className="rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-[#87928C] ring-1 ring-[#E3E8E4]">Em breve</span>}
+        {active ? <ChevronRight className="size-4 text-[#A2ACA6] transition group-hover:translate-x-0.5" /> : <span className="rounded-full bg-white px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.07em] text-[#87928C] ring-1 ring-[#E3E8E4]">Em breve</span>}
       </div>
-      <div className="mt-3">
-        <p className={`text-[13px] font-black leading-5 ${active ? "text-[#101713]" : "text-[#5F6B64]"}`}>{title}</p>
+      <div className="mt-2.5">
+        <p className={`text-[13px] font-black leading-5 ${active ? "text-[#101713]" : "text-[#68736D]"}`}>{title}</p>
         {active ? <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[#159F60]">{status}</p> : null}
       </div>
     </div>
   );
 
-  if (!active) return content;
-  if (external) return <a href={href} target="_blank" rel="noopener noreferrer">{content}</a>;
-  return <Link href={href}>{content}</Link>;
+  if (!active) return <div className={fullWidth ? "col-span-2" : ""}>{content}</div>;
+  if (external) return <a className={fullWidth ? "col-span-2" : ""} href={href} target="_blank" rel="noopener noreferrer">{content}</a>;
+  return <Link className={fullWidth ? "col-span-2" : ""} href={href}>{content}</Link>;
 }
