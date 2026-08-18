@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { CalendarCheck2, CalendarClock, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, CalendarCheck2, CalendarClock, UserCheck, UserX, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/contexts/ToastContext";
 import type { Tables } from "@/types/database.types";
 import type { ConsultaComProntuario } from "@/services/prontuarios.queries";
+import { setPacienteStatusAction } from "@/services/pacientes.actions";
 import { VisaoGeralTab } from "./VisaoGeralTab";
 import { ProntuarioTab } from "./ProntuarioTab";
 import { AvaliacoesTab } from "./AvaliacoesTab";
@@ -25,11 +28,38 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
   pagamentos: Tables<"pagamentos">[];
   historicoFluxo: Tables<"fluxo_movimentacoes">[];
 }) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [tab, setTab] = useState("visao-geral");
+  const [changingStatus, setChangingStatus] = useState(false);
   const stats = computeConsultasStats(paciente, consultas);
   const completed = stats.realizadas;
   const scheduled = stats.agendadas;
   const remaining = stats.restantes;
+  const isInactive = paciente.status === "inativo";
+
+  async function handleStatusChange() {
+    const nextStatus = isInactive ? "ativo" : "inativo";
+
+    if (!isInactive) {
+      const confirmed = window.confirm(
+        "Tornar este paciente inativo? O acesso dele à área do paciente também será desativado.",
+      );
+      if (!confirmed) return;
+    }
+
+    setChangingStatus(true);
+    const result = await setPacienteStatusAction(paciente.id, nextStatus);
+    setChangingStatus(false);
+
+    if (!result.success) {
+      toast({ kind: "error", title: "Não foi possível alterar o status", description: result.message });
+      return;
+    }
+
+    toast({ kind: "success", title: result.message });
+    router.refresh();
+  }
 
   return (
     <div>
@@ -37,10 +67,23 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
         <ArrowLeft className="size-4" /> Pacientes
       </Link>
 
-      <PageHeader
-        title={paciente.nome ?? "Paciente"}
-        description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações e informações administrativas."
-      />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader
+          title={paciente.nome ?? "Paciente"}
+          description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações e informações administrativas."
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant={isInactive ? "outline" : "danger"}
+          loading={changingStatus}
+          onClick={handleStatusChange}
+          className="shrink-0"
+        >
+          {isInactive ? <UserCheck className="size-4" /> : <UserX className="size-4" />}
+          {isInactive ? "Reativar paciente" : "Tornar inativo"}
+        </Button>
+      </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         {[
