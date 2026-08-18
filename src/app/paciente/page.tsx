@@ -226,7 +226,7 @@ export default async function PacienteDashboardPage() {
             </div>
           </section>
 
-          <section className="mt-5">
+          <section className="mt-4">
             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Acompanhamento contínuo</p>
             <div className="mt-2.5 grid gap-3">
               <div className="rounded-[18px] border border-black/[0.05] bg-white p-3.5 shadow-[0_6px_18px_rgba(14,26,20,0.03)]">
@@ -262,10 +262,27 @@ export default async function PacienteDashboardPage() {
 }
 
 function QuickCard({ href, icon, title, active, status, external, fullWidth }: { href: string; icon: React.ReactNode; title: string; active: boolean; status: string; external?: boolean; fullWidth?: boolean }) {
-  const content = (
-    <div className={`group min-h-[102px] rounded-[19px] border p-3.5 transition active:scale-[0.985] ${fullWidth ? "col-span-2" : ""} ${active ? "border-black/[0.055] bg-white shadow-[0_8px_22px_rgba(14,26,20,0.04)]" : "border-[#E0E6E2] bg-[#F5F7F5]"}`}>
+  const cardClass = active
+    ? "border-black/[0.055] bg-white shadow-[0_8px_22px_rgba(14,26,20,0.04)]"
+    : "border-[#E0E6E2] bg-[#F5F7F5]";
+
+  const iconClass = active
+    ? "bg-[#EAF8F0] text-[#159F60]"
+    : "bg-white text-[#7F8B84] ring-1 ring-[#E3E8E4]";
+
+  const content = fullWidth ? (
+    <div className={`group flex min-h-[78px] items-center gap-3 rounded-[19px] border px-3.5 py-3 transition active:scale-[0.985] ${cardClass}`}>
+      <span className={`flex size-10 shrink-0 items-center justify-center rounded-[12px] ${iconClass}`}>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className={`text-[13px] font-black leading-5 ${active ? "text-[#101713]" : "text-[#68736D]"}`}>{title}</p>
+        {active ? <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[#159F60]">{status}</p> : <p className="mt-0.5 text-[8px] font-black uppercase tracking-[0.07em] text-[#87928C]">Em breve</p>}
+      </div>
+      {active ? <ChevronRight className="size-4 shrink-0 text-[#A2ACA6] transition group-hover:translate-x-0.5" /> : null}
+    </div>
+  ) : (
+    <div className={`group min-h-[102px] rounded-[19px] border p-3.5 transition active:scale-[0.985] ${cardClass}`}>
       <div className="flex items-start justify-between gap-3">
-        <span className={`flex size-9 items-center justify-center rounded-[12px] ${active ? "bg-[#EAF8F0] text-[#159F60]" : "bg-white text-[#7F8B84] ring-1 ring-[#E3E8E4]"}`}>{icon}</span>
+        <span className={`flex size-9 items-center justify-center rounded-[12px] ${iconClass}`}>{icon}</span>
         {active ? <ChevronRight className="size-4 text-[#A2ACA6] transition group-hover:translate-x-0.5" /> : <span className="rounded-full bg-white px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.07em] text-[#87928C] ring-1 ring-[#E3E8E4]">Em breve</span>}
       </div>
       <div className="mt-2.5">
