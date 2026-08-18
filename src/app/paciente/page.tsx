@@ -13,13 +13,15 @@ export default async function PacienteDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/paciente/login");
 
+  const sb = supabase as any;
   const [{ data: paciente }, plano] = await Promise.all([
-    supabase.from("pacientes").select("nome").eq("auth_id", user.id).maybeSingle(),
+    sb.from("pacientes").select("nome,treino_liberado").eq("auth_id", user.id).maybeSingle(),
     getPlanoAlimentarPacienteAtual(),
   ]);
   if (!paciente) redirect("/paciente/login?error=not-patient");
 
   const primeiroNome = paciente.nome?.split(" ")[0] ?? "";
+  const treinoLiberado = Boolean(paciente.treino_liberado);
 
   return (
     <main className="min-h-screen bg-bg px-4 py-6 sm:py-10">
@@ -32,7 +34,7 @@ export default async function PacienteDashboardPage() {
         <section className="mt-8 rounded-[30px] bg-ink-deep p-6 text-white shadow-dark sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Bem-vindo{primeiroNome ? `, ${primeiroNome}` : ""}</p>
           <h1 className="mt-2 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">Seu acompanhamento em um só lugar.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Acesse seu plano alimentar, formulários e materiais do acompanhamento sempre que precisar.</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Acesse seu plano alimentar, formulários, treinos e materiais do acompanhamento sempre que precisar.</p>
         </section>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -52,12 +54,13 @@ export default async function PacienteDashboardPage() {
             description="Preencha ou revise as informações solicitadas antes do seu atendimento."
           />
           <PortalCard
-            href="#"
+            href="/paciente/treinos"
             icon={<Dumbbell className="size-5" />}
             eyebrow="Treinamento"
             title="Treinos"
-            description="Espaço preparado para seus treinos e orientações de exercício."
-            disabled
+            description={treinoLiberado ? "Acesse sua rotina, séries, repetições, RIR, intervalos e vídeos de execução." : "Seu treino aparecerá aqui quando for liberado pelo profissional."}
+            destaque={treinoLiberado}
+            disabled={!treinoLiberado}
           />
           <PortalCard
             href="#"
@@ -83,7 +86,7 @@ function PortalCard({ href, icon, eyebrow, title, description, destaque, disable
       <p className="mt-5 text-xs font-bold uppercase tracking-[0.14em] text-brand-dark">{eyebrow}</p>
       <h2 className="mt-1 text-xl font-black text-ink">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
-      {disabled && <p className="mt-auto pt-3 text-xs font-bold text-muted">Em breve</p>}
+      {disabled && <p className="mt-auto pt-3 text-xs font-bold text-muted">Aguardando liberação</p>}
     </div>
   );
 
