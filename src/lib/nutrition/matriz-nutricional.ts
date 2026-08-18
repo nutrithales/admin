@@ -116,25 +116,28 @@ const MATRIZES: Record<NumeroRefeicoes, { codigo: "A" | "B" | "C"; nome: string;
 
 const MATRIZES_PERFORMANCE: Record<NumeroRefeicoes, { nome: string; percentual: number }[]> = {
   4: [
-    { nome: "Café da manhã", percentual: 25 },
-    { nome: "Almoço", percentual: 30 },
-    { nome: "Pré-treino", percentual: 20 },
-    { nome: "Jantar", percentual: 25 },
+    { nome: "Café da manhã", percentual: 21.25 },
+    { nome: "Almoço", percentual: 29.75 },
+    { nome: "Pré-treino", percentual: 15 },
+    { nome: "Lanche da tarde", percentual: 12.75 },
+    { nome: "Jantar", percentual: 21.25 },
   ],
   5: [
-    { nome: "Café da manhã", percentual: 20 },
-    { nome: "Lanche da manhã", percentual: 10 },
-    { nome: "Almoço", percentual: 25 },
-    { nome: "Pré-treino", percentual: 20 },
-    { nome: "Jantar", percentual: 25 },
+    { nome: "Café da manhã", percentual: 17 },
+    { nome: "Lanche da manhã", percentual: 8.5 },
+    { nome: "Almoço", percentual: 25.5 },
+    { nome: "Pré-treino", percentual: 15 },
+    { nome: "Lanche da tarde", percentual: 12.75 },
+    { nome: "Jantar", percentual: 21.25 },
   ],
   6: [
-    { nome: "Café da manhã", percentual: 20 },
-    { nome: "Lanche da manhã", percentual: 10 },
-    { nome: "Almoço", percentual: 25 },
-    { nome: "Pré-treino", percentual: 20 },
-    { nome: "Jantar", percentual: 20 },
-    { nome: "Ceia", percentual: 5 },
+    { nome: "Café da manhã", percentual: 17 },
+    { nome: "Lanche da manhã", percentual: 8.5 },
+    { nome: "Almoço", percentual: 25.5 },
+    { nome: "Pré-treino", percentual: 15 },
+    { nome: "Lanche da tarde", percentual: 12.75 },
+    { nome: "Jantar", percentual: 17 },
+    { nome: "Ceia", percentual: 4.25 },
   ],
 };
 
@@ -218,7 +221,7 @@ export function calcularMatrizNutricional(input: MatrizInput): MatrizResultado {
 
   return {
     codigo: matriz.codigo,
-    nome: input.objetivo === "performance" ? `${matriz.nome} - Performance` : matriz.nome,
+    nome: input.objetivo === "performance" ? `${matriz.nome} + pré-treino` : matriz.nome,
     numeroRefeicoes: input.numeroRefeicoes,
     rmrKcal: rmr?.kcal ?? null,
     metodoRmr: rmr?.metodo ?? null,
