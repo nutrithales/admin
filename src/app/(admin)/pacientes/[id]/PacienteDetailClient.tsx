@@ -17,12 +17,12 @@ import { AvaliacoesTab } from "./AvaliacoesTab";
 import { PreConsultaTab } from "./PreConsultaTab";
 import { AdministrativoTab } from "./AdministrativoTab";
 import { TreinosTab } from "./TreinosTab";
-import { SuplementacaoTab } from "./SuplementacaoTab";
+import { SuplementacaoTab, type SuplementacaoAdmin } from "./SuplementacaoTab";
 import { AccessAreaPacienteCard } from "./AccessAreaPacienteCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 
-export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsulta, pendencias, pagamentos, historicoFluxo }: {
+export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsulta, pendencias, pagamentos, historicoFluxo, suplementacao }: {
   paciente: Tables<"pacientes">;
   consultas: ConsultaComProntuario[];
   avaliacoes: Tables<"avaliacoes_fisicas">[];
@@ -30,6 +30,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
   pendencias: Tables<"pendencias">[];
   pagamentos: Tables<"pagamentos">[];
   historicoFluxo: Tables<"fluxo_movimentacoes">[];
+  suplementacao: SuplementacaoAdmin | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -115,7 +116,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
           { key: "prontuario", label: "Prontuário" },
           { key: "avaliacoes", label: "Avaliações físicas" },
           { key: "treinos", label: "Treinos" },
-          { key: "suplementacao", label: "Suplementação" },
+          { key: "suplementacao", label: suplementacao?.ativo ? "Suplementação • ativa" : "Suplementação" },
           { key: "pre-consulta", label: "Pré-consulta" },
           { key: "administrativo", label: "Administrativo (Clara)" },
         ]}
@@ -130,7 +131,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
       ) : tab === "treinos" ? (
         <TreinosTab pacienteId={paciente.id} />
       ) : tab === "suplementacao" ? (
-        <SuplementacaoTab authId={paciente.auth_id} />
+        <SuplementacaoTab data={suplementacao} />
       ) : tab === "pre-consulta" ? (
         <PreConsultaTab formulario={preConsulta} paciente={paciente} />
       ) : (
