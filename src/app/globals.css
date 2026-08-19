@@ -116,6 +116,18 @@
   }
 }
 
+/* Patient dashboard: quick-access cards always keep the same footprint,
+   even when the number of cards is odd. */
+main [class*="max-w-[500px]"] .grid.grid-cols-2.gap-3 > .col-span-2 {
+  grid-column: auto !important;
+}
+
+main [class*="max-w-[500px]"] .grid.grid-cols-2.gap-3 > .group,
+main [class*="max-w-[500px]"] .grid.grid-cols-2.gap-3 > * > .group {
+  min-height: 102px !important;
+  height: 100%;
+}
+
 @layer utilities {
   .eyebrow {
     font-size: 0.8125rem;
