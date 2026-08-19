@@ -91,6 +91,13 @@ export default async function PacienteDashboardPage() {
   const totalRealizadas = Math.max(0, Number(consultasRealizadas || 0) + consultasIniciais);
   const progresso = consultasIncluidas ? Math.min(100, Math.round((totalRealizadas / consultasIncluidas) * 100)) : 0;
 
+  const paginasAtivas = paginas || [];
+  const termosDeTreino = ["treino", "hiit", "muscula", "alongamento", "mobilidade", "corrida"];
+  const temTreinoEspecifico = paginasAtivas.some((pagina: any) => {
+    const titulo = String(pagina?.titulo || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    return termosDeTreino.some((termo) => titulo.includes(termo));
+  });
+
   const quickItems = [
     {
       key: "plano",
@@ -101,15 +108,17 @@ export default async function PacienteDashboardPage() {
       status: plano ? "Disponível" : "Em breve",
       external: false,
     },
-    {
-      key: "treino",
-      href: "/paciente/treinos",
-      icon: <Dumbbell className="size-[18px]" />,
-      title: "Treinos",
-      active: treinoLiberado,
-      status: treinoLiberado ? "Disponível" : "Em breve",
-      external: false,
-    },
+    ...(temTreinoEspecifico
+      ? []
+      : [{
+          key: "treino",
+          href: "/paciente/treinos",
+          icon: <Dumbbell className="size-[18px]" />,
+          title: "Treinos",
+          active: treinoLiberado,
+          status: treinoLiberado ? "Disponível" : "Em breve",
+          external: false,
+        }]),
     ...(suplementacaoLiberada
       ? [{
           key: "suplementacao",
@@ -132,7 +141,7 @@ export default async function PacienteDashboardPage() {
           external: false,
         }]
       : []),
-    ...(paginas || []).map((pagina: any, index: number) => ({
+    ...paginasAtivas.map((pagina: any, index: number) => ({
       key: `${pagina.titulo}-${pagina.ordem}-${index}`,
       href: pagina.url_pagina || "#",
       icon: <FileText className="size-[18px]" />,
