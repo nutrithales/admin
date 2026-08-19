@@ -156,7 +156,7 @@ export default async function PacienteDashboardPage() {
         <div className="px-5">
           <section className="pb-0.5 pt-5">
             <h1 className="text-[31px] font-black leading-[0.98] tracking-[-0.043em] text-[#101713]">Olá, {primeiroNome}</h1>
-            <p className="mt-1.5 max-w-[320px] text-[12px] leading-5 text-[#748078]">Seus recursos e próximos passos estão aqui.</p>
+            <p className="mt-1.5 max-w-[330px] text-[12px] leading-5 text-[#748078]">Acompanhe seu plano, próximos passos e materiais em um só lugar.</p>
           </section>
 
           <section className="mt-3.5 overflow-hidden rounded-[22px] bg-[#0E1A14] text-white shadow-[0_14px_30px_rgba(14,26,20,0.13)]">
@@ -202,12 +202,9 @@ export default async function PacienteDashboardPage() {
           </section>
 
           <section className="mt-5">
-            <div className="mb-2.5 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Seus recursos</p>
-                <h2 className="mt-0.5 text-[18px] font-black tracking-[-0.025em] text-[#101713]">Acessos rápidos</h2>
-              </div>
-              <span className="pb-0.5 text-[9px] font-bold text-[#9AA39D]">Toque para abrir</span>
+            <div className="mb-2.5">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#87928C]">Seu acompanhamento</p>
+              <h2 className="mt-0.5 text-[18px] font-black tracking-[-0.025em] text-[#101713]">Acessos rápidos</h2>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
