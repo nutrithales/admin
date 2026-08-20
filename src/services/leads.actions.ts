@@ -98,9 +98,19 @@ export async function registrarFollowupEnviadoAction(id:string,dia:number):Promi
   const supabase=await createClient(),db=supabase as any,leads=db.from("leads"),agendados=db.from("lead_followups_agendados");
   const{data:lead,error:readError}=await leads.select("fluxo_followup").eq("id",id).single();
   if(readError||!lead)return{success:false,message:"Lead não encontrado."};
-  const now=new Date().toISOString();
+  const nowDate=new Date(),now=nowDate.toISOString();
   const {error:scheduleError}=await agendados.update({status:"enviado",enviado_em:now}).eq("lead_id",id).eq("dia",dia).eq("status","pendente");
   if(scheduleError)return{success:false,message:`Erro ao concluir follow-up: ${scheduleError.message}`};
+
+  const {data:futureRows,error:futureError}=await agendados.select("id,dia").eq("lead_id",id).eq("status","pendente").gt("dia",dia).order("dia",{ascending:true});
+  if(futureError)return{success:false,message:`Erro ao recalcular próximos follow-ups: ${futureError.message}`};
+  for(const row of futureRows??[]){
+    const nextDate=new Date(nowDate);
+    nextDate.setDate(nextDate.getDate()+(Number(row.dia)-dia));
+    const {error:updateScheduleError}=await agendados.update({agendado_para:nextDate.toISOString()}).eq("id",row.id);
+    if(updateScheduleError)return{success:false,message:`Erro ao atualizar próxima data: ${updateScheduleError.message}`};
+  }
+
   const nextLead:Record<number,string>={2:"05_lead_d4",4:"06_lead_d8",8:"07_lead_d14",14:"08_lead_d21",21:"09_lead_d30",30:"15_nao_respondeu"};
   const nextProposal:Record<number,string>={1:"11_proposta_d3",3:"12_proposta_d6",6:"13_proposta_d10",10:"14_interessado_proximo_mes"};
   const next=lead.fluxo_followup==="lead"?nextLead[dia]:nextProposal[dia];
@@ -108,7 +118,7 @@ export async function registrarFollowupEnviadoAction(id:string,dia:number):Promi
   const{error}=await leads.update({ultimo_followup_enviado_dia:dia,ultimo_followup_enviado_em:now,proxima_acao_em:null,updated_at:now,...(next?{etapa:next}:{}),...(final?{fluxo_followup:null}:{})}).eq("id",id);
   if(error)return{success:false,message:`Erro ao registrar follow-up: ${error.message}`};
   revalidatePath("/leads");revalidatePath("/clara");
-  return{success:true,message:"Follow-up concluído. Kanban e próximo follow-up atualizados."};
+  return{success:true,message:"Follow-up concluído. Kanban e próximas datas atualizados."};
 }
 
 export async function deleteLeadAction(id:string):Promise<ActionResult>{
