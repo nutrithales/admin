@@ -26,7 +26,7 @@ function localDate(value?: string | null) { if (!value) return ""; const d = new
 function fmt(value?: string | null){return value?new Date(value).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"";}
 function fmtDate(value?: string | null){return value?new Date(value).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"}):"—";}
 function monthKey(value?: string | null){if(!value)return"";const d=new Date(value);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}
-function monthLabel(key:string){const [year,month]=key.split("-").map(Number);return new Date(year,month-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});}
+function monthLabel(key:string){const parts=key.split("-");const year=Number(parts[0]??new Date().getFullYear());const month=Number(parts[1]??1);return new Date(year,month-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});}
 function stageNumber(etapa?: string | null){const n=Number((etapa??"").slice(0,2));return Number.isFinite(n)?n:0;}
 function isConverted(lead:Lead){return Boolean(lead.convertido_paciente_id||lead.convertido_em||lead.etapa==="16_convertido");}
 function stageLabel(etapa?:string|null){return LEAD_STAGES.find(s=>s.key===etapa)?.label??etapa??"—";}
@@ -38,10 +38,11 @@ export function LeadsClient({ initialLeads, leadHistory }: { initialLeads: Lead[
   const [form, setForm] = useState(empty); const [saving, setSaving] = useState(false);
   const [view, setView] = useState<View>("kanban");
   const monthOptions = useMemo(() => Array.from(new Set(leadHistory.map(l=>monthKey(l.created_at)).filter(Boolean))).sort().reverse(), [leadHistory]);
-  const [month, setMonth] = useState(monthOptions[0] ?? monthKey(new Date().toISOString()));
+  const fallbackMonth = monthKey(new Date().toISOString());
+  const [month, setMonth] = useState(monthOptions[0] ?? fallbackMonth);
 
   useEffect(() => setLeads(initialLeads), [initialLeads]);
-  useEffect(() => { if(monthOptions.length && !monthOptions.includes(month)) setMonth(monthOptions[0]); }, [monthOptions, month]);
+  useEffect(() => { const first=monthOptions[0]; if(first && !monthOptions.includes(month)) setMonth(first); }, [monthOptions, month]);
 
   const filtered = useMemo(() => leads.filter((l) => `${l.nome} ${l.telefone} ${l.email} ${l.origem} ${l.origem_detalhe ?? ""}`.toLowerCase().includes(search.toLowerCase())), [leads, search]);
   const monthly = useMemo(() => leadHistory.filter(l=>monthKey(l.created_at)===month), [leadHistory,month]);
