@@ -19,6 +19,19 @@ export type CheckinAutomacao = {
   formulario: { id: string; nome: string; tipo: string } | null;
 };
 
+export type CheckinAdesaoPaciente = {
+  paciente_id: string;
+  nome: string;
+  status: string | null;
+  enviados: number;
+  respondidos: number;
+  expirados: number;
+  taxa_resposta: number;
+  faltas_consecutivas: number;
+  ultimo_status: string | null;
+  ultimo_envio_em: string | null;
+};
+
 export async function listCheckinAutomacoes(): Promise<CheckinAutomacao[]> {
   const supabase = (await createClient()) as any;
   const { data, error } = await supabase
@@ -49,4 +62,40 @@ export async function getCheckinDashboardResumo() {
     proximos: proximos.count ?? 0,
     expirados: expirados.count ?? 0,
   };
+}
+
+export async function listCheckinAdesaoPacientes(): Promise<CheckinAdesaoPaciente[]> {
+  const supabase = (await createClient()) as any;
+  const [{ data: pacientes }, { data: envios }] = await Promise.all([
+    supabase.from("pacientes").select("id,nome,status").order("nome", { ascending: true }),
+    supabase
+      .from("formulario_envios")
+      .select("paciente_id,status,agendado_para, formulario:formularios(tipo)")
+      .order("agendado_para", { ascending: false }),
+  ]);
+
+  const checkinEnvios = (envios ?? []).filter((e: any) => e.formulario?.tipo === "checkin");
+  return (pacientes ?? []).map((p: any) => {
+    const itens = checkinEnvios.filter((e: any) => e.paciente_id === p.id);
+    const encerrados = itens.filter((e: any) => e.status === "respondido" || e.status === "expirado");
+    const respondidos = encerrados.filter((e: any) => e.status === "respondido").length;
+    const expirados = encerrados.filter((e: any) => e.status === "expirado").length;
+    let faltasConsecutivas = 0;
+    for (const item of encerrados) {
+      if (item.status !== "expirado") break;
+      faltasConsecutivas += 1;
+    }
+    return {
+      paciente_id: p.id,
+      nome: p.nome ?? "Paciente sem nome",
+      status: p.status,
+      enviados: itens.length,
+      respondidos,
+      expirados,
+      taxa_resposta: encerrados.length ? Math.round((respondidos / encerrados.length) * 100) : 0,
+      faltas_consecutivas: faltasConsecutivas,
+      ultimo_status: itens[0]?.status ?? null,
+      ultimo_envio_em: itens[0]?.agendado_para ?? null,
+    };
+  }).filter((p: CheckinAdesaoPaciente) => p.enviados > 0);
 }
