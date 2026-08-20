@@ -5,6 +5,45 @@ export const PLAN_OPTIONS = [
   { value: "Plano Elite Premium", label: "Plano Elite Premium", consultas: 9, duracaoMeses: 12 },
 ] as const;
 
+/** Términos históricos conferidos com a base antiga do Notion.
+ * Apenas contratos antigos recebem override; novas contratações continuam
+ * usando a duração comercial atual (Essencial 4 meses, Evolução 8 meses). */
+const LEGACY_PLAN_END_DATES: Record<string, string> = {
+  "plano evolução|2026-06-06": "2027-04-06",
+  "plano evolução|2026-01-10": "2026-11-10",
+  "plano evolução|2026-01-23": "2026-11-23",
+  "plano essencial|2026-03-27": "2026-08-27",
+  "plano evolução|2025-07-07": "2026-05-07",
+  "plano evolução|2026-03-01": "2027-01-01",
+  "plano essencial|2025-11-08": "2026-04-08",
+  "plano evolução|2025-11-26": "2026-09-26",
+  "plano evolução|2026-06-15": "2027-04-15",
+  "plano essencial|2026-07-13": "2026-12-13",
+  "plano evolução|2025-10-30": "2026-08-30",
+  "plano essencial|2026-04-18": "2026-09-18",
+  "plano evolução|2025-11-07": "2026-09-07",
+  "plano evolução|2025-12-12": "2026-09-07",
+  "plano evolução|2025-11-08": "2026-09-08",
+  "plano essencial|2026-03-16": "2026-08-16",
+  "plano evolução|2026-06-26": "2027-04-26",
+  "plano essencial|2026-05-19": "2026-10-19",
+  "plano essencial|2026-05-18": "2026-10-18",
+  "plano evolução|2026-03-09": "2027-01-09",
+  "plano evolução|2026-02-07": "2026-12-07",
+  "plano essencial|2026-05-15": "2026-10-15",
+  "plano evolução|2026-03-16": "2027-01-16",
+  "plano essencial|2026-05-25": "2026-10-25",
+  "plano essencial|2026-04-22": "2026-09-22",
+  "plano essencial|2026-06-01": "2026-11-01",
+  "plano evolução|2025-10-02": "2026-08-02",
+  "plano evolução|2025-09-11": "2026-07-11",
+  "plano evolução|2026-05-18": "2027-03-18",
+  "plano essencial|2026-04-29": "2026-09-29",
+  "plano essencial|2026-02-10": "2026-07-10",
+  "plano essencial|2026-03-08": "2026-08-08",
+  "plano essencial|2026-04-01": "2026-09-01",
+};
+
 /** Cor visual estável por serviço. Mantém o mesmo plano reconhecível nas
  * listas de pacientes e na agenda, sem misturar cor de plano com status. */
 export function planBadgeClassName(plan?: string | null) {
@@ -35,9 +74,9 @@ export function planDurationMonths(plan?: string | null): number | null {
 }
 
 /**
- * Término contratual do acompanhamento. É calculado exclusivamente pela
- * data de início + duração comercial do plano; consultas agendadas,
- * realizadas ou restantes não alteram essa data.
+ * Término contratual do acompanhamento. Contratos antigos previamente
+ * conferidos preservam o término originalmente contratado; os demais são
+ * calculados pela duração comercial atual do plano.
  *
  * A Consulta Avulsa vence 31 dias após o início. Os planos de acompanhamento
  * usam sua duração comercial em meses.
@@ -53,6 +92,12 @@ export function planEndDate(dataInicio?: string | null, plan?: string | null): D
   if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
 
   const normalizedPlan = (plan ?? "").toLocaleLowerCase("pt-BR");
+  const legacyEnd = LEGACY_PLAN_END_DATES[`${normalizedPlan}|${dataInicio.slice(0, 10)}`];
+  if (legacyEnd) {
+    const [endYear, endMonth, endDay] = legacyEnd.split("-").map(Number);
+    return new Date(Date.UTC(endYear, endMonth - 1, endDay, 12, 0, 0));
+  }
+
   if (normalizedPlan.includes("avulsa")) {
     const endDate = new Date(Date.UTC(year, month, day, 12, 0, 0));
     endDate.setUTCDate(endDate.getUTCDate() + 31);
