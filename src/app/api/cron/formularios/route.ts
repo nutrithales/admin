@@ -25,10 +25,7 @@ async function sendWhatsApp(params: { telefone: string; nome: string; formulario
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const templateName = process.env.WHATSAPP_TEMPLATE_FORMULARIO;
   const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
-
-  if (!phoneNumberId || !accessToken || !templateName) {
-    return { ok: false as const, message: "Integração do WhatsApp não configurada no ambiente." };
-  }
+  if (!phoneNumberId || !accessToken || !templateName) return { ok: false as const, message: "Integração do WhatsApp não configurada no ambiente." };
 
   const response = await fetch(`https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`, {
     method: "POST",
@@ -40,14 +37,11 @@ async function sendWhatsApp(params: { telefone: string; nome: string; formulario
       template: {
         name: templateName,
         language: { code: "pt_BR" },
-        components: [{
-          type: "body",
-          parameters: [
-            { type: "text", text: params.nome },
-            { type: "text", text: params.formularioNome },
-            { type: "text", text: params.link },
-          ],
-        }],
+        components: [{ type: "body", parameters: [
+          { type: "text", text: params.nome },
+          { type: "text", text: params.formularioNome },
+          { type: "text", text: params.link },
+        ] }],
       },
     }),
   });
@@ -78,6 +72,32 @@ function nextFutureCycle(automacao: any, now: Date) {
   return next;
 }
 
+async function avaliarDuasAusenciasSeguidas(supabase: any, pacienteId: string) {
+  const { data: ultimos } = await supabase
+    .from("formulario_envios")
+    .select("id,status,agendado_para, formulario:formularios(tipo), paciente:pacientes(nome)")
+    .eq("paciente_id", pacienteId)
+    .in("status", ["respondido", "expirado"])
+    .order("agendado_para", { ascending: false })
+    .limit(6);
+
+  const checkins = (ultimos ?? []).filter((e: any) => e.formulario?.tipo === "checkin").slice(0, 2);
+  if (checkins.length < 2 || !checkins.every((e: any) => e.status === "expirado")) return;
+
+  const chave = `checkin_sem_resposta_2:${pacienteId}`;
+  const { data: existente } = await supabase.from("pendencias").select("id,status").eq("chave_evento", chave).in("status", ["pendente", "adiada"]).maybeSingle();
+  if (existente) return;
+
+  await supabase.from("pendencias").insert({
+    tipo: "checkin_sem_resposta_2",
+    paciente_id: pacienteId,
+    motivo: `${checkins[0]?.paciente?.nome || "Paciente"} não respondeu aos 2 últimos check-ins consecutivos.`,
+    prioridade: "alta",
+    status: "pendente",
+    chave_evento: chave,
+  });
+}
+
 export async function GET(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -85,20 +105,25 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const nowIso = now.toISOString();
   const origin = baseUrl();
-  const result = { automacoes: 0, agendados: 0, enviados: 0, expirados: 0, erros: 0, ignorados: 0 };
+  const result = { automacoes: 0, agendados: 0, enviados: 0, expirados: 0, alertas: 0, erros: 0, ignorados: 0 };
 
-  // Recupera envios que ficaram travados em processamento por interrupção da função.
   const staleProcessing = new Date(now.getTime() - 15 * 60_000).toISOString();
   await supabase.from("formulario_envios").update({ status: "agendado", updated_at: nowIso }).eq("status", "processando").lt("updated_at", staleProcessing);
 
-  // Fecha automaticamente links cujo prazo de resposta terminou.
   const { data: expirados } = await supabase
     .from("formulario_envios")
     .update({ status: "expirado", updated_at: nowIso })
     .in("status", ["enviado", "visualizado"])
     .lt("expira_em", nowIso)
-    .select("id");
+    .select("id,paciente_id");
   result.expirados = expirados?.length ?? 0;
+
+  for (const pacienteId of [...new Set((expirados ?? []).map((e: any) => e.paciente_id).filter(Boolean))] as string[]) {
+    const antes = await supabase.from("pendencias").select("id", { count: "exact", head: true }).eq("chave_evento", `checkin_sem_resposta_2:${pacienteId}`).in("status", ["pendente", "adiada"]);
+    await avaliarDuasAusenciasSeguidas(supabase, pacienteId);
+    const depois = await supabase.from("pendencias").select("id", { count: "exact", head: true }).eq("chave_evento", `checkin_sem_resposta_2:${pacienteId}`).in("status", ["pendente", "adiada"]);
+    if ((depois.count ?? 0) > (antes.count ?? 0)) result.alertas += 1;
+  }
 
   const { data: automacoes, error: automacoesError } = await supabase
     .from("formulario_automacoes")
@@ -107,7 +132,6 @@ export async function GET(req: NextRequest) {
     .lte("proximo_disparo_em", nowIso)
     .order("proximo_disparo_em", { ascending: true })
     .limit(50);
-
   if (automacoesError) return NextResponse.json({ error: automacoesError.message }, { status: 500 });
 
   for (const automacao of automacoes ?? []) {
@@ -117,10 +141,7 @@ export async function GET(req: NextRequest) {
     if (automacao.publico === "selecionados") pacientesQuery = pacientesQuery.in("id", automacao.paciente_ids ?? []);
 
     const { data: pacientes, error: pacientesError } = await pacientesQuery;
-    if (pacientesError) {
-      result.erros += 1;
-      continue;
-    }
+    if (pacientesError) { result.erros += 1; continue; }
 
     const ciclo = automacao.proximo_disparo_em;
     const expiraEm = new Date(now.getTime() + Number(automacao.prazo_resposta_dias) * 86_400_000).toISOString();
@@ -154,22 +175,11 @@ export async function GET(req: NextRequest) {
     .lte("agendado_para", nowIso)
     .order("agendado_para", { ascending: true })
     .limit(200);
-
   if (enviosError) return NextResponse.json({ error: enviosError.message, ...result }, { status: 500 });
 
   for (const envio of envios ?? []) {
-    const { data: claimed } = await supabase
-      .from("formulario_envios")
-      .update({ status: "processando", updated_at: nowIso })
-      .eq("id", envio.id)
-      .eq("status", "agendado")
-      .select("id")
-      .maybeSingle();
-
-    if (!claimed) {
-      result.ignorados += 1;
-      continue;
-    }
+    const { data: claimed } = await supabase.from("formulario_envios").update({ status: "processando", updated_at: nowIso }).eq("id", envio.id).eq("status", "agendado").select("id").maybeSingle();
+    if (!claimed) { result.ignorados += 1; continue; }
 
     if (!envio.paciente?.telefone || !origin) {
       const message = !envio.paciente?.telefone ? "Paciente sem telefone cadastrado." : "URL pública dos formulários não configurada.";
@@ -180,13 +190,7 @@ export async function GET(req: NextRequest) {
     }
 
     const link = `${origin}/f/${envio.token}`;
-    const whatsapp = await sendWhatsApp({
-      telefone: envio.paciente.telefone,
-      nome: envio.paciente.nome || "Paciente",
-      formularioNome: envio.formulario?.nome || "Check-in",
-      link,
-    });
-
+    const whatsapp = await sendWhatsApp({ telefone: envio.paciente.telefone, nome: envio.paciente.nome || "Paciente", formularioNome: envio.formulario?.nome || "Check-in", link });
     if (!whatsapp.ok) {
       await supabase.from("formulario_envios").update({ status: "erro", ultimo_erro: whatsapp.message, updated_at: new Date().toISOString() }).eq("id", envio.id);
       await supabase.from("whatsapp_envios").insert({ formulario_envio_id: envio.id, paciente_id: envio.paciente_id, tipo: "formulario", status: "erro", erro: whatsapp.message, payload: { link } });
