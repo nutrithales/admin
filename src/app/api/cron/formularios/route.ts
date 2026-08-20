@@ -57,11 +57,25 @@ async function sendWhatsApp(params: { telefone: string; nome: string; formulario
   return { ok: true as const, messageId: body?.messages?.[0]?.id as string | undefined };
 }
 
-function nextFutureCycle(currentIso: string, recurrenceDays: number, now: Date) {
-  let next = new Date(currentIso);
-  do next = new Date(next.getTime() + recurrenceDays * 86_400_000);
-  while (next <= now);
-  return next.toISOString();
+function addDays(iso: string, days: number) {
+  return new Date(new Date(iso).getTime() + days * 86_400_000).toISOString();
+}
+
+function addMonthSaoPaulo(iso: string, diaMes: number) {
+  const shifted = new Date(new Date(iso).getTime() - 3 * 3_600_000);
+  shifted.setUTCMonth(shifted.getUTCMonth() + 1);
+  shifted.setUTCDate(diaMes);
+  return new Date(shifted.getTime() + 3 * 3_600_000).toISOString();
+}
+
+function nextFutureCycle(automacao: any, now: Date) {
+  let next = automacao.proximo_disparo_em as string;
+  do {
+    if (automacao.frequencia_tipo === "semanal") next = addDays(next, 7);
+    else if (automacao.frequencia_tipo === "mensal") next = addMonthSaoPaulo(next, Number(automacao.dia_mes));
+    else next = addDays(next, Number(automacao.recorrencia_dias));
+  } while (new Date(next) <= now);
+  return next;
 }
 
 export async function GET(req: NextRequest) {
@@ -71,11 +85,24 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const nowIso = now.toISOString();
   const origin = baseUrl();
-  const result = { automacoes: 0, agendados: 0, enviados: 0, erros: 0, ignorados: 0 };
+  const result = { automacoes: 0, agendados: 0, enviados: 0, expirados: 0, erros: 0, ignorados: 0 };
+
+  // Recupera envios que ficaram travados em processamento por interrupção da função.
+  const staleProcessing = new Date(now.getTime() - 15 * 60_000).toISOString();
+  await supabase.from("formulario_envios").update({ status: "agendado", updated_at: nowIso }).eq("status", "processando").lt("updated_at", staleProcessing);
+
+  // Fecha automaticamente links cujo prazo de resposta terminou.
+  const { data: expirados } = await supabase
+    .from("formulario_envios")
+    .update({ status: "expirado", updated_at: nowIso })
+    .in("status", ["enviado", "visualizado"])
+    .lt("expira_em", nowIso)
+    .select("id");
+  result.expirados = expirados?.length ?? 0;
 
   const { data: automacoes, error: automacoesError } = await supabase
     .from("formulario_automacoes")
-    .select("id,formulario_id,publico,paciente_ids,recorrencia_dias,proximo_disparo_em")
+    .select("id,formulario_id,publico,paciente_ids,frequencia_tipo,recorrencia_dias,dia_semana,dia_mes,prazo_resposta_dias,proximo_disparo_em")
     .eq("ativo", true)
     .lte("proximo_disparo_em", nowIso)
     .order("proximo_disparo_em", { ascending: true })
@@ -96,6 +123,7 @@ export async function GET(req: NextRequest) {
     }
 
     const ciclo = automacao.proximo_disparo_em;
+    const expiraEm = new Date(now.getTime() + Number(automacao.prazo_resposta_dias) * 86_400_000).toISOString();
     for (const paciente of pacientes ?? []) {
       const { error } = await supabase.from("formulario_envios").insert({
         formulario_id: automacao.formulario_id,
@@ -105,6 +133,7 @@ export async function GET(req: NextRequest) {
         status: "agendado",
         canal: "whatsapp",
         agendado_para: nowIso,
+        expira_em: expiraEm,
       });
       if (!error) result.agendados += 1;
       else if (error.code === "23505") result.ignorados += 1;
@@ -113,7 +142,7 @@ export async function GET(req: NextRequest) {
 
     await supabase.from("formulario_automacoes").update({
       ultimo_disparo_em: nowIso,
-      proximo_disparo_em: nextFutureCycle(ciclo, automacao.recorrencia_dias, now),
+      proximo_disparo_em: nextFutureCycle(automacao, now),
       updated_at: nowIso,
     }).eq("id", automacao.id).eq("proximo_disparo_em", ciclo);
   }
