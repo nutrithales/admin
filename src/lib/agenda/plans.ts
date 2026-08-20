@@ -26,13 +26,11 @@ export function planDurationMonths(plan?: string | null): number | null {
  * data de início + duração comercial do plano; consultas agendadas,
  * realizadas ou restantes não alteram essa data.
  *
- * Consulta Avulsa retorna null de propósito: ela não entra automaticamente
- * no funil de renovação dos planos de acompanhamento.
+ * A Consulta Avulsa vence 31 dias após o início. Os planos de acompanhamento
+ * usam sua duração comercial em meses.
  */
 export function planEndDate(dataInicio?: string | null, plan?: string | null): Date | null {
-  const months = planDurationMonths(plan);
-  if (!dataInicio || months === null) return null;
-
+  if (!dataInicio) return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dataInicio);
   if (!match) return null;
 
@@ -40,6 +38,16 @@ export function planEndDate(dataInicio?: string | null, plan?: string | null): D
   const month = Number(match[2]) - 1;
   const day = Number(match[3]);
   if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+
+  const normalizedPlan = (plan ?? "").toLocaleLowerCase("pt-BR");
+  if (normalizedPlan.includes("avulsa")) {
+    const endDate = new Date(Date.UTC(year, month, day, 12, 0, 0));
+    endDate.setUTCDate(endDate.getUTCDate() + 31);
+    return endDate;
+  }
+
+  const months = planDurationMonths(plan);
+  if (months === null) return null;
 
   const firstTargetDay = new Date(Date.UTC(year, month + months, 1, 12, 0, 0));
   const targetYear = firstTargetDay.getUTCFullYear();

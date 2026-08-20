@@ -33,6 +33,7 @@ import {
 import { PacienteFormModal } from "./PacienteFormModal";
 import { PlanoQuickEditModal } from "./PlanoQuickEditModal";
 import { PasswordRevealModal } from "@/components/ui/PasswordRevealModal";
+import { planEndDate } from "@/lib/agenda/plans";
 
 type Paciente = PacienteComConsultas;
 
@@ -44,6 +45,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Paciente | null>(null);
   const [planoEditing, setPlanoEditing] = useState<Paciente | null>(null);
+  const [planoAdding, setPlanoAdding] = useState(false);
   const [deleting, setDeleting] = useState<Paciente | null>(null);
   const [resetPassword, setResetPassword] = useState<{ nome: string; password: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -157,6 +159,21 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       ),
     },
     {
+      key: "vigencia",
+      header: "Vigência",
+      sortValue: (p) => p.data_inicio ?? "",
+      render: (p) => {
+        const fim = planEndDate(p.data_inicio, p.plano);
+        if (!p.data_inicio) return <span className="text-muted-light">—</span>;
+        return (
+          <div>
+            <p className="font-medium">{new Date(`${p.data_inicio}T12:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</p>
+            <p className="text-xs text-muted">até {fim ? fim.toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "sem término"}</p>
+          </div>
+        );
+      },
+    },
+    {
       key: "consultas",
       header: "Consultas",
       sortValue: (p) => p.consultas_realizadas,
@@ -203,7 +220,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       <PageHeader
         title="Pacientes"
         description="Gerencie o cadastro e o acesso dos seus pacientes. Clique no nome para abrir a ficha completa."
-        actions={<Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-4" /> Novo paciente</Button>}
+        actions={<div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setPlanoAdding(true)}><Wallet className="size-4" /> Adicionar plano</Button><Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-4" /> Novo paciente</Button></div>}
       />
 
       {pacientes.length === 0 ? (
@@ -228,6 +245,7 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
 
       <PacienteFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={refresh} paciente={editing} />
       <PlanoQuickEditModal paciente={planoEditing} onClose={() => setPlanoEditing(null)} onSaved={refresh} />
+      <PlanoQuickEditModal open={planoAdding} paciente={null} pacientes={pacientes} onClose={() => setPlanoAdding(false)} onSaved={refresh} />
       <PasswordRevealModal open={!!resetPassword} password={resetPassword?.password ?? null} pacienteNome={resetPassword?.nome} onClose={() => setResetPassword(null)} />
       <ConfirmDialog
         open={!!deleting}

@@ -354,6 +354,7 @@ export async function changePacientePlanoAction(
   plano: string,
   consultasIncluidas: number,
   consultasRealizadasIniciais: number,
+  dataInicio: string,
 ): Promise<ActionResult> {
   await assertAdmin();
   const supabase = await createClient();
@@ -363,6 +364,9 @@ export async function changePacientePlanoAction(
   }
   if (!Number.isInteger(consultasRealizadasIniciais) || consultasRealizadasIniciais < 0) {
     return { success: false, message: "Informe uma quantidade válida de consultas realizadas." };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) {
+    return { success: false, message: "Informe uma data de início válida." };
   }
 
   // Se o paciente estava no funil de renovação (fim do plano anterior), a
@@ -381,6 +385,7 @@ export async function changePacientePlanoAction(
     .from("pacientes")
     .update({
       plano,
+      data_inicio: dataInicio,
       consultas_incluidas: consultasIncluidas,
       consultas_realizadas_iniciais: consultasRealizadasIniciais,
       ...(emFunilDeRenovacao
@@ -391,5 +396,5 @@ export async function changePacientePlanoAction(
   if (error) return { success: false, message: `Erro ao alterar plano: ${error.message}` };
 
   revalidatePath("/pacientes");
-  return { success: true, message: "Plano atualizado." };
+  return { success: true, message: "Plano e vigência atualizados." };
 }
