@@ -16,7 +16,7 @@ import type { Lead } from "@/services/leads.queries";
 import { cn } from "@/utils/cn";
 
 const colors: Record<string, string> = { slate: "bg-slate-100 text-slate-700", amber: "bg-amber-100 text-amber-800", sky: "bg-sky-100 text-sky-800", rose: "bg-rose-100 text-rose-800" };
-const ORIGENS = ["Instagram", "Google", "Indicação", "Site", "WhatsApp", "Academia/parceria", "Paciente", "Outro"] as const;
+const ORIGENS = ["Instagram", "Google", "Indicação", "Site - Geral", "Site - Emagrecimento", "Site - Nutrição Esportiva", "Site - Hipertrofia", "WhatsApp", "Academia/parceria", "Paciente", "Outro"] as const;
 const empty = { nome: "", telefone: "", email: "", origem: "", origemDetalhe: "", campanha: "", planoInteresse: "", observacoes: "", proximaAcaoEm: "", urgente: false, etapa: "01_lead_recebido" as LeadStageKey };
 
 type View = "kanban" | "lista" | "relatorio";
