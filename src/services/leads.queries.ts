@@ -8,6 +8,9 @@ export type Lead = Tables<"leads"> & {
   followup_inicio_em: string | null;
   ultimo_followup_enviado_dia: number | null;
   ultimo_followup_enviado_em: string | null;
+  origem_detalhe?: string | null;
+  campanha?: string | null;
+  convertido_em?: string | null;
   proximo_followup_em?: string | null;
   proximo_followup_etiqueta?: string | null;
 };
@@ -18,7 +21,7 @@ export async function listLeads():Promise<Lead[]> {
   const db=supabase as any;
   const leadsTable=db.from("leads");
   const followupsTable=db.from("lead_followups_agendados");
-  const {data,error}=await leadsTable.select("*").is("convertido_paciente_id",null).order("updated_at",{ascending:false});
+  const {data,error}=await leadsTable.select("*").is("convertido_paciente_id",null).is("convertido_em",null).order("updated_at",{ascending:false});
   if(error)throw new Error(`Erro ao carregar leads: ${error.message}`);
   const leads=(data??[]) as Lead[];
   if(!leads.length)return leads;
@@ -26,6 +29,13 @@ export async function listLeads():Promise<Lead[]> {
   const nextByLead=new Map<string,{etiqueta:string;agendado_para:string}>();
   for(const item of agendados??[]) if(!nextByLead.has(item.lead_id)) nextByLead.set(item.lead_id,item);
   return leads.map(lead=>{const next=nextByLead.get(lead.id);return {...lead,proximo_followup_em:next?.agendado_para??null,proximo_followup_etiqueta:next?.etiqueta??null};});
+}
+
+export async function listAllLeads():Promise<Lead[]> {
+  const supabase=await createClient();
+  const {data,error}=await (supabase as any).from("leads").select("*").order("created_at",{ascending:false});
+  if(error)throw new Error(`Erro ao carregar histórico de leads: ${error.message}`);
+  return (data??[]) as Lead[];
 }
 
 export async function listLeadFollowupsPendentes():Promise<LeadFollowupPendente[]> {
