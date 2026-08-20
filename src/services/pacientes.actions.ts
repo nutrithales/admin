@@ -204,10 +204,42 @@ export async function resetPacientePasswordAction(id: string): Promise<ActionRes
 
   const password = generateTemporaryPassword();
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(existing.auth_id, { password });
+  const { error: updateError } = await admin.auth.admin.updateUserById(existing.auth_id, {
+    password,
+  });
 
-  if (error) {
-    return { success: false, message: `Erro ao gerar nova senha: ${error.message}` };
+  if (updateError) {
+    const usuarioAusente = /user not found/i.test(updateError.message);
+    if (!usuarioAusente) {
+      return { success: false, message: `Erro ao gerar nova senha: ${updateError.message}` };
+    }
+
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email: existing.email,
+      password,
+      email_confirm: true,
+      user_metadata: { nome: existing.nome ?? "" },
+    });
+
+    if (createError || !created.user) {
+      return {
+        success: false,
+        message: `Erro ao reparar o acesso do paciente: ${createError?.message ?? "erro desconhecido"}`,
+      };
+    }
+
+    const { error: linkError } = await supabase
+      .from("pacientes")
+      .update({ auth_id: created.user.id })
+      .eq("id", id);
+
+    if (linkError) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      return {
+        success: false,
+        message: `A conta foi criada, mas não pôde ser vinculada ao paciente: ${linkError.message}`,
+      };
+    }
   }
 
   const emailResult = await sendPatientCredentialsEmail({
