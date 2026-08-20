@@ -5,6 +5,19 @@ export const PLAN_OPTIONS = [
   { value: "Plano Elite Premium", label: "Plano Elite Premium", consultas: 9, duracaoMeses: 12 },
 ] as const;
 
+/** Cor visual estável por serviço. Mantém o mesmo plano reconhecível nas
+ * listas de pacientes e na agenda, sem misturar cor de plano com status. */
+export function planBadgeClassName(plan?: string | null) {
+  const normalized = (plan ?? "").toLocaleLowerCase("pt-BR");
+  if (normalized.includes("personal trainer")) return "bg-rose-100 text-rose-800";
+  if (normalized.includes("consultoria de treino")) return "bg-amber-100 text-amber-800";
+  if (normalized.includes("elite")) return "bg-violet-100 text-violet-800";
+  if (normalized.includes("evolu")) return "bg-sky-100 text-sky-800";
+  if (normalized.includes("essencial")) return "bg-emerald-100 text-emerald-800";
+  if (normalized.includes("avulsa")) return "bg-slate-100 text-slate-700";
+  return "bg-bg-alt text-muted";
+}
+
 export function includedConsultations(plan?: string | null) {
   const normalized = (plan ?? "").toLocaleLowerCase("pt-BR");
   if (normalized.includes("elite")) return 9;

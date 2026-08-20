@@ -33,7 +33,7 @@ import {
 import { PacienteFormModal } from "./PacienteFormModal";
 import { PlanoQuickEditModal } from "./PlanoQuickEditModal";
 import { PasswordRevealModal } from "@/components/ui/PasswordRevealModal";
-import { planEndDate } from "@/lib/agenda/plans";
+import { planBadgeClassName, planEndDate } from "@/lib/agenda/plans";
 
 type Paciente = PacienteComConsultas;
 
@@ -148,9 +148,9 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       sortValue: (p) => p.plano?.toLowerCase() ?? "",
       render: (p) => (
         <div className="flex max-w-56 flex-wrap gap-1">
-          {p.plano && <Badge tone="success">{p.plano}</Badge>}
+          {p.plano && <Badge className={planBadgeClassName(p.plano)}>{p.plano}</Badge>}
           {p.planos_paralelos.filter((plano) => plano.status === "ativo").map((plano) => (
-            <Badge key={plano.id} tone="info">{plano.nome}</Badge>
+            <Badge key={plano.id} className={planBadgeClassName(plano.nome)}>{plano.nome}</Badge>
           ))}
           {!p.plano && p.planos_paralelos.length === 0 && <span className="text-muted-light">—</span>}
         </div>

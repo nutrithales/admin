@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/contexts/ToastContext";
 import { CONSULTA_STATUS_LABEL, CONSULTA_STATUS_TONE, type ConsultaStatus } from "@/lib/clara/consultas";
+import { planBadgeClassName } from "@/lib/agenda/plans";
 import { parseAgendaDescription } from "@/lib/agenda/parse-description";
 
 interface AgendaEvent {
@@ -158,7 +159,7 @@ export function AgendaClient() {
                     <div className="text-sm font-semibold text-brand-dark">{start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{end ? `–${end.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div>
                   </div>
                   <div className="min-w-0 flex-1 border-border lg:border-l lg:pl-6">
-                    <div className="flex flex-wrap items-center gap-2"><UserRound className="size-4 text-muted" /><h2 className="font-bold text-ink">{patient}</h2>{info.plano && <Badge tone="brand">{info.plano}</Badge>}{info.modalidade && <Badge>{info.modalidade}</Badge>}<Badge tone={event.status ? CONSULTA_STATUS_TONE[event.status] : "info"}>{event.status ? CONSULTA_STATUS_LABEL[event.status] : "Agendada"}</Badge></div>
+                    <div className="flex flex-wrap items-center gap-2"><UserRound className="size-4 text-muted" /><h2 className="font-bold text-ink">{patient}</h2>{info.plano && <Badge className={planBadgeClassName(info.plano)}>{info.plano}</Badge>}{info.modalidade && <Badge>{info.modalidade}</Badge>}<Badge tone={event.status ? CONSULTA_STATUS_TONE[event.status] : "info"}>{event.status ? CONSULTA_STATUS_LABEL[event.status] : "Agendada"}</Badge></div>
                     <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">{info.email && <span>{info.email}</span>}{info.whatsapp && <span>{info.whatsapp}</span>}{event.location && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{event.location}</span>}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
