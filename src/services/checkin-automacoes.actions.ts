@@ -13,6 +13,22 @@ function parseSaoPauloDateTime(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function alignFixedSchedule(base: Date, frequencia: string, diaSemana: number | null, diaMes: number | null) {
+  if (frequencia === "intervalo") return base;
+  // Trabalha em horário de São Paulo preservando o horário escolhido pelo usuário.
+  const local = new Date(base.getTime() - 3 * 3_600_000);
+  if (frequencia === "semanal" && diaSemana !== null) {
+    const diff = (diaSemana - local.getUTCDay() + 7) % 7;
+    local.setUTCDate(local.getUTCDate() + diff);
+  }
+  if (frequencia === "mensal" && diaMes !== null) {
+    const originalDay = local.getUTCDate();
+    if (diaMes < originalDay) local.setUTCMonth(local.getUTCMonth() + 1);
+    local.setUTCDate(diaMes);
+  }
+  return new Date(local.getTime() + 3 * 3_600_000);
+}
+
 export async function criarCheckinAutomacaoAction(formData: FormData): Promise<ActionResult> {
   await assertAdmin();
 
@@ -26,7 +42,7 @@ export async function criarCheckinAutomacaoAction(formData: FormData): Promise<A
   const diaSemana = diaSemanaRaw === "" ? null : Number(diaSemanaRaw);
   const diaMes = diaMesRaw === "" ? null : Number(diaMesRaw);
   const prazoRespostaDias = Number(formData.get("prazo_resposta_dias") || 3);
-  const primeiraExecucao = parseSaoPauloDateTime(String(formData.get("primeira_execucao_em") || ""));
+  const primeiraExecucaoInformada = parseSaoPauloDateTime(String(formData.get("primeira_execucao_em") || ""));
   const pacienteIds = formData.getAll("paciente_ids").map(String).filter(Boolean);
 
   if (!formularioId || !nome) return { success: false, message: "Informe o nome da automação e o formulário." };
@@ -36,9 +52,10 @@ export async function criarCheckinAutomacaoAction(formData: FormData): Promise<A
   if (frequenciaTipo === "semanal" && (!Number.isInteger(diaSemana) || diaSemana! < 0 || diaSemana! > 6)) return { success: false, message: "Selecione o dia fixo da semana." };
   if (frequenciaTipo === "mensal" && (!Number.isInteger(diaMes) || diaMes! < 1 || diaMes! > 28)) return { success: false, message: "Informe um dia do mês entre 1 e 28." };
   if (!Number.isInteger(prazoRespostaDias) || prazoRespostaDias < 1 || prazoRespostaDias > 30) return { success: false, message: "O prazo de resposta deve ficar entre 1 e 30 dias." };
-  if (!primeiraExecucao) return { success: false, message: "Informe uma data e horário válidos para o primeiro disparo." };
+  if (!primeiraExecucaoInformada) return { success: false, message: "Informe uma data e horário válidos para o primeiro disparo." };
   if (publico === "selecionados" && pacienteIds.length === 0) return { success: false, message: "Selecione ao menos um paciente." };
 
+  const primeiraExecucao = alignFixedSchedule(primeiraExecucaoInformada, frequenciaTipo, diaSemana, diaMes);
   const supabase = createAdminClient() as any;
   const { data: formulario } = await supabase.from("formularios").select("id,tipo").eq("id", formularioId).eq("ativo", true).maybeSingle();
   if (!formulario) return { success: false, message: "Formulário ativo não encontrado." };
