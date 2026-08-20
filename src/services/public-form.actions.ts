@@ -105,6 +105,12 @@ export async function responderFormularioAction(token: string, formData: FormDat
     if (checkin?.id && resposta?.id) {
       await supabase.from("formulario_respostas").update({ checkin_id: checkin.id }).eq("id", resposta.id);
     }
+
+    await supabase
+      .from("pendencias")
+      .update({ status: "resolvida", resolvida_em: agora, updated_at: agora })
+      .eq("chave_evento", `checkin_sem_resposta_2:${envio.paciente_id}`)
+      .in("status", ["pendente", "adiada"]);
   }
 
   if (requerAtencao) {
