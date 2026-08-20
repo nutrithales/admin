@@ -21,7 +21,7 @@ export async function listLeads():Promise<Lead[]> {
   const db=supabase as any;
   const leadsTable=db.from("leads");
   const followupsTable=db.from("lead_followups_agendados");
-  const {data,error}=await leadsTable.select("*").is("convertido_paciente_id",null).is("convertido_em",null).order("updated_at",{ascending:false});
+  const {data,error}=await leadsTable.select("*").is("convertido_paciente_id",null).order("updated_at",{ascending:false});
   if(error)throw new Error(`Erro ao carregar leads: ${error.message}`);
   const leads=(data??[]) as Lead[];
   if(!leads.length)return leads;
