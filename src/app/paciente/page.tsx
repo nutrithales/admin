@@ -9,6 +9,7 @@ import {
   Dumbbell,
   FileText,
   MessageCircle,
+  Sparkles,
   Utensils,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -144,10 +145,10 @@ export default async function PacienteDashboardPage() {
     ...paginasAtivas.map((pagina: any, index: number) => ({
       key: `${pagina.titulo}-${pagina.ordem}-${index}`,
       href: pagina.url_pagina || "#",
-      icon: <FileText className="size-[18px]" />,
+      icon: pagina.icone === "sparkles" ? <Sparkles className="size-[18px]" /> : <FileText className="size-[18px]" />,
       title: pagina.titulo || "Material",
       active: Boolean(pagina.url_pagina),
-      status: "Material",
+      status: pagina.icone === "sparkles" ? "Rotina guiada" : "Material",
       external: Boolean(pagina.url_pagina?.startsWith("http")),
     })),
   ];
