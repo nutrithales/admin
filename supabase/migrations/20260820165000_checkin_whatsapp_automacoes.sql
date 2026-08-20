@@ -28,6 +28,11 @@ alter table public.formulario_envios
   add column if not exists automacao_id uuid references public.formulario_automacoes(id) on delete set null,
   add column if not exists ciclo_referencia timestamptz;
 
+alter table public.formulario_envios drop constraint if exists formulario_envios_status_check;
+alter table public.formulario_envios
+  add constraint formulario_envios_status_check
+  check (status in ('agendado', 'processando', 'enviado', 'visualizado', 'respondido', 'expirado', 'erro', 'cancelado'));
+
 create unique index if not exists formulario_envios_automacao_ciclo_paciente_uidx
   on public.formulario_envios (automacao_id, ciclo_referencia, paciente_id)
   where automacao_id is not null and ciclo_referencia is not null;
