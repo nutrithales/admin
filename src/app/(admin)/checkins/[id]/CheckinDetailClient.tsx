@@ -1,13 +1,18 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { BrainCircuit, Check, Clipboard, ExternalLink, MessageCircle, RefreshCw, Save } from "lucide-react";
+import { BrainCircuit, Check, CheckCircle2, Clipboard, ExternalLink, MessageCircle, RefreshCw, Save } from "lucide-react";
 import { gerarPanoramaIaAction, marcarEnviadoWhatsAppAction, salvarRespostaClinicaAction } from "@/services/checkins.actions";
 
 function pretty(value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   return String(value);
+}
+
+function whatsappPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
 }
 
 export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }: any) {
@@ -58,10 +63,18 @@ export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }
       setFeedback("Salve ou cole primeiro uma mensagem para o paciente.");
       return;
     }
-    const phone = String(paciente.telefone).replace(/\D/g, "");
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(mensagem.trim())}`;
+    const url = `https://wa.me/${whatsappPhone(String(paciente.telefone))}?text=${encodeURIComponent(mensagem.trim())}`;
     window.open(url, "_blank", "noopener,noreferrer");
-    startTransition(async () => { await marcarEnviadoWhatsAppAction(Number(checkin.id)); });
+    setFeedback("WhatsApp aberto. Depois de enviar a mensagem, marque o retorno como enviado para concluir este check-in.");
+  }
+
+  function concluirRetorno() {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await marcarEnviadoWhatsAppAction(Number(checkin.id));
+      setFeedback(result.message);
+      if (result.success) window.location.href = "/checkins";
+    });
   }
 
   return (
@@ -75,7 +88,7 @@ export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }
             </div>
             <button onClick={copiarEAbrirChatGPT} className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background">
               {copiado ? <Check size={17} /> : <Clipboard size={17} />}
-              {copiado ? "Copiado" : "Copiar + abrir Assistente"}
+              {copiado ? "Copiado" : "Copiar + abrir meu GPT"}
               <ExternalLink size={14} />
             </button>
           </div>
@@ -104,16 +117,16 @@ export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">2 · Síntese clínica e próximos 15 dias</p>
             <h2 className="mt-1 text-xl font-bold">Área de análise</h2>
-            <p className="mt-1 text-sm text-muted">Você pode colar aqui a resposta do seu GPT ou gerar um panorama automático pela IA do painel.</p>
+            <p className="mt-1 text-sm text-muted">Cole aqui a resposta do seu GPT. A IA interna do painel fica disponível apenas como alternativa.</p>
           </div>
           <button onClick={gerarIa} disabled={pending} className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold disabled:opacity-50">
-            <RefreshCw size={16} className={pending ? "animate-spin" : ""} /> Atualizar panorama com IA
+            <RefreshCw size={16} className={pending ? "animate-spin" : ""} /> Gerar alternativa com IA do painel
           </button>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="space-y-2 text-sm font-semibold">Panorama / análise
-            <textarea value={analise} onChange={(e) => setAnalise(e.target.value)} rows={10} className="w-full rounded-2xl border border-border bg-background p-4 font-normal leading-6 outline-none focus:border-brand" placeholder="Cole aqui a análise do ChatGPT ou gere pelo botão acima..." />
+            <textarea value={analise} onChange={(e) => setAnalise(e.target.value)} rows={10} className="w-full rounded-2xl border border-border bg-background p-4 font-normal leading-6 outline-none focus:border-brand" placeholder="Cole aqui a análise do seu GPT..." />
           </label>
           <label className="space-y-2 text-sm font-semibold">Orientações para os próximos 15 dias
             <textarea value={orientacoes} onChange={(e) => setOrientacoes(e.target.value)} rows={10} className="w-full rounded-2xl border border-border bg-background p-4 font-normal leading-6 outline-none focus:border-brand" placeholder="Metas e orientações práticas..." />
@@ -127,6 +140,7 @@ export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }
         <div className="mt-4 flex flex-wrap gap-3">
           <button onClick={salvar} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-50"><Save size={16} /> Salvar análise</button>
           <button onClick={abrirWhatsApp} className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white"><MessageCircle size={17} /> Abrir WhatsApp do paciente</button>
+          {!checkin.revisado && <button onClick={concluirRetorno} disabled={pending} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 disabled:opacity-50"><CheckCircle2 size={17} /> Marcar retorno como enviado</button>}
         </div>
         {feedback && <p className="mt-3 rounded-xl bg-background px-4 py-3 text-sm text-muted">{feedback}</p>}
       </section>
