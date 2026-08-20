@@ -87,6 +87,7 @@ export function ClaraClient({
   const [modalAberto, setModalAberto] = useState<ModalAberto>(null);
   const [adiando, setAdiando] = useState<string | null>(null);
   const [enviandoWhatsapp, setEnviandoWhatsapp] = useState<string | null>(null);
+  const [concluindoFollowup, setConcluindoFollowup] = useState<string | null>(null);
   const [pendenciaResolvendo, setPendenciaResolvendo] = useState<PendenciaComPaciente | null>(null);
 
   function refresh() { router.refresh(); }
@@ -109,16 +110,23 @@ export function ClaraClient({
     refresh();
   }
 
-  async function abrirWhatsappLead(f: LeadFollowupPendente) {
+  function abrirWhatsappLead(f: LeadFollowupPendente) {
     const digitos = onlyDigits(f.lead.telefone);
     if (!digitos) return toast({ kind: "error", title: "Lead sem WhatsApp cadastrado." });
     const numero = digitos.startsWith("55") ? digitos : `55${digitos}`;
     const corpo = followupMessage(f.mensagem, f.lead.nome);
     const aba = window.open(`https://wa.me/${numero}?text=${encodeURIComponent(corpo)}`, "_blank");
     if (!aba) return toast({ kind: "error", title: "O navegador bloqueou a aba do WhatsApp." });
+    toast({ kind: "success", title: "WhatsApp aberto. Marque como Feito somente depois de enviar." });
+  }
+
+  async function concluirFollowup(f: LeadFollowupPendente) {
+    const key = `${f.lead.id}-${f.dia}`;
+    setConcluindoFollowup(key);
     const r = await registrarFollowupEnviadoAction(f.lead.id, f.dia);
-    toast({ kind: r.success ? "success" : "error", title: r.success ? `${f.etiqueta} aberto no WhatsApp.` : r.message });
-    refresh();
+    setConcluindoFollowup(null);
+    toast({ kind: r.success ? "success" : "error", title: r.message });
+    if (r.success) refresh();
   }
 
   async function abrirWhatsappDaPendencia(p: PendenciaComPaciente) {
@@ -241,7 +249,7 @@ export function ClaraClient({
 
           <Card>
             <div className="flex items-center justify-between p-6 pb-4">
-              <h2 className="text-base font-bold text-ink">Follow-ups comerciais</h2>
+              <div><h2 className="text-base font-bold text-ink">Follow-ups comerciais</h2><p className="mt-1 text-xs text-muted">Abra a conversa, envie a mensagem e só então marque como Feito.</p></div>
               <Link href="/leads" className="text-sm font-semibold text-brand-dark hover:underline">Ver kanban</Link>
             </div>
             <div className="px-6 pb-6">
@@ -249,14 +257,20 @@ export function ClaraClient({
                 <EmptyState icon={CheckCircle2} title="Nenhum follow-up vencido" description="A Marc.ia mostrará aqui somente as mensagens que já estiverem na data de envio." />
               ) : (
                 <ul className="flex flex-col gap-3">
-                  {leadFollowups.map((f) => (
-                    <li key={`${f.lead.id}-${f.dia}`} className="rounded-lg border border-border p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div><div className="flex gap-2"><Badge tone="brand">{f.etiqueta}</Badge><Badge tone="warning">Enviar hoje</Badge></div><p className="mt-2 font-semibold text-ink">{f.lead.nome}</p><p className="text-sm text-muted">{f.titulo}</p><p className="mt-3 whitespace-pre-line rounded-md bg-bg-alt p-3 text-sm text-ink">{followupMessage(f.mensagem, f.lead.nome)}</p></div>
-                        <Button size="sm" onClick={() => void abrirWhatsappLead(f)}><MessageCircle className="size-4" /> Enviar no WhatsApp</Button>
-                      </div>
-                    </li>
-                  ))}
+                  {leadFollowups.map((f) => {
+                    const key = `${f.lead.id}-${f.dia}`;
+                    return (
+                      <li key={key} className="rounded-lg border border-border p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1"><div className="flex gap-2"><Badge tone="brand">{f.etiqueta}</Badge><Badge tone="warning">Enviar hoje</Badge></div><p className="mt-2 font-semibold text-ink">{f.lead.nome}</p><p className="text-sm text-muted">{f.titulo}</p><p className="mt-3 whitespace-pre-line rounded-md bg-bg-alt p-3 text-sm text-ink">{followupMessage(f.mensagem, f.lead.nome)}</p></div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" onClick={() => abrirWhatsappLead(f)}><MessageCircle className="size-4" /> Abrir WhatsApp</Button>
+                            <Button variant="secondary" size="sm" loading={concluindoFollowup===key} onClick={() => void concluirFollowup(f)}><CheckCircle2 className="size-4" /> Feito</Button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
