@@ -10,6 +10,11 @@ function pretty(value: unknown) {
   return String(value);
 }
 
+function whatsappPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+}
+
 export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }: any) {
   const [analise, setAnalise] = useState(checkin.analise_ia ?? "");
   const [orientacoes, setOrientacoes] = useState(checkin.orientacoes_ia ?? "");
@@ -58,8 +63,7 @@ export function CheckinDetailClient({ checkin, paciente, historico, chatgptUrl }
       setFeedback("Salve ou cole primeiro uma mensagem para o paciente.");
       return;
     }
-    const phone = String(paciente.telefone).replace(/\D/g, "");
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(mensagem.trim())}`;
+    const url = `https://wa.me/${whatsappPhone(String(paciente.telefone))}?text=${encodeURIComponent(mensagem.trim())}`;
     window.open(url, "_blank", "noopener,noreferrer");
     setFeedback("WhatsApp aberto. Depois de enviar a mensagem, marque o retorno como enviado para concluir este check-in.");
   }
