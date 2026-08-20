@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Check, Moon, Play, RotateCcw, Sun, Video } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
+import WorkoutEvolution from "./WorkoutEvolution";
 
 type Workout = any;
 type Exercise = any;
@@ -17,6 +18,7 @@ type ProgressData = {
   activeWorkoutId?: string | null;
   exerciseState?: Record<string, ExerciseState>;
   sessions?: Record<string, SessionState>;
+  updatedAt?: number;
 };
 
 const EMPTY_SESSION: SessionState = { started: false, running: false, elapsedSec: 0, timerAnchor: null, rest: null, obs: "" };
@@ -29,10 +31,6 @@ function fmtTime(value: number) {
   return h > 0
     ? `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
     : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-function fmtDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "2-digit" }).format(new Date(value));
 }
 
 function getRepsNumber(value: string | null | undefined) {
@@ -54,6 +52,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
   const [saveState, setSaveState] = useState<"saved" | "saving" | "pending" | "error">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestProgress = useRef(progress);
+  const storageKey = `nutri-treino-progress:v2:${patientId}`;
 
   useEffect(() => { latestProgress.current = progress; }, [progress]);
 
@@ -78,14 +77,15 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
   const updateProgress = useCallback((updater: (current: ProgressData) => ProgressData) => {
     setProgress((current) => {
-      const next = updater(current);
+      const next = { ...updater(current), updatedAt: Date.now() };
       latestProgress.current = next;
+      try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* proteção local é complementar */ }
       if (saveTimer.current) clearTimeout(saveTimer.current);
       setSaveState("pending");
       saveTimer.current = setTimeout(() => void saveProgress(latestProgress.current), 550);
       return next;
     });
-  }, [saveProgress]);
+  }, [saveProgress, storageKey]);
 
   useEffect(() => {
     async function load() {
@@ -110,7 +110,12 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
         setLoading(false);
         return;
       }
-      const stored: ProgressData = progressRow?.dados || {};
+      const cloudStored: ProgressData = progressRow?.dados || {};
+      let stored = cloudStored;
+      try {
+        const localStored = JSON.parse(window.localStorage.getItem(storageKey) || "null") as ProgressData | null;
+        if (localStored && Number(localStored.updatedAt || 0) > Number(cloudStored.updatedAt || 0)) stored = localStored;
+      } catch { /* usa a versão da nuvem */ }
       const validActive = ws.some((w: any) => w.id === stored.activeWorkoutId) ? stored.activeWorkoutId : ws[0]?.id || null;
       setWorkouts(ws);
       setExercises(exerciseData || []);
@@ -119,19 +124,31 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
       setLoading(false);
     }
     void load();
-  }, [patientId, supabase]);
+  }, [patientId, storageKey, supabase]);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 500);
-    const sync = () => setClock(Date.now());
+    const flush = () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+      void saveProgress(latestProgress.current);
+    };
+    const sync = () => {
+      setClock(Date.now());
+      if (document.visibilityState === "hidden") flush();
+    };
     document.addEventListener("visibilitychange", sync);
     window.addEventListener("pageshow", sync);
+    window.addEventListener("focus", sync);
+    window.addEventListener("pagehide", flush);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", sync);
       window.removeEventListener("pageshow", sync);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("pagehide", flush);
     };
-  }, []);
+  }, [saveProgress]);
 
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -271,25 +288,6 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     setTab("evolucao");
   }
 
-  const evolution = useMemo(() => {
-    const completed = history.filter((h) => h.concluido);
-    const now = Date.now();
-    const week = completed.filter((h) => now - new Date(h.iniciado_em).getTime() <= 7 * 86400000);
-    const month = completed.filter((h) => now - new Date(h.iniciado_em).getTime() <= 30 * 86400000);
-    const totalTime = completed.reduce((sum, h) => sum + Number(h.duracao_seg || 0), 0);
-    const volume = (list: any[]) => list.reduce((sum, h) => sum + Number(h.dados?.volume || 0), 0);
-    const prs: Record<string, number> = {};
-    for (const h of completed) {
-      for (const ex of Array.isArray(h.dados?.exercises) ? h.dados.exercises : []) {
-        prs[ex.name] = Math.max(prs[ex.name] || 0, Number(ex.load || 0));
-      }
-    }
-    const maxLoad = Math.max(0, ...Object.values(prs));
-    const xp = completed.length * 100;
-    const level = Math.floor(xp / 500) + 1;
-    return { completed, week, month, totalTime, weekVolume: volume(week), monthVolume: volume(month), prs, maxLoad, xp, level };
-  }, [history]);
-
   if (loading) return <main className="min-h-screen bg-[#0E1A14] px-4 py-20 text-center text-[#9DB3A7]">Carregando seu dashboard de treino…</main>;
   if (error) return <main className="min-h-screen bg-[#0E1A14] px-4 py-10 text-white"><div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6">{error}</div></main>;
   if (!activeWorkout) return <main className="min-h-screen bg-[#0E1A14] px-4 py-10 text-white"><div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6">Nenhum treino ativo liberado no momento.</div></main>;
@@ -384,30 +382,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
             </div>
           </>
         ) : (
-          <>
-            <section className={`mb-4 rounded-[26px] border p-5 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
-              <p className="text-[11px] font-black uppercase tracking-[.14em] text-[#19DD7F]">Evolução</p>
-              <h1 className="mt-1 text-3xl font-black">Seu histórico de treinos</h1>
-              <p className="mt-2 text-sm opacity-60">{evolution.completed.length} sessões registradas</p>
-            </section>
-            <div className="grid grid-cols-3 gap-2">
-              <div className={`rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}><b className="block text-xl">{fmtTime(evolution.totalTime)}</b><span className="text-[10px] opacity-60">Tempo total</span></div>
-              <div className={`rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}><b className="block text-xl">{evolution.maxLoad ? `${evolution.maxLoad} kg` : "—"}</b><span className="text-[10px] opacity-60">Maior carga</span></div>
-              <div className={`rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}><b className="block text-xl">Nível {evolution.level}</b><span className="text-[10px] opacity-60">{evolution.xp} XP</span></div>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className={`rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}><b className="text-lg">{evolution.week.length} treinos</b><p className="mt-1 text-xs opacity-60">Últimos 7 dias · {Math.round(evolution.weekVolume)} kg movimentados</p></div>
-              <div className={`rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}><b className="text-lg">{evolution.month.length} treinos</b><p className="mt-1 text-xs opacity-60">Últimos 30 dias · {Math.round(evolution.monthVolume)} kg movimentados</p></div>
-            </div>
-            <section className={`mt-4 rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
-              <h2 className="font-black">Recordes pessoais</h2>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">{Object.entries(evolution.prs).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => <div key={name} className={`rounded-xl border p-3 ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`}><b className="block text-sm">{name}</b><span className="text-xs text-[#19DD7F]">{value} kg</span></div>)}</div>
-            </section>
-            <section className={`mt-4 rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
-              <h2 className="font-black">Sessões recentes</h2>
-              <div className="mt-3 grid gap-2">{evolution.completed.slice(0, 12).map((h) => <div key={h.id} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`}><div><b className="block text-sm">{h.dados?.workoutName || workouts.find((w) => w.id === h.treino_id)?.nome || "Treino"}</b><span className="text-xs opacity-55">{fmtDate(h.iniciado_em)}</span></div><span className="text-right text-xs font-black text-[#19DD7F]">{fmtTime(Number(h.duracao_seg || 0))}<br />{Math.round(Number(h.dados?.volume || 0))} kg</span></div>)}</div>
-            </section>
-          </>
+          <WorkoutEvolution history={history} workouts={workouts} dark={dark} />
         )}
       </div>
 
