@@ -45,6 +45,13 @@ export function planEndDate(dataInicio?: string | null, plan?: string | null): D
     endDate.setUTCDate(endDate.getUTCDate() + 31);
     return endDate;
   }
+  if (normalizedPlan.includes("personal trainer")) {
+    const firstTargetDay = new Date(Date.UTC(year, month + 1, 1, 12, 0, 0));
+    const targetYear = firstTargetDay.getUTCFullYear();
+    const targetMonth = firstTargetDay.getUTCMonth();
+    const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 12, 0, 0)).getUTCDate();
+    return new Date(Date.UTC(targetYear, targetMonth, Math.min(day, lastDay), 12, 0, 0));
+  }
 
   const months = planDurationMonths(plan);
   if (months === null) return null;

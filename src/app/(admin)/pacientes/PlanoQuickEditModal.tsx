@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, FieldGroup } from "@/components/ui/Input";
 import { useToast } from "@/contexts/ToastContext";
-import { changePacientePlanoAction } from "@/services/pacientes.actions";
+import { addPacientePlanoParaleloAction, changePacientePlanoAction } from "@/services/pacientes.actions";
 import type { Tables } from "@/types/database.types";
 import { includedConsultations, planEndDate, PLAN_OPTIONS } from "@/lib/agenda/plans";
 
@@ -27,12 +27,19 @@ function formatDate(date: Date | null) {
   return date?.toLocaleDateString("pt-BR", { timeZone: "UTC" }) ?? "Sem término automático";
 }
 
+const TRAINING_PLAN_OPTIONS = ["Consultoria de treino", "Personal Trainer"] as const;
+
+function dateToIso(date: Date | null) {
+  return date?.toISOString().slice(0, 10) ?? "";
+}
+
 export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], onClose, onSaved }: PlanoQuickEditModalProps) {
   const { toast } = useToast();
   const [plano, setPlano] = useState("");
   const [consultasIncluidas, setConsultasIncluidas] = useState(1);
   const [consultasRealizadas, setConsultasRealizadas] = useState(0);
   const [dataInicio, setDataInicio] = useState(isoToday());
+  const [dataFimLivre, setDataFimLivre] = useState("");
   const [pacienteId, setPacienteId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -49,6 +56,7 @@ export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], on
       setConsultasIncluidas(includedConsultations("Plano Essencial"));
       setConsultasRealizadas(0);
       setDataInicio(isoToday());
+      setDataFimLivre("");
     }
   }, [open, paciente]);
 
@@ -60,13 +68,22 @@ export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], on
       return;
     }
     setSaving(true);
-    const result = await changePacientePlanoAction(
-      targetId,
-      plano,
-      consultasIncluidas,
-      consultasRealizadas,
-      dataInicio,
-    );
+    const isTrainingPlan = TRAINING_PLAN_OPTIONS.includes(plano as typeof TRAINING_PLAN_OPTIONS[number]);
+    const dataFim = plano === "Consultoria de treino" ? dataFimLivre : dateToIso(planEndDate(dataInicio, plano));
+    const result = isTrainingPlan
+      ? await addPacientePlanoParaleloAction(
+          targetId,
+          plano as typeof TRAINING_PLAN_OPTIONS[number],
+          dataInicio,
+          dataFim,
+        )
+      : await changePacientePlanoAction(
+          targetId,
+          plano,
+          consultasIncluidas,
+          consultasRealizadas,
+          dataInicio,
+        );
     setSaving(false);
 
     if (result.success) {
@@ -108,6 +125,9 @@ export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], on
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-brand"
           >
             {PLAN_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {!paciente && <optgroup label="Serviços de treino">
+              {TRAINING_PLAN_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+            </optgroup>}
           </select>
         </FieldGroup>
         <div className="grid grid-cols-2 gap-3">
@@ -117,12 +137,16 @@ export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], on
           </FieldGroup>
           <FieldGroup>
             <Label>Data final calculada</Label>
-            <div className="flex min-h-11 items-center rounded-lg border border-border bg-bg-alt px-4 text-sm font-semibold text-ink">
-              {formatDate(planEndDate(dataInicio, plano))}
-            </div>
+            {plano === "Consultoria de treino" ? (
+              <Input id="plano-fim-livre" type="date" required min={dataInicio} value={dataFimLivre} onChange={(e) => setDataFimLivre(e.target.value)} />
+            ) : (
+              <div className="flex min-h-11 items-center rounded-lg border border-border bg-bg-alt px-4 text-sm font-semibold text-ink">
+                {formatDate(planEndDate(dataInicio, plano))}
+              </div>
+            )}
           </FieldGroup>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        {!TRAINING_PLAN_OPTIONS.includes(plano as typeof TRAINING_PLAN_OPTIONS[number]) && <div className="grid grid-cols-2 gap-3">
           <FieldGroup>
             <Label htmlFor="consultas-incluidas">Consultas do plano</Label>
             <Input id="consultas-incluidas" type="number" min={1} value={consultasIncluidas} onChange={(e) => setConsultasIncluidas(Number(e.target.value))} />
@@ -131,8 +155,9 @@ export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], on
             <Label htmlFor="consultas-realizadas">Já realizadas antes do sistema</Label>
             <Input id="consultas-realizadas" type="number" min={0} value={consultasRealizadas} onChange={(e) => setConsultasRealizadas(Number(e.target.value))} />
           </FieldGroup>
-        </div>
-        <p className="text-xs text-muted">As consultas marcadas como realizadas dentro do painel serão somadas automaticamente a esse histórico inicial.</p>
+        </div>}
+        {!TRAINING_PLAN_OPTIONS.includes(plano as typeof TRAINING_PLAN_OPTIONS[number]) && <p className="text-xs text-muted">As consultas marcadas como realizadas dentro do painel serão somadas automaticamente a esse histórico inicial.</p>}
+        {TRAINING_PLAN_OPTIONS.includes(plano as typeof TRAINING_PLAN_OPTIONS[number]) && <p className="text-xs text-muted">Este serviço será adicionado em paralelo e não substituirá o plano nutricional do paciente.</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar

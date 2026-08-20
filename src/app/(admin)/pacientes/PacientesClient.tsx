@@ -146,7 +146,15 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       key: "plano",
       header: "Plano",
       sortValue: (p) => p.plano?.toLowerCase() ?? "",
-      render: (p) => p.plano || <span className="text-muted-light">—</span>,
+      render: (p) => (
+        <div className="flex max-w-56 flex-wrap gap-1">
+          {p.plano && <Badge tone="success">{p.plano}</Badge>}
+          {p.planos_paralelos.filter((plano) => plano.status === "ativo").map((plano) => (
+            <Badge key={plano.id} tone="info">{plano.nome}</Badge>
+          ))}
+          {!p.plano && p.planos_paralelos.length === 0 && <span className="text-muted-light">—</span>}
+        </div>
+      ),
     },
     {
       key: "status",
@@ -164,11 +172,18 @@ export function PacientesClient({ initialPacientes }: { initialPacientes: Pacien
       sortValue: (p) => p.data_inicio ?? "",
       render: (p) => {
         const fim = planEndDate(p.data_inicio, p.plano);
-        if (!p.data_inicio) return <span className="text-muted-light">—</span>;
+        const paralelos = p.planos_paralelos.filter((plano) => plano.status === "ativo");
+        if (!p.data_inicio && paralelos.length === 0) return <span className="text-muted-light">—</span>;
         return (
-          <div>
-            <p className="font-medium">{new Date(`${p.data_inicio}T12:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</p>
-            <p className="text-xs text-muted">até {fim ? fim.toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "sem término"}</p>
+          <div className="space-y-1.5">
+            {p.data_inicio && <div>
+              <p className="text-xs font-semibold text-ink">Nutrição</p>
+              <p className="text-xs text-muted">{new Date(`${p.data_inicio}T12:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })} até {fim ? fim.toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "sem término"}</p>
+            </div>}
+            {paralelos.map((plano) => <div key={plano.id}>
+              <p className="text-xs font-semibold text-ink">{plano.nome}</p>
+              <p className="text-xs text-muted">{new Date(`${plano.data_inicio}T12:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })} até {new Date(`${plano.data_fim}T12:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</p>
+            </div>)}
           </div>
         );
       },

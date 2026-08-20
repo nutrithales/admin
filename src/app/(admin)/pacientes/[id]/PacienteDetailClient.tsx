@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarCheck2, CalendarClock, UserCheck, UserX, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarCheck2, CalendarClock, Pencil, UserCheck, UserX, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +21,7 @@ import { SuplementacaoTab, type SuplementacaoAdmin } from "./SuplementacaoTab";
 import { AccessAreaPacienteCard } from "./AccessAreaPacienteCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { computeConsultasStats } from "@/lib/clara/consultas";
+import { ConsultasRealizadasModal } from "./ConsultasRealizadasModal";
 
 export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsulta, pendencias, pagamentos, historicoFluxo, suplementacao }: {
   paciente: Tables<"pacientes">;
@@ -36,6 +37,7 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
   const { toast } = useToast();
   const [tab, setTab] = useState("visao-geral");
   const [changingStatus, setChangingStatus] = useState(false);
+  const [editingConsultas, setEditingConsultas] = useState(false);
   const stats = computeConsultasStats(paciente, consultas);
   const completed = stats.realizadas;
   const scheduled = stats.agendadas;
@@ -94,10 +96,18 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
           { label: paciente.plano || "Sem plano definido", value: `${completed}/${paciente.consultas_incluidas}`, detail: "consultas realizadas", icon: Wallet },
           { label: "Saldo disponível", value: remaining, detail: "consultas restantes", icon: CalendarCheck2 },
           { label: "Próximas consultas", value: scheduled, detail: "agendamentos ativos", icon: CalendarClock },
-        ].map(({ label, value, detail, icon: Icon }) => (
-          <Card key={label}><CardContent className="flex items-center gap-3 pt-6"><div className="rounded-full bg-brand-light p-3 text-brand-dark"><Icon className="size-5" /></div><div><p className="text-xs font-semibold text-muted">{label}</p><p className="text-xl font-bold text-ink">{value}</p><p className="text-xs text-muted">{detail}</p></div></CardContent></Card>
+        ].map(({ label, value, detail, icon: Icon }, index) => (
+          <Card key={label}><CardContent className="flex items-center gap-3 pt-6"><div className="rounded-full bg-brand-light p-3 text-brand-dark"><Icon className="size-5" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-muted">{label}</p><p className="text-xl font-bold text-ink">{value}</p><p className="text-xs text-muted">{detail}</p></div>{index === 0 && <button type="button" onClick={() => setEditingConsultas(true)} className="rounded-lg p-2 text-muted hover:bg-bg-alt hover:text-ink" aria-label="Editar consultas realizadas"><Pencil className="size-4" /></button>}</CardContent></Card>
         ))}
       </div>
+
+      <ConsultasRealizadasModal
+        open={editingConsultas}
+        onClose={() => setEditingConsultas(false)}
+        pacienteId={paciente.id}
+        realizadasNoSistema={completed - paciente.consultas_realizadas_iniciais}
+        realizadasIniciais={paciente.consultas_realizadas_iniciais}
+      />
 
       <AccessAreaPacienteCard
         pacienteId={paciente.id}

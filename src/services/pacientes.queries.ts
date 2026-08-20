@@ -3,23 +3,51 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database.types";
 import { computeConsultasStats } from "@/lib/clara/consultas";
 
+export interface PacientePlanoParalelo {
+  id: string;
+  paciente_id: string;
+  categoria: string;
+  nome: string;
+  data_inicio: string;
+  data_fim: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PacientePlanosSelect {
+  select: (columns: string) => {
+    eq: (column: string, value: string) => {
+      order: (column: string, options: { ascending: boolean }) => Promise<{ data: PacientePlanoParalelo[] | null }>;
+    };
+  };
+}
+
 export type PacienteComConsultas = Tables<"pacientes"> & {
   consultas_realizadas: number;
   consultas_agendadas: number;
+  planos_paralelos: PacientePlanoParalelo[];
 };
 
 export async function listPacientes(): Promise<PacienteComConsultas[]> {
   const supabase = await createClient();
-  const [{ data, error }, { data: consultations }] = await Promise.all([
+  const pacientePlanos = (supabase as unknown as { from: (table: string) => PacientePlanosSelect }).from("paciente_planos");
+  const [{ data, error }, { data: consultations }, { data: planosParalelos }] = await Promise.all([
     supabase.from("pacientes").select("*").order("created_at", { ascending: false }),
     supabase.from("consultas").select("auth_id, status"),
+    pacientePlanos.select("*").eq("status", "ativo").order("data_fim", { ascending: false }),
   ]);
 
   if (error) throw new Error(`Erro ao carregar pacientes: ${error.message}`);
   return (data ?? []).map((patient) => {
     const consultasDoPaciente = (consultations ?? []).filter((item) => item.auth_id === patient.auth_id);
     const stats = computeConsultasStats(patient, consultasDoPaciente);
-    return { ...patient, consultas_realizadas: stats.realizadas, consultas_agendadas: stats.agendadas };
+    return {
+      ...patient,
+      consultas_realizadas: stats.realizadas,
+      consultas_agendadas: stats.agendadas,
+      planos_paralelos: (planosParalelos ?? []).filter((plano) => plano.paciente_id === patient.id),
+    };
   });
 }
 

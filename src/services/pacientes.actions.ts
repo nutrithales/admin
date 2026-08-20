@@ -398,3 +398,58 @@ export async function changePacientePlanoAction(
   revalidatePath("/pacientes");
   return { success: true, message: "Plano e vigência atualizados." };
 }
+
+export async function addPacientePlanoParaleloAction(
+  pacienteId: string,
+  nome: "Consultoria de treino" | "Personal Trainer",
+  dataInicio: string,
+  dataFim: string,
+): Promise<ActionResult> {
+  await assertAdmin();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(dataFim)) {
+    return { success: false, message: "Informe datas de início e término válidas." };
+  }
+  if (dataFim < dataInicio) {
+    return { success: false, message: "A data final não pode ser anterior à data inicial." };
+  }
+
+  const supabase = await createClient();
+  const pacientePlanos = (supabase as unknown as {
+    from: (table: string) => {
+      insert: (values: Record<string, string>) => Promise<{ error: { message: string } | null }>;
+    };
+  }).from("paciente_planos");
+  const { error } = await pacientePlanos.insert({
+    paciente_id: pacienteId,
+    categoria: "treino",
+    nome,
+    data_inicio: dataInicio,
+    data_fim: dataFim,
+  });
+  if (error) return { success: false, message: `Erro ao adicionar plano: ${error.message}` };
+
+  revalidatePath("/pacientes");
+  revalidatePath(`/pacientes/${pacienteId}`);
+  return { success: true, message: `${nome} adicionado sem substituir o plano nutricional.` };
+}
+
+export async function updateConsultasRealizadasIniciaisAction(
+  pacienteId: string,
+  quantidade: number,
+): Promise<ActionResult> {
+  await assertAdmin();
+  if (!Number.isInteger(quantidade) || quantidade < 0) {
+    return { success: false, message: "Informe uma quantidade válida de consultas realizadas." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pacientes")
+    .update({ consultas_realizadas_iniciais: quantidade })
+    .eq("id", pacienteId);
+  if (error) return { success: false, message: `Erro ao atualizar consultas: ${error.message}` };
+
+  revalidatePath("/pacientes");
+  revalidatePath(`/pacientes/${pacienteId}`);
+  return { success: true, message: "Histórico inicial de consultas atualizado." };
+}
