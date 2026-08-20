@@ -94,8 +94,15 @@ export function planEndDate(dataInicio?: string | null, plan?: string | null): D
   const normalizedPlan = (plan ?? "").toLocaleLowerCase("pt-BR");
   const legacyEnd = LEGACY_PLAN_END_DATES[`${normalizedPlan}|${dataInicio.slice(0, 10)}`];
   if (legacyEnd) {
-    const [endYear, endMonth, endDay] = legacyEnd.split("-").map(Number);
-    return new Date(Date.UTC(endYear, endMonth - 1, endDay, 12, 0, 0));
+    const legacyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(legacyEnd);
+    if (legacyMatch) {
+      const endYear = Number(legacyMatch[1]);
+      const endMonth = Number(legacyMatch[2]) - 1;
+      const endDay = Number(legacyMatch[3]);
+      if (Number.isFinite(endYear) && Number.isFinite(endMonth) && Number.isFinite(endDay)) {
+        return new Date(Date.UTC(endYear, endMonth, endDay, 12, 0, 0));
+      }
+    }
   }
 
   if (normalizedPlan.includes("avulsa")) {
