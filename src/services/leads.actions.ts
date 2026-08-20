@@ -1,8 +1,121 @@
 "use server";
-import { revalidatePath } from "next/cache";import { z } from "zod";import { assertAdmin } from "@/lib/supabase/assert-admin";import { createClient } from "@/lib/supabase/server";import { LEAD_STAGES } from "@/lib/leads/stages";import type { LeadFollowupFlow } from "@/lib/leads/followups";import type { ActionResult } from "@/services/pacientes.actions";
-const keys=LEAD_STAGES.map(i=>i.key) as [string,...string[]];const leadSchema=z.object({nome:z.string().trim().min(2,"Informe o nome do lead.").max(120),telefone:z.string().trim().max(30).nullable().optional(),email:z.union([z.literal(""),z.string().email("E-mail inválido.")]).nullable().optional(),origem:z.string().trim().max(80).nullable().optional(),planoInteresse:z.string().trim().max(80).nullable().optional(),observacoes:z.string().trim().max(3000).nullable().optional(),proximaAcaoEm:z.string().datetime().nullable().optional(),urgente:z.boolean().optional(),etapa:z.enum(keys).optional()});export type LeadInput=z.input<typeof leadSchema>;
-function followupForStage(etapa?:string){if(etapa?.startsWith("04_lead_")||etapa?.startsWith("05_lead_")||etapa?.startsWith("06_lead_")||etapa?.startsWith("07_lead_")||etapa?.startsWith("08_lead_")||etapa?.startsWith("09_lead_"))return"lead" as LeadFollowupFlow;if(etapa?.startsWith("10_proposta_")||etapa?.startsWith("11_proposta_")||etapa?.startsWith("12_proposta_")||etapa?.startsWith("13_proposta_"))return"proposta" as LeadFollowupFlow;return null;}
-export async function createLeadAction(input:LeadInput):Promise<ActionResult>{await assertAdmin();const parsed=leadSchema.safeParse(input);if(!parsed.success)return{success:false,message:parsed.error.issues[0]?.message??"Dados inválidos."};const d=parsed.data,etapa=d.etapa??"01_lead_recebido",flow=followupForStage(etapa),now=new Date().toISOString(),supabase=await createClient(),leads=(supabase as any).from("leads");const{error}=await leads.insert({nome:d.nome,telefone:d.telefone||null,email:d.email||null,origem:d.origem||null,plano_interesse:d.planoInteresse||null,observacoes:d.observacoes||null,proxima_acao_em:d.proximaAcaoEm||null,urgente:d.urgente??false,etapa,fluxo_followup:flow,followup_inicio_em:flow?now:null,ultimo_followup_enviado_dia:null});if(error)return{success:false,message:`Erro ao cadastrar lead: ${error.message}`};revalidatePath("/leads");revalidatePath("/clara");return{success:true,message:"Lead cadastrado."};}
-export async function updateLeadAction(id:string,input:Partial<LeadInput>):Promise<ActionResult>{await assertAdmin();if(!z.string().uuid().safeParse(id).success)return{success:false,message:"Lead inválido."};const parsed=leadSchema.partial().safeParse(input);if(!parsed.success)return{success:false,message:parsed.error.issues[0]?.message??"Dados inválidos."};const d=parsed.data,supabase=await createClient(),leads=(supabase as any).from("leads");const patch:Record<string,unknown>={...(d.nome!==undefined?{nome:d.nome}:{}),...(d.telefone!==undefined?{telefone:d.telefone||null}:{}),...(d.email!==undefined?{email:d.email||null}:{}),...(d.origem!==undefined?{origem:d.origem||null}:{}),...(d.planoInteresse!==undefined?{plano_interesse:d.planoInteresse||null}:{}),...(d.observacoes!==undefined?{observacoes:d.observacoes||null}:{}),...(d.proximaAcaoEm!==undefined?{proxima_acao_em:d.proximaAcaoEm}:{}),...(d.urgente!==undefined?{urgente:d.urgente}:{}),...(d.etapa!==undefined?{etapa:d.etapa}:{}),updated_at:new Date().toISOString()};if(d.etapa!==undefined){const flow=followupForStage(d.etapa);patch.fluxo_followup=flow;if(d.etapa==="04_lead_d2"||d.etapa==="10_proposta_d1"){patch.followup_inicio_em=new Date().toISOString();patch.ultimo_followup_enviado_dia=null;patch.ultimo_followup_enviado_em=null;}}const{error}=await leads.update(patch).eq("id",id);if(error)return{success:false,message:`Erro ao atualizar lead: ${error.message}`};revalidatePath("/leads");revalidatePath("/clara");return{success:true,message:"Lead atualizado."};}
-export async function registrarFollowupEnviadoAction(id:string,dia:number):Promise<ActionResult>{await assertAdmin();const supabase=await createClient(),db=supabase as any,leads=db.from("leads"),agendados=db.from("lead_followups_agendados");const{data:lead,error:readError}=await leads.select("fluxo_followup").eq("id",id).single();if(readError||!lead)return{success:false,message:"Lead não encontrado."};const now=new Date().toISOString();await agendados.update({status:"enviado",enviado_em:now}).eq("lead_id",id).eq("dia",dia).eq("status","pendente");const nextLead:Record<number,string>={2:"05_lead_d4",4:"06_lead_d8",8:"07_lead_d14",14:"08_lead_d21",21:"09_lead_d30",30:"15_nao_respondeu"};const nextProposal:Record<number,string>={1:"11_proposta_d3",3:"12_proposta_d6",6:"13_proposta_d10",10:"14_interessado_proximo_mes"};const next=lead.fluxo_followup==="lead"?nextLead[dia]:nextProposal[dia];const final=(lead.fluxo_followup==="lead"&&dia===30)||(lead.fluxo_followup==="proposta"&&dia===10);const{error}=await leads.update({ultimo_followup_enviado_dia:dia,ultimo_followup_enviado_em:now,updated_at:now,...(next?{etapa:next}:{}),...(final?{fluxo_followup:null}:{})}).eq("id",id);if(error)return{success:false,message:`Erro ao registrar follow-up: ${error.message}`};revalidatePath("/leads");revalidatePath("/clara");return{success:true,message:"Follow-up registrado e lead avançado."};}
-export async function deleteLeadAction(id:string):Promise<ActionResult>{await assertAdmin();const supabase=await createClient();const{error}=await (supabase as any).from("leads").delete().eq("id",id);if(error)return{success:false,message:`Erro ao excluir lead: ${error.message}`};revalidatePath("/leads");revalidatePath("/clara");return{success:true,message:"Lead excluído."};}
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { assertAdmin } from "@/lib/supabase/assert-admin";
+import { createClient } from "@/lib/supabase/server";
+import { LEAD_STAGES } from "@/lib/leads/stages";
+import type { LeadFollowupFlow } from "@/lib/leads/followups";
+import type { ActionResult } from "@/services/pacientes.actions";
+
+const keys=LEAD_STAGES.map(i=>i.key) as [string,...string[]];
+const leadSchema=z.object({
+  nome:z.string().trim().min(2,"Informe o nome do lead.").max(120),
+  telefone:z.string().trim().max(30).nullable().optional(),
+  email:z.union([z.literal(""),z.string().email("E-mail inválido.")]).nullable().optional(),
+  origem:z.string().trim().min(1,"Informe a origem do lead.").max(80),
+  origemDetalhe:z.string().trim().max(120).nullable().optional(),
+  campanha:z.string().trim().max(120).nullable().optional(),
+  planoInteresse:z.string().trim().max(80).nullable().optional(),
+  observacoes:z.string().trim().max(3000).nullable().optional(),
+  proximaAcaoEm:z.string().datetime().nullable().optional(),
+  urgente:z.boolean().optional(),
+  etapa:z.enum(keys).optional()
+});
+export type LeadInput=z.input<typeof leadSchema>;
+
+function followupForStage(etapa?:string){
+  if(etapa?.startsWith("04_lead_")||etapa?.startsWith("05_lead_")||etapa?.startsWith("06_lead_")||etapa?.startsWith("07_lead_")||etapa?.startsWith("08_lead_")||etapa?.startsWith("09_lead_"))return"lead" as LeadFollowupFlow;
+  if(etapa?.startsWith("10_proposta_")||etapa?.startsWith("11_proposta_")||etapa?.startsWith("12_proposta_")||etapa?.startsWith("13_proposta_"))return"proposta" as LeadFollowupFlow;
+  return null;
+}
+
+export async function createLeadAction(input:LeadInput):Promise<ActionResult>{
+  await assertAdmin();
+  const parsed=leadSchema.safeParse(input);
+  if(!parsed.success)return{success:false,message:parsed.error.issues[0]?.message??"Dados inválidos."};
+  const d=parsed.data,etapa=d.etapa??"01_lead_recebido",flow=followupForStage(etapa),now=new Date().toISOString(),supabase=await createClient(),leads=(supabase as any).from("leads");
+  const{error}=await leads.insert({
+    nome:d.nome,
+    telefone:d.telefone||null,
+    email:d.email||null,
+    origem:d.origem,
+    origem_detalhe:d.origemDetalhe||null,
+    campanha:d.campanha||null,
+    plano_interesse:d.planoInteresse||null,
+    observacoes:d.observacoes||null,
+    proxima_acao_em:d.proximaAcaoEm||null,
+    urgente:d.urgente??false,
+    etapa,
+    convertido_em:etapa==="16_convertido"?now:null,
+    fluxo_followup:flow,
+    followup_inicio_em:flow?now:null,
+    ultimo_followup_enviado_dia:null
+  });
+  if(error)return{success:false,message:`Erro ao cadastrar lead: ${error.message}`};
+  revalidatePath("/leads");revalidatePath("/clara");
+  return{success:true,message:"Lead cadastrado."};
+}
+
+export async function updateLeadAction(id:string,input:Partial<LeadInput>):Promise<ActionResult>{
+  await assertAdmin();
+  if(!z.string().uuid().safeParse(id).success)return{success:false,message:"Lead inválido."};
+  const parsed=leadSchema.partial().safeParse(input);
+  if(!parsed.success)return{success:false,message:parsed.error.issues[0]?.message??"Dados inválidos."};
+  const d=parsed.data,supabase=await createClient(),leads=(supabase as any).from("leads"),now=new Date().toISOString();
+  const patch:Record<string,unknown>={
+    ...(d.nome!==undefined?{nome:d.nome}:{}),
+    ...(d.telefone!==undefined?{telefone:d.telefone||null}:{}),
+    ...(d.email!==undefined?{email:d.email||null}:{}),
+    ...(d.origem!==undefined?{origem:d.origem}:{}),
+    ...(d.origemDetalhe!==undefined?{origem_detalhe:d.origemDetalhe||null}:{}),
+    ...(d.campanha!==undefined?{campanha:d.campanha||null}:{}),
+    ...(d.planoInteresse!==undefined?{plano_interesse:d.planoInteresse||null}:{}),
+    ...(d.observacoes!==undefined?{observacoes:d.observacoes||null}:{}),
+    ...(d.proximaAcaoEm!==undefined?{proxima_acao_em:d.proximaAcaoEm}:{}),
+    ...(d.urgente!==undefined?{urgente:d.urgente}:{}),
+    ...(d.etapa!==undefined?{etapa:d.etapa}:{}),
+    updated_at:now
+  };
+  if(d.etapa!==undefined){
+    const flow=followupForStage(d.etapa);
+    patch.fluxo_followup=flow;
+    patch.convertido_em=d.etapa==="16_convertido"?now:null;
+    if(d.etapa==="04_lead_d2"||d.etapa==="10_proposta_d1"){
+      patch.followup_inicio_em=now;
+      patch.ultimo_followup_enviado_dia=null;
+      patch.ultimo_followup_enviado_em=null;
+    }
+  }
+  const{error}=await leads.update(patch).eq("id",id);
+  if(error)return{success:false,message:`Erro ao atualizar lead: ${error.message}`};
+  revalidatePath("/leads");revalidatePath("/clara");
+  return{success:true,message:"Lead atualizado."};
+}
+
+export async function registrarFollowupEnviadoAction(id:string,dia:number):Promise<ActionResult>{
+  await assertAdmin();
+  const supabase=await createClient(),db=supabase as any,leads=db.from("leads"),agendados=db.from("lead_followups_agendados");
+  const{data:lead,error:readError}=await leads.select("fluxo_followup").eq("id",id).single();
+  if(readError||!lead)return{success:false,message:"Lead não encontrado."};
+  const now=new Date().toISOString();
+  const {error:scheduleError}=await agendados.update({status:"enviado",enviado_em:now}).eq("lead_id",id).eq("dia",dia).eq("status","pendente");
+  if(scheduleError)return{success:false,message:`Erro ao concluir follow-up: ${scheduleError.message}`};
+  const nextLead:Record<number,string>={2:"05_lead_d4",4:"06_lead_d8",8:"07_lead_d14",14:"08_lead_d21",21:"09_lead_d30",30:"15_nao_respondeu"};
+  const nextProposal:Record<number,string>={1:"11_proposta_d3",3:"12_proposta_d6",6:"13_proposta_d10",10:"14_interessado_proximo_mes"};
+  const next=lead.fluxo_followup==="lead"?nextLead[dia]:nextProposal[dia];
+  const final=(lead.fluxo_followup==="lead"&&dia===30)||(lead.fluxo_followup==="proposta"&&dia===10);
+  const{error}=await leads.update({ultimo_followup_enviado_dia:dia,ultimo_followup_enviado_em:now,proxima_acao_em:null,updated_at:now,...(next?{etapa:next}:{}),...(final?{fluxo_followup:null}:{})}).eq("id",id);
+  if(error)return{success:false,message:`Erro ao registrar follow-up: ${error.message}`};
+  revalidatePath("/leads");revalidatePath("/clara");
+  return{success:true,message:"Follow-up concluído. Kanban e próximo follow-up atualizados."};
+}
+
+export async function deleteLeadAction(id:string):Promise<ActionResult>{
+  await assertAdmin();
+  const supabase=await createClient();
+  const{error}=await (supabase as any).from("leads").delete().eq("id",id);
+  if(error)return{success:false,message:`Erro ao excluir lead: ${error.message}`};
+  revalidatePath("/leads");revalidatePath("/clara");
+  return{success:true,message:"Lead excluído."};
+}
