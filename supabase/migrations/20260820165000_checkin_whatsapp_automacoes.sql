@@ -4,14 +4,20 @@ create table if not exists public.formulario_automacoes (
   nome text not null,
   publico text not null default 'ativos' check (publico in ('todos', 'ativos', 'selecionados')),
   paciente_ids uuid[] not null default '{}',
+  frequencia_tipo text not null default 'intervalo' check (frequencia_tipo in ('intervalo', 'semanal', 'mensal')),
   recorrencia_dias integer not null default 15 check (recorrencia_dias > 0),
+  dia_semana smallint check (dia_semana is null or dia_semana between 0 and 6),
+  dia_mes smallint check (dia_mes is null or dia_mes between 1 and 28),
+  prazo_resposta_dias integer not null default 3 check (prazo_resposta_dias between 1 and 30),
   primeira_execucao_em timestamptz not null,
   proximo_disparo_em timestamptz not null,
   ultimo_disparo_em timestamptz,
   ativo boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (publico <> 'selecionados' or cardinality(paciente_ids) > 0)
+  check (publico <> 'selecionados' or cardinality(paciente_ids) > 0),
+  check (frequencia_tipo <> 'semanal' or dia_semana is not null),
+  check (frequencia_tipo <> 'mensal' or dia_mes is not null)
 );
 
 alter table public.formulario_automacoes enable row level security;
