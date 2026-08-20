@@ -6,7 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Check, Moon, Play, RotateCcw, Sun, Video } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
-import ViniciusEvolution from "./ViniciusEvolution";
+import WorkoutEvolution from "./WorkoutEvolution";
 
 type Workout = any;
 type Exercise = any;
@@ -18,6 +18,7 @@ type ProgressData = {
   activeWorkoutId?: string | null;
   exerciseState?: Record<string, ExerciseState>;
   sessions?: Record<string, SessionState>;
+  updatedAt?: number;
 };
 
 const EMPTY_SESSION: SessionState = { started: false, running: false, elapsedSec: 0, timerAnchor: null, rest: null, obs: "" };
@@ -51,6 +52,7 @@ export default function ViniciusWorkoutDashboardClient({ patientId, patientName 
   const [saveState, setSaveState] = useState<"saved" | "saving" | "pending" | "error">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestProgress = useRef(progress);
+  const storageKey = `nutri-treino-progress:v2:${patientId}`;
 
   useEffect(() => { latestProgress.current = progress; }, [progress]);
 
@@ -75,14 +77,15 @@ export default function ViniciusWorkoutDashboardClient({ patientId, patientName 
 
   const updateProgress = useCallback((updater: (current: ProgressData) => ProgressData) => {
     setProgress((current) => {
-      const next = updater(current);
+      const next = { ...updater(current), updatedAt: Date.now() };
       latestProgress.current = next;
+      try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* proteção local é complementar */ }
       if (saveTimer.current) clearTimeout(saveTimer.current);
       setSaveState("pending");
       saveTimer.current = setTimeout(() => void saveProgress(latestProgress.current), 550);
       return next;
     });
-  }, [saveProgress]);
+  }, [saveProgress, storageKey]);
 
   useEffect(() => {
     async function load() {
@@ -107,7 +110,12 @@ export default function ViniciusWorkoutDashboardClient({ patientId, patientName 
         setLoading(false);
         return;
       }
-      const stored: ProgressData = progressRow?.dados || {};
+      const cloudStored: ProgressData = progressRow?.dados || {};
+      let stored = cloudStored;
+      try {
+        const localStored = JSON.parse(window.localStorage.getItem(storageKey) || "null") as ProgressData | null;
+        if (localStored && Number(localStored.updatedAt || 0) > Number(cloudStored.updatedAt || 0)) stored = localStored;
+      } catch { /* usa a versão da nuvem */ }
       const validActive = ws.some((w: any) => w.id === stored.activeWorkoutId) ? stored.activeWorkoutId : ws[0]?.id || null;
       setWorkouts(ws);
       setExercises(exerciseData || []);
@@ -116,19 +124,31 @@ export default function ViniciusWorkoutDashboardClient({ patientId, patientName 
       setLoading(false);
     }
     void load();
-  }, [patientId, supabase]);
+  }, [patientId, storageKey, supabase]);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 500);
-    const sync = () => setClock(Date.now());
+    const flush = () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+      void saveProgress(latestProgress.current);
+    };
+    const sync = () => {
+      setClock(Date.now());
+      if (document.visibilityState === "hidden") flush();
+    };
     document.addEventListener("visibilitychange", sync);
     window.addEventListener("pageshow", sync);
+    window.addEventListener("focus", sync);
+    window.addEventListener("pagehide", flush);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", sync);
       window.removeEventListener("pageshow", sync);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("pagehide", flush);
     };
-  }, []);
+  }, [saveProgress]);
 
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -362,7 +382,7 @@ export default function ViniciusWorkoutDashboardClient({ patientId, patientName 
             </div>
           </>
         ) : (
-          <ViniciusEvolution history={history} workouts={workouts} dark={dark} />
+          <WorkoutEvolution history={history} workouts={workouts} dark={dark} />
         )}
       </div>
 
