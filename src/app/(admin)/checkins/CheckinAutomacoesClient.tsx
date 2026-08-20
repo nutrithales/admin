@@ -14,11 +14,21 @@ function publicoLabel(value: CheckinAutomacao["publico"], selected: number) {
   return `${selected} paciente${selected === 1 ? "" : "s"} selecionado${selected === 1 ? "" : "s"}`;
 }
 
+function frequenciaLabel(a: CheckinAutomacao) {
+  if (a.frequencia_tipo === "semanal") {
+    const nomes = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+    return `Toda ${nomes[a.dia_semana ?? 1]}`;
+  }
+  if (a.frequencia_tipo === "mensal") return `Todo dia ${a.dia_mes}`;
+  return `A cada ${a.recorrencia_dias} dias`;
+}
+
 export function CheckinAutomacoesClient({ formularios, pacientes, automacoes }: { formularios: FormularioResumo[]; pacientes: Paciente[]; automacoes: CheckinAutomacao[] }) {
   const checkins = useMemo(() => formularios.filter((f) => f.tipo === "checkin" && f.ativo), [formularios]);
   const [formularioId, setFormularioId] = useState(checkins[0]?.id ?? "");
   const formulario = checkins.find((f) => f.id === formularioId);
   const [publico, setPublico] = useState<"ativos" | "todos" | "selecionados">("ativos");
+  const [frequenciaTipo, setFrequenciaTipo] = useState<"intervalo" | "semanal" | "mensal">("intervalo");
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [busca, setBusca] = useState("");
   const [resultado, setResultado] = useState<{ success: boolean; message: string } | null>(null);
@@ -29,6 +39,7 @@ export function CheckinAutomacoesClient({ formularios, pacientes, automacoes }: 
     const data = new FormData(form);
     data.set("formulario_id", formularioId);
     data.set("publico", publico);
+    data.set("frequencia_tipo", frequenciaTipo);
     selecionados.forEach((id) => data.append("paciente_ids", id));
     setResultado(null);
     startTransition(async () => setResultado(await criarCheckinAutomacaoAction(data)));
@@ -49,7 +60,7 @@ export function CheckinAutomacoesClient({ formularios, pacientes, automacoes }: 
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Disparo automático</p>
           <h2 className="mt-1 text-xl font-bold">Agenda de check-ins pelo WhatsApp</h2>
-          <p className="mt-1 text-sm text-muted">Defina a primeira data, a recorrência e o público. A lista de pacientes é recalculada em cada disparo.</p>
+          <p className="mt-1 text-sm text-muted">Defina o calendário, o prazo de resposta e o público. A lista de pacientes é recalculada em cada disparo.</p>
         </div>
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand"><CalendarClock size={20} /></div>
       </div>
@@ -63,14 +74,56 @@ export function CheckinAutomacoesClient({ formularios, pacientes, automacoes }: 
             {checkins.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
           </select>
         </label>
+
+        <div className="lg:col-span-2">
+          <p className="mb-2 text-sm font-semibold">Tipo de programação</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              ["intervalo", "Intervalo", "Ex.: a cada 15 dias"],
+              ["semanal", "Dia fixo da semana", "Ex.: toda sexta-feira"],
+              ["mensal", "Dia fixo do mês", "Ex.: todo dia 5"],
+            ].map(([value, label, help]) => (
+              <label key={value} className={`cursor-pointer rounded-2xl border p-4 ${frequenciaTipo === value ? "border-brand bg-brand/5" : "border-border bg-background"}`}>
+                <input type="radio" checked={frequenciaTipo === value} onChange={() => setFrequenciaTipo(value as typeof frequenciaTipo)} className="mr-2 accent-[var(--color-brand)]" />
+                <span className="font-semibold">{label}</span>
+                <span className="mt-1 block text-xs leading-5 text-muted">{help}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <label className="space-y-2 text-sm font-semibold">Primeiro disparo
           <span className="flex w-full min-w-0 rounded-xl border border-border bg-background px-3 py-3">
             <input name="primeira_execucao_em" type="datetime-local" required className="block w-full min-w-0 border-0 bg-transparent p-0 font-normal outline-none" />
           </span>
         </label>
-        <label className="space-y-2 text-sm font-semibold">Repetir a cada
+
+        {frequenciaTipo === "intervalo" && (
+          <label className="space-y-2 text-sm font-semibold">Repetir a cada
+            <div className="flex items-center gap-2">
+              <input name="recorrencia_dias" type="number" min={1} max={365} defaultValue={formulario?.recorrencia_dias ?? 15} required className="w-full rounded-xl border border-border bg-background px-3 py-3 font-normal outline-none focus:border-brand" />
+              <span className="text-sm text-muted">dias</span>
+            </div>
+          </label>
+        )}
+
+        {frequenciaTipo === "semanal" && (
+          <label className="space-y-2 text-sm font-semibold">Dia fixo da semana
+            <select name="dia_semana" defaultValue="5" className="w-full rounded-xl border border-border bg-background px-3 py-3 font-normal outline-none focus:border-brand">
+              <option value="1">Segunda-feira</option><option value="2">Terça-feira</option><option value="3">Quarta-feira</option><option value="4">Quinta-feira</option><option value="5">Sexta-feira</option><option value="6">Sábado</option><option value="0">Domingo</option>
+            </select>
+          </label>
+        )}
+
+        {frequenciaTipo === "mensal" && (
+          <label className="space-y-2 text-sm font-semibold">Dia fixo do mês
+            <input name="dia_mes" type="number" min={1} max={28} defaultValue={5} className="w-full rounded-xl border border-border bg-background px-3 py-3 font-normal outline-none focus:border-brand" />
+          </label>
+        )}
+
+        <label className="space-y-2 text-sm font-semibold">Prazo final para resposta
           <div className="flex items-center gap-2">
-            <input name="recorrencia_dias" type="number" min={1} max={365} defaultValue={formulario?.recorrencia_dias ?? 15} required className="w-full rounded-xl border border-border bg-background px-3 py-3 font-normal outline-none focus:border-brand" />
+            <input name="prazo_resposta_dias" type="number" min={1} max={30} defaultValue={3} required className="w-full rounded-xl border border-border bg-background px-3 py-3 font-normal outline-none focus:border-brand" />
             <span className="text-sm text-muted">dias</span>
           </div>
         </label>
@@ -84,7 +137,7 @@ export function CheckinAutomacoesClient({ formularios, pacientes, automacoes }: 
               ["selecionados", "Selecionar pacientes", "Escolha manualmente quem participa"],
             ].map(([value, label, help]) => (
               <label key={value} className={`cursor-pointer rounded-2xl border p-4 ${publico === value ? "border-brand bg-brand/5" : "border-border bg-background"}`}>
-                <input type="radio" name="publico_visual" value={value} checked={publico === value} onChange={() => setPublico(value as typeof publico)} className="mr-2 accent-[var(--color-brand)]" />
+                <input type="radio" value={value} checked={publico === value} onChange={() => setPublico(value as typeof publico)} className="mr-2 accent-[var(--color-brand)]" />
                 <span className="font-semibold">{label}</span>
                 <span className="mt-1 block text-xs leading-5 text-muted">{help}</span>
               </label>
@@ -126,7 +179,7 @@ export function CheckinAutomacoesClient({ formularios, pacientes, automacoes }: 
               <div key={a.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{a.nome}</p><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${a.ativo ? "bg-emerald-50 text-emerald-700" : "bg-black/5 text-muted"}`}>{a.ativo ? "Ativa" : "Pausada"}</span></div>
-                  <p className="mt-1 text-xs text-muted">{a.formulario?.nome ?? "Check-in"} · {publicoLabel(a.publico, a.paciente_ids?.length ?? 0)} · a cada {a.recorrencia_dias} dias</p>
+                  <p className="mt-1 text-xs text-muted">{a.formulario?.nome ?? "Check-in"} · {publicoLabel(a.publico, a.paciente_ids?.length ?? 0)} · {frequenciaLabel(a)} · prazo {a.prazo_resposta_dias} dias</p>
                   <p className="mt-1 text-xs text-muted">Próximo disparo: {new Date(a.proximo_disparo_em).toLocaleString("pt-BR")}</p>
                 </div>
                 <div className="flex gap-2">
