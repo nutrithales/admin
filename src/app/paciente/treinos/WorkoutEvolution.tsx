@@ -103,7 +103,7 @@ export default function WorkoutEvolution({ history, workouts, dark }: Props) {
       }
     }
 
-    const mostExercise = [...exerciseCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+    const mostExercise = [...exerciseCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "Sem registro";
     const trainingDays = new Set(completed.map((item) => dateKey(item.iniciado_em)));
     const orderedDays = [...trainingDays].map((key) => startOfDay(`${key}T12:00:00`)).sort((a, b) => a.getTime() - b.getTime());
 
@@ -244,7 +244,7 @@ export default function WorkoutEvolution({ history, workouts, dark }: Props) {
       </section>
 
       <section className="mt-8 rounded-[28px] bg-[#163F2A] px-6 py-7 text-white">
-        <p className="text-xl font-black italic">“Disciplina supera motivação.”</p>
+        <p className="text-xl font-black italic">“O que faz diferença é voltar para o próximo treino.”</p>
       </section>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -324,5 +324,4 @@ export default function WorkoutEvolution({ history, workouts, dark }: Props) {
     </>
   );
 }
-
 
