@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false }, { status: 404 });
   }
 
-  const admin = createAdminClient();
+  // Rota temporária e descartável: usamos o client admin já tipado no app,
+  // mas afrouxamos a inferência aqui para clonar linhas genéricas de tabelas.
+  const admin: any = createAdminClient();
 
   const { data: existingPatient } = await admin
     .from("pacientes")
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
   }
 
   let exercisesCopied = 0;
-  for (const source of sourcePrograms) {
+  for (const source of sourcePrograms as any[]) {
     const { data: newProgram, error: programInsertError } = await admin
       .from("treino_programas")
       .insert({
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (sourceExercises?.length) {
-      const rows = sourceExercises.map((exercise) => ({
+      const rows = (sourceExercises as any[]).map((exercise) => ({
         treino_id: newProgram.id,
         bloco_ordem: exercise.bloco_ordem,
         bloco_nome: exercise.bloco_nome,
