@@ -276,7 +276,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
   function toggleAll(ex: Exercise) {
     const state = getExerciseState(ex);
     const mark = !state.sets.every(Boolean);
-    updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, sets: state.sets.map(() => mark) } }));
+    updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, sets: state.sets.map(() => mark) } } }));
     if (mark) startRest(ex);
   }
 
