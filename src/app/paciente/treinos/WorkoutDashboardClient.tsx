@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Check, Moon, Play, RotateCcw, Sun, Video } from "lucide-react";
+import { ArrowLeft, Check, Moon, Pause, Play, RotateCcw, Sun, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
 import WorkoutEvolution from "./WorkoutEvolution";
@@ -22,6 +22,7 @@ type ProgressData = {
 };
 
 const EMPTY_SESSION: SessionState = { started: false, running: false, elapsedSec: 0, timerAnchor: null, rest: null, obs: "" };
+const STALE_SESSION_MS = 12 * 60 * 60 * 1000;
 
 function fmtTime(value: number) {
   const sec = Math.max(0, Math.floor(value || 0));
@@ -38,6 +39,15 @@ function getRepsNumber(value: string | null | undefined) {
   return match ? Number(match[0]) : 0;
 }
 
+function startOfWeek(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
 export default function WorkoutDashboardClient({ patientId, patientName }: { patientId: string; patientName: string }) {
   const supabase = useMemo(() => createClient() as any, []);
   const [loading, setLoading] = useState(true);
@@ -45,6 +55,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [history, setHistory] = useState<Execution[]>([]);
+  const [weeklyGoal, setWeeklyGoal] = useState(3);
   const [progress, setProgress] = useState<ProgressData>({ exerciseState: {}, sessions: {} });
   const [tab, setTab] = useState<"treino" | "evolucao">("treino");
   const [dark, setDark] = useState(true);
@@ -66,6 +77,12 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
   const session = activeWorkout ? (progress.sessions?.[activeWorkout.id] || EMPTY_SESSION) : EMPTY_SESSION;
 
+  const weeklyCompleted = useMemo(() => {
+    const weekStart = startOfWeek();
+    return history.filter((h) => new Date(h.finalizado_em || h.iniciado_em) >= weekStart).length;
+  }, [history]);
+  const weeklyPct = Math.min(100, Math.round((weeklyCompleted / Math.max(1, weeklyGoal)) * 100));
+
   const saveProgress = useCallback(async (data: ProgressData) => {
     setSaveState("saving");
     const { error: saveError } = await supabase.from("treino_progresso").upsert(
@@ -79,7 +96,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     setProgress((current) => {
       const next = { ...updater(current), updatedAt: Date.now() };
       latestProgress.current = next;
-      try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* proteção local é complementar */ }
+      try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* proteção local complementar */ }
       if (saveTimer.current) clearTimeout(saveTimer.current);
       setSaveState("pending");
       saveTimer.current = setTimeout(() => void saveProgress(latestProgress.current), 550);
@@ -90,10 +107,11 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [{ data: workoutData, error: workoutError }, { data: progressRow }, { data: historyData }] = await Promise.all([
+      const [{ data: workoutData, error: workoutError }, { data: progressRow }, { data: historyData }, { data: patientData }] = await Promise.all([
         supabase.from("treino_programas").select("*").eq("paciente_id", patientId).eq("status", "ativo").order("ordem"),
         supabase.from("treino_progresso").select("dados").eq("paciente_id", patientId).maybeSingle(),
         supabase.from("treino_execucoes").select("*").eq("paciente_id", patientId).eq("concluido", true).order("iniciado_em", { ascending: false }).limit(180),
+        supabase.from("pacientes").select("treino_frequencia_semanal").eq("id", patientId).maybeSingle(),
       ]);
       if (workoutError) {
         setError("Não foi possível carregar seus treinos agora.");
@@ -115,12 +133,25 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
       try {
         const localStored = JSON.parse(window.localStorage.getItem(storageKey) || "null") as ProgressData | null;
         if (localStored && Number(localStored.updatedAt || 0) > Number(cloudStored.updatedAt || 0)) stored = localStored;
-      } catch { /* usa a versão da nuvem */ }
+      } catch { /* usa versão da nuvem */ }
+
+      if (stored.updatedAt && Date.now() - Number(stored.updatedAt) > STALE_SESSION_MS) {
+        const sessions = { ...(stored.sessions || {}) };
+        for (const key of Object.keys(sessions)) {
+          if (sessions[key]?.started) sessions[key] = { ...EMPTY_SESSION };
+        }
+        stored = { ...stored, sessions, updatedAt: Date.now() };
+      }
+
       const validActive = ws.some((w: any) => w.id === stored.activeWorkoutId) ? stored.activeWorkoutId : ws[0]?.id || null;
+      const fallbackGoal = Number(ws.find((w: any) => Number(w.frequencia_semanal) > 0)?.frequencia_semanal || 3);
+      setWeeklyGoal(Math.max(1, Number(patientData?.treino_frequencia_semanal || fallbackGoal)));
       setWorkouts(ws);
       setExercises(exerciseData || []);
       setHistory(historyData || []);
-      setProgress({ exerciseState: {}, sessions: {}, ...stored, activeWorkoutId: validActive });
+      const loadedProgress = { exerciseState: {}, sessions: {}, ...stored, activeWorkoutId: validActive };
+      setProgress(loadedProgress);
+      latestProgress.current = loadedProgress;
       setLoading(false);
     }
     void load();
@@ -196,14 +227,40 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
   function toggleWorkoutTimer() {
     if (!session.started) {
-      setSession({ started: true, running: true, elapsedSec: 0, timerAnchor: Date.now() });
+      setSession({ started: true, running: true, elapsedSec: 0, timerAnchor: Date.now(), rest: null });
       return;
     }
     if (session.running) setSession({ running: false, elapsedSec: currentElapsed, timerAnchor: null });
     else setSession({ running: true, timerAnchor: Date.now() });
   }
 
+  function restartTimer() {
+    if (!session.started) return;
+    setSession({ running: false, elapsedSec: 0, timerAnchor: null, rest: null });
+  }
+
+  function discardSession() {
+    if (!activeWorkout || !session.started) return;
+    if (!window.confirm("Descartar esta sessão? O tempo e as séries marcadas serão zerados e nada será contabilizado como treino realizado.")) return;
+    const cleared = { ...(progress.exerciseState || {}) };
+    for (const ex of activeExercises) {
+      const st = getExerciseState(ex);
+      cleared[ex.id] = { ...st, sets: st.sets.map(() => false) };
+    }
+    const next: ProgressData = {
+      ...progress,
+      exerciseState: cleared,
+      sessions: { ...progress.sessions, [activeWorkout.id]: { ...EMPTY_SESSION } },
+      updatedAt: Date.now(),
+    };
+    setProgress(next);
+    latestProgress.current = next;
+    try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* proteção local complementar */ }
+    void saveProgress(next);
+  }
+
   function startRest(ex: Exercise) {
+    if (!session.started) return;
     const sec = Math.max(0, Number(ex.descanso_seg || 0));
     if (!sec) return;
     setSession({ rest: { exerciseId: ex.id, label: ex.nome, total: sec, remaining: sec, paused: false, endAt: Date.now() + sec * 1000 } });
@@ -215,7 +272,6 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     nextSets[index] = !nextSets[index];
     updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, sets: nextSets } } }));
     if (nextSets[index]) startRest(ex);
-    if (!session.started) setSession({ started: true, running: true, timerAnchor: Date.now() });
   }
 
   function toggleAll(ex: Exercise) {
@@ -244,6 +300,10 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
   async function finishWorkout() {
     if (!activeWorkout) return;
+    if (!session.started) {
+      window.alert("Inicie o treino antes de concluir. Assim a sessão só é contabilizada quando você realmente começar o treino.");
+      return;
+    }
     if (completion.done < completion.total && !window.confirm("Ainda existem séries não marcadas. Deseja concluir mesmo assim?")) return;
     const duration = Math.max(1, currentElapsed || 1);
     let volume = 0;
@@ -281,6 +341,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
       ...progress,
       exerciseState: cleared,
       sessions: { ...progress.sessions, [activeWorkout.id]: { ...EMPTY_SESSION } },
+      updatedAt: Date.now(),
     };
     setProgress(next);
     latestProgress.current = next;
@@ -319,6 +380,20 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
         {tab === "treino" ? (
           <>
+            <section className={`mb-4 rounded-[26px] border p-5 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[.14em] text-[#19DD7F]">Meta semanal</p>
+                  <p className="mt-1 text-2xl font-black">{weeklyCompleted} de {weeklyGoal} treinos</p>
+                  <p className="mt-1 text-xs opacity-60">Sua meta é individual e reinicia toda segunda-feira.</p>
+                </div>
+                <div className="min-w-[180px] flex-1 sm:max-w-[360px]">
+                  <div className={`h-3 overflow-hidden rounded-full ${dark ? "bg-[#243C30]" : "bg-black/10"}`}><div className="h-full rounded-full bg-[#19DD7F]" style={{ width: `${weeklyPct}%` }} /></div>
+                  <p className="mt-2 text-right text-xs font-black">{weeklyPct}% da meta</p>
+                </div>
+              </div>
+            </section>
+
             <section className={`mb-4 rounded-[26px] border p-5 shadow-2xl ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
               <p className="text-[11px] font-black uppercase tracking-[.14em] text-[#19DD7F]">Treino de hoje</p>
               <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">{activeWorkout.nome}</h1>
@@ -327,9 +402,13 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[.12em] opacity-55">Cronômetro do treino</p>
                   <p className="mt-1 text-3xl font-black tabular-nums">{fmtTime(currentElapsed)}</p>
-                  <p className={`mt-1 text-xs ${saveState === "error" ? "text-red-400" : "opacity-55"}`}>{saveState === "saving" ? "Salvando…" : saveState === "pending" ? "Alterações pendentes" : saveState === "error" ? "Erro ao salvar" : "Salvo automaticamente"}</p>
+                  <p className={`mt-1 text-xs ${saveState === "error" ? "text-red-400" : "opacity-55"}`}>{!session.started ? "Sessão não iniciada" : session.running ? "Treino em andamento" : "Tempo pausado"} · {saveState === "saving" ? "salvando…" : saveState === "pending" ? "alterações pendentes" : saveState === "error" ? "erro ao salvar" : "salvo"}</p>
                 </div>
-                <button onClick={toggleWorkoutTimer} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#19DD7F] px-4 text-sm font-black text-[#04120B]"><Play className="size-4" /> {!session.started ? "Iniciar treino" : session.running ? "Pausar" : "Retomar"}</button>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={toggleWorkoutTimer} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#19DD7F] px-4 text-sm font-black text-[#04120B]">{session.running ? <Pause className="size-4" /> : <Play className="size-4" />} {!session.started ? "Iniciar treino" : session.running ? "Pausar tempo" : "Retomar tempo"}</button>
+                  {session.started ? <button onClick={restartTimer} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-current/15 px-4 text-sm font-black"><RotateCcw className="size-4" /> Zerar tempo</button> : null}
+                  {session.started ? <button onClick={discardSession} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-400/40 px-4 text-sm font-black text-red-400"><X className="size-4" /> Descartar sessão</button> : null}
+                </div>
               </div>
             </section>
 
@@ -343,6 +422,8 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
               <span className="text-[11px] opacity-60">{completion.done}/{completion.total} séries</span>
             </section>
 
+            {!session.started ? <p className="mb-4 rounded-xl border border-current/10 px-4 py-3 text-xs opacity-65">Você pode consultar cargas, vídeos e orientações sem iniciar um treino. O cronômetro só começa quando você tocar em <b>Iniciar treino</b>.</p> : null}
+
             {[...grouped.values()].map((group, gi) => (
               <section key={gi} className="mb-6">
                 <h2 className="mb-3 text-lg font-black">{group[0]?.bloco_nome || "Exercícios"}</h2>
@@ -354,7 +435,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
                       <div className="flex items-start justify-between gap-3 p-4">
                         <div>
                           <h3 className="text-lg font-black">{ex.nome}</h3>
-                          <p className="mt-1 text-xs opacity-60">{Number(ex.series || 0)} séries · {ex.repeticoes || "repetições livres"}{ex.descanso_seg ? ` · ${ex.descanso_seg}s descanso` : ""}</p>
+                          <p className="mt-1 text-xs opacity-60">{Number(ex.series || 0)} séries · {ex.repeticoes || "repetições livres"}{ex.rir ? ` · RIR ${ex.rir}` : ""}{ex.descanso_seg ? ` · ${ex.descanso_seg}s descanso` : ""}</p>
                         </div>
                         <button onClick={() => toggleAll(ex)} className={`grid size-11 shrink-0 place-items-center rounded-full border-2 ${allDone ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{allDone ? <Check className="size-5" /> : null}</button>
                       </div>
@@ -378,7 +459,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
             </section>
             <div className="flex flex-wrap gap-2">
               <button onClick={finishWorkout} className="min-h-11 rounded-xl bg-[#19DD7F] px-4 text-sm font-black text-[#04120B]">Concluir treino</button>
-              <button onClick={() => setSession({ started: true, running: true, elapsedSec: 0, timerAnchor: Date.now(), rest: null })} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-current/15 px-4 text-sm font-black"><RotateCcw className="size-4" /> Reiniciar cronômetro</button>
+              {session.started ? <button onClick={discardSession} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-current/15 px-4 text-sm font-black"><X className="size-4" /> Encerrar sem contabilizar</button> : null}
             </div>
           </>
         ) : (
