@@ -1,17 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import WorkoutDashboardClient from "./WorkoutDashboardClient";
-import ViniciusWorkoutDashboardClient from "./ViniciusWorkoutDashboardClient";
 
 export const metadata = { title: "Dashboard de Treinos | Nutri Thales Rosa" };
-
-function normalizeName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
 
 export default async function PacienteTreinosPage() {
   const supabase = await createClient();
@@ -31,12 +22,5 @@ export default async function PacienteTreinosPage() {
   if (!paciente.treino_liberado) redirect("/paciente");
 
   const patientName = paciente.nome || "Paciente";
-  const normalizedName = normalizeName(patientName);
-  const isViniciusSales = normalizedName.includes("vinicius") && normalizedName.includes("sales");
-
-  if (isViniciusSales) {
-    return <ViniciusWorkoutDashboardClient patientId={paciente.id} patientName={patientName} />;
-  }
-
   return <WorkoutDashboardClient patientId={paciente.id} patientName={patientName} />;
 }
