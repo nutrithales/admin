@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "xwihrxinweeadtcouhoo.supabase.co" },
     ],
   },
+  experimental: {
+    serverActions: {
+      // A área do paciente é acessada pelo domínio público e encaminhada
+      // internamente para admin.nutrithales.com.br. O Next.js bloqueia Server
+      // Actions quando Origin e x-forwarded-host divergem, a menos que o
+      // domínio público esteja explicitamente autorizado.
+      allowedOrigins: ["nutrithales.com.br", "www.nutrithales.com.br"],
+    },
+  },
   // Garante que os .otf da Galano sejam empacotados na função serverless
   // que exporta o PDF (src/lib/pdf/plano-alimentar.tsx lê os arquivos via
   // fs.readFileSync pro React-PDF, e esse acesso via fs não é rastreado
