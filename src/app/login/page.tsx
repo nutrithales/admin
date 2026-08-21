@@ -4,7 +4,6 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Lock, Mail, ShieldAlert } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -27,7 +26,7 @@ function LoginForm() {
       ? "Esta conta não tem acesso ao painel administrativo."
       : urlError === "recovery-link"
         ? "O link de recuperação é inválido ou expirou. Solicite um novo link."
-      : null,
+        : null,
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -35,18 +34,27 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = (await response.json()) as { message?: string };
 
-    if (signInError) {
-      setError("E-mail ou senha inválidos.");
+      if (!response.ok) {
+        setError(result.message || "Não foi possível entrar no painel.");
+        return;
+      }
+
+      // A full navigation guarantees that the auth cookie written by Supabase
+      // is available before the protected dashboard routes are requested.
+      window.location.assign(redirectTo.startsWith("/") ? redirectTo : "/");
+    } catch {
+      setError("Não foi possível conectar ao serviço de autenticação. Tente novamente.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // A full navigation guarantees that the auth cookie written by Supabase
-    // is available before the protected dashboard routes are requested.
-    window.location.assign(redirectTo.startsWith("/") ? redirectTo : "/");
   }
 
   async function handleRecovery() {
