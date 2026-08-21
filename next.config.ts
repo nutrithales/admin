@@ -6,6 +6,21 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "xwihrxinweeadtcouhoo.supabase.co" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/paciente/materiais",
+        has: [
+          {
+            type: "query",
+            key: "arquivo",
+            value: "(?<id>[0-9a-fA-F-]{36})",
+          },
+        ],
+        destination: "/paciente/materiais/:id/arquivo",
+      },
+    ];
+  },
   experimental: {
     serverActions: {
       // A área do paciente é acessada pelo domínio público e encaminhada
