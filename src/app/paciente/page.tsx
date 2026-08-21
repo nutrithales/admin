@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   Bolt,
+  BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -66,6 +67,7 @@ export default async function PacienteDashboardPage() {
     { data: ultimoCheckin },
     { data: preConsulta },
     { data: paginas },
+    { count: bibliotecaAtiva },
   ] = await Promise.all([
     sb.from("pacientes").select("nome,plano,consultas_incluidas,consultas_realizadas_iniciais,treino_liberado").eq("auth_id", user.id).maybeSingle(),
     getPlanoAlimentarPacienteAtual(),
@@ -75,6 +77,7 @@ export default async function PacienteDashboardPage() {
     sb.from("checkins").select("semana,status,respondido_em").eq("auth_id", user.id).order("semana", { ascending: false }).limit(1).maybeSingle(),
     sb.from("formularios_pre_consulta").select("id,status,solicitado_em").eq("auth_id", user.id).eq("status", "pendente").order("solicitado_em", { ascending: false }).limit(1).maybeSingle(),
     sb.from("paginas_paciente").select("titulo,url_pagina,icone,ordem").eq("user_id", user.id).eq("ativo", true).order("ordem", { ascending: true }),
+    sb.from("biblioteca").select("id", { count: "exact", head: true }).eq("ativo", true),
   ]);
 
   if (!paciente) redirect("/paciente/login?error=not-patient");
@@ -84,6 +87,7 @@ export default async function PacienteDashboardPage() {
   const suplementacaoLiberada = Boolean(suplementacao);
   const preConsultaPendente = Boolean(preConsulta);
   const totalSuplementos = Array.isArray(suplementacao?.itens) ? suplementacao.itens.length : 0;
+  const totalMateriais = Math.max(0, Number(bibliotecaAtiva) || 0);
   const consultaFormatada = formatConsulta(proximaConsulta?.data ?? null);
   const consultaMeta = [proximaConsulta?.tipo, proximaConsulta?.modalidade].filter(Boolean).join(" · ");
 
@@ -139,6 +143,17 @@ export default async function PacienteDashboardPage() {
           title: "Pré-consulta",
           active: true,
           status: "Pendente",
+          external: false,
+        }]
+      : []),
+    ...(totalMateriais > 0
+      ? [{
+          key: "materiais-extras",
+          href: "/paciente/materiais",
+          icon: <BookOpen className="size-[18px]" />,
+          title: "Materiais extras",
+          active: true,
+          status: `${totalMateriais} ${totalMateriais === 1 ? "material" : "materiais"}`,
           external: false,
         }]
       : []),
