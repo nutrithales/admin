@@ -227,7 +227,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
   function toggleWorkoutTimer() {
     if (!session.started) {
-      setSession({ started: true, running: true, elapsedSec: 0, timerAnchor: Date.now(), rest: null });
+      setSession({ started: true, running: true, elapsedSec: 0, timerAnchor: Date.now() });
       return;
     }
     if (session.running) setSession({ running: false, elapsedSec: currentElapsed, timerAnchor: null });
@@ -236,7 +236,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
   function restartTimer() {
     if (!session.started) return;
-    setSession({ running: false, elapsedSec: 0, timerAnchor: null, rest: null });
+    setSession({ running: false, elapsedSec: 0, timerAnchor: null });
   }
 
   function discardSession() {
@@ -260,7 +260,6 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
   }
 
   function startRest(ex: Exercise) {
-    if (!session.started) return;
     const sec = Math.max(0, Number(ex.descanso_seg || 0));
     if (!sec) return;
     setSession({ rest: { exerciseId: ex.id, label: ex.nome, total: sec, remaining: sec, paused: false, endAt: Date.now() + sec * 1000 } });
@@ -277,7 +276,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
   function toggleAll(ex: Exercise) {
     const state = getExerciseState(ex);
     const mark = !state.sets.every(Boolean);
-    updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, sets: state.sets.map(() => mark) } } }));
+    updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, sets: state.sets.map(() => mark) } }));
     if (mark) startRest(ex);
   }
 
@@ -422,7 +421,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
               <span className="text-[11px] opacity-60">{completion.done}/{completion.total} séries</span>
             </section>
 
-            {!session.started ? <p className="mb-4 rounded-xl border border-current/10 px-4 py-3 text-xs opacity-65">Você pode consultar cargas, vídeos e orientações sem iniciar um treino. O cronômetro só começa quando você tocar em <b>Iniciar treino</b>.</p> : null}
+            {!session.started ? <p className="mb-4 rounded-xl border border-current/10 px-4 py-3 text-xs opacity-65">Você pode consultar cargas, vídeos e orientações sem iniciar um treino. O cronômetro geral só começa quando você tocar em <b>Iniciar treino</b>. O cronômetro de intervalo pode ser usado separadamente e não abre uma sessão de treino.</p> : null}
 
             {[...grouped.values()].map((group, gi) => (
               <section key={gi} className="mb-6">
@@ -431,6 +430,7 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
                   {group.map((ex) => {
                     const st = getExerciseState(ex);
                     const allDone = st.sets.length > 0 && st.sets.every(Boolean);
+                    const restActive = currentRest?.exerciseId === ex.id;
                     return <article key={ex.id} className={`overflow-hidden rounded-[20px] border ${allDone ? "border-[#19DD7F]" : dark ? "border-[#294337]" : "border-black/10"} ${dark ? "bg-[#15251D]" : "bg-white"}`}>
                       <div className="flex items-start justify-between gap-3 p-4">
                         <div>
@@ -440,7 +440,10 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
                         <button onClick={() => toggleAll(ex)} className={`grid size-11 shrink-0 place-items-center rounded-full border-2 ${allDone ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{allDone ? <Check className="size-5" /> : null}</button>
                       </div>
                       <div className="px-4 pb-4">
-                        <div className="mb-3 flex flex-wrap gap-2">{st.sets.map((done, i) => <button key={i} onClick={() => toggleSet(ex, i)} className={`size-11 rounded-xl border font-black ${done ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{i + 1}</button>)}</div>
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          {st.sets.map((done, i) => <button key={i} onClick={() => toggleSet(ex, i)} className={`size-11 rounded-xl border font-black ${done ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{i + 1}</button>)}
+                          {Number(ex.descanso_seg || 0) > 0 ? <button onClick={() => startRest(ex)} className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-black ${restActive ? "border-[#19DD7F] bg-[#19DD7F]/10 text-[#19DD7F]" : "border-current/20"}`}><Play className="size-3.5" /> {restActive ? `Intervalo ${fmtTime(currentRest?.remaining || 0)}` : `Intervalo ${ex.descanso_seg}s`}</button> : null}
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
                           <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Carga<input value={st.load} onChange={(e) => setExerciseField(ex, "load", e.target.value)} inputMode="decimal" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.carga_inicial ? `${ex.carga_inicial} kg` : "kg"} /></label>
                           <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Repetições realizadas<input value={st.reps} onChange={(e) => setExerciseField(ex, "reps", e.target.value)} inputMode="numeric" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.repeticoes || "reps"} /></label>
