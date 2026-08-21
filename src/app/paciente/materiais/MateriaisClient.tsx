@@ -76,7 +76,7 @@ export function MateriaisClient({ conteudos }: { conteudos: Conteudo[] }) {
               return (
                 <a
                   key={item.id}
-                  href={`/paciente/materiais/${item.id}/arquivo`}
+                  href={`/paciente/materiais?arquivo=${encodeURIComponent(item.id)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full rounded-[20px] border border-black/[0.055] bg-white p-4 text-left shadow-[0_7px_20px_rgba(14,26,20,0.035)] transition active:scale-[0.99]"
