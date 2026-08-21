@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import WorkoutDashboardClient from "./WorkoutDashboardClient";
+import WeeklyGoalEditor from "./WeeklyGoalEditor";
 
 export const metadata = { title: "Dashboard de Treinos | Nutri Thales Rosa" };
 
@@ -22,5 +23,10 @@ export default async function PacienteTreinosPage() {
   if (!paciente.treino_liberado) redirect("/paciente");
 
   const patientName = paciente.nome || "Paciente";
-  return <WorkoutDashboardClient patientId={paciente.id} patientName={patientName} />;
+  return (
+    <>
+      <WeeklyGoalEditor patientId={paciente.id} />
+      <WorkoutDashboardClient patientId={paciente.id} patientName={patientName} />
+    </>
+  );
 }
