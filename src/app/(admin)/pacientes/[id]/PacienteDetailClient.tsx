@@ -17,6 +17,7 @@ import { AvaliacoesTab } from "./AvaliacoesTab";
 import { PreConsultaTab } from "./PreConsultaTab";
 import { AdministrativoTab } from "./AdministrativoTab";
 import { TreinosTab } from "./TreinosTab";
+import { DiarioTab } from "./DiarioTab";
 import { SuplementacaoTab, type SuplementacaoAdmin } from "./SuplementacaoTab";
 import { AccessAreaPacienteCard } from "./AccessAreaPacienteCard";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -43,51 +44,33 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
   const scheduled = stats.agendadas;
   const remaining = stats.restantes;
   const isInactive = paciente.status === "inativo";
+  const diarioAtivo = Boolean((paciente as any).diario_liberado);
 
   async function handleStatusChange() {
     const nextStatus = isInactive ? "ativo" : "inativo";
-
     if (!isInactive) {
-      const confirmed = window.confirm(
-        "Tornar este paciente inativo? O acesso dele à área do paciente também será desativado.",
-      );
+      const confirmed = window.confirm("Tornar este paciente inativo? O acesso dele à área do paciente também será desativado.");
       if (!confirmed) return;
     }
-
     setChangingStatus(true);
     const result = await setPacienteStatusAction(paciente.id, nextStatus);
     setChangingStatus(false);
-
     if (!result.success) {
       toast({ kind: "error", title: "Não foi possível alterar o status", description: result.message });
       return;
     }
-
     toast({ kind: "success", title: result.message });
     router.refresh();
   }
 
   return (
     <div>
-      <Link href="/pacientes" className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft className="size-4" /> Pacientes
-      </Link>
+      <Link href="/pacientes" className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft className="size-4" /> Pacientes</Link>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <PageHeader
-          title={paciente.nome ?? "Paciente"}
-          description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações, treinos, suplementação e informações administrativas."
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant={isInactive ? "outline" : "danger"}
-          loading={changingStatus}
-          onClick={handleStatusChange}
-          className="shrink-0"
-        >
-          {isInactive ? <UserCheck className="size-4" /> : <UserX className="size-4" />}
-          {isInactive ? "Reativar paciente" : "Tornar inativo"}
+        <PageHeader title={paciente.nome ?? "Paciente"} description="Ficha completa do paciente, com cadastro, histórico de consultas, prontuário, avaliações, treinos, diário, suplementação e informações administrativas." />
+        <Button type="button" size="sm" variant={isInactive ? "outline" : "danger"} loading={changingStatus} onClick={handleStatusChange} className="shrink-0">
+          {isInactive ? <UserCheck className="size-4" /> : <UserX className="size-4" />}{isInactive ? "Reativar paciente" : "Tornar inativo"}
         </Button>
       </div>
 
@@ -101,61 +84,28 @@ export function PacienteDetailClient({ paciente, consultas, avaliacoes, preConsu
         ))}
       </div>
 
-      <ConsultasRealizadasModal
-        open={editingConsultas}
-        onClose={() => setEditingConsultas(false)}
-        pacienteId={paciente.id}
-        realizadasNoSistema={completed - paciente.consultas_realizadas_iniciais}
-        realizadasIniciais={paciente.consultas_realizadas_iniciais}
-      />
+      <ConsultasRealizadasModal open={editingConsultas} onClose={() => setEditingConsultas(false)} pacienteId={paciente.id} realizadasNoSistema={completed - paciente.consultas_realizadas_iniciais} realizadasIniciais={paciente.consultas_realizadas_iniciais} />
+      <AccessAreaPacienteCard pacienteId={paciente.id} email={paciente.email} telefone={paciente.telefone} authId={paciente.auth_id} status={paciente.status} />
 
-      <AccessAreaPacienteCard
-        pacienteId={paciente.id}
-        email={paciente.email}
-        telefone={paciente.telefone}
-        authId={paciente.auth_id}
-        status={paciente.status}
-      />
+      <Tabs className="mb-6" value={tab} onChange={setTab} items={[
+        { key: "visao-geral", label: "Visão geral" },
+        { key: "prontuario", label: "Prontuário" },
+        { key: "avaliacoes", label: "Avaliações físicas" },
+        { key: "treinos", label: "Treinos" },
+        { key: "diario", label: diarioAtivo ? "Diário • ativo" : "Diário" },
+        { key: "suplementacao", label: suplementacao?.ativo ? "Suplementação • ativa" : "Suplementação" },
+        { key: "pre-consulta", label: "Pré-consulta" },
+        { key: "administrativo", label: "Administrativo (Clara)" },
+      ]} />
 
-      <Tabs
-        className="mb-6"
-        value={tab}
-        onChange={setTab}
-        items={[
-          { key: "visao-geral", label: "Visão geral" },
-          { key: "prontuario", label: "Prontuário" },
-          { key: "avaliacoes", label: "Avaliações físicas" },
-          { key: "treinos", label: "Treinos" },
-          { key: "suplementacao", label: suplementacao?.ativo ? "Suplementação • ativa" : "Suplementação" },
-          { key: "pre-consulta", label: "Pré-consulta" },
-          { key: "administrativo", label: "Administrativo (Clara)" },
-        ]}
-      />
-
-      {tab === "visao-geral" ? (
-        <VisaoGeralTab paciente={paciente} consultas={consultas} />
-      ) : tab === "prontuario" ? (
-        <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
-      ) : tab === "avaliacoes" ? (
-        <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
-      ) : tab === "treinos" ? (
-        <TreinosTab pacienteId={paciente.id} />
-      ) : tab === "suplementacao" ? (
-        <SuplementacaoTab data={suplementacao} />
-      ) : tab === "pre-consulta" ? (
-        <PreConsultaTab formulario={preConsulta} paciente={paciente} />
-      ) : (
-        <AdministrativoTab
-          pacienteId={paciente.id}
-          fluxoEtapa={paciente.fluxo_etapa}
-          fluxoUrgente={paciente.fluxo_urgente}
-          fluxoProximaAcaoEm={paciente.fluxo_proxima_acao_em}
-          observacoes={paciente.fluxo_observacoes}
-          pendencias={pendencias}
-          pagamentos={pagamentos}
-          historicoFluxo={historicoFluxo}
-        />
-      )}
+      {tab === "visao-geral" ? <VisaoGeralTab paciente={paciente} consultas={consultas} />
+      : tab === "prontuario" ? <ProntuarioTab consultas={consultas} pacienteId={paciente.id} />
+      : tab === "avaliacoes" ? <AvaliacoesTab avaliacoes={avaliacoes} authId={paciente.auth_id} />
+      : tab === "treinos" ? <TreinosTab pacienteId={paciente.id} />
+      : tab === "diario" ? <DiarioTab pacienteId={paciente.id} authId={paciente.auth_id} />
+      : tab === "suplementacao" ? <SuplementacaoTab data={suplementacao} />
+      : tab === "pre-consulta" ? <PreConsultaTab formulario={preConsulta} paciente={paciente} />
+      : <AdministrativoTab pacienteId={paciente.id} fluxoEtapa={paciente.fluxo_etapa} fluxoUrgente={paciente.fluxo_urgente} fluxoProximaAcaoEm={paciente.fluxo_proxima_acao_em} observacoes={paciente.fluxo_observacoes} pendencias={pendencias} pagamentos={pagamentos} historicoFluxo={historicoFluxo} />}
     </div>
   );
 }
