@@ -1,0 +1,27 @@
+name: Patient Mobile
+
+on:
+  push:
+    paths:
+      - "apps/patient-mobile/**"
+      - ".github/workflows/patient-mobile.yml"
+  pull_request:
+    paths:
+      - "apps/patient-mobile/**"
+      - ".github/workflows/patient-mobile.yml"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/patient-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/patient-mobile/package-lock.json
+      - run: npm install
+      - run: npx tsc --noEmit
