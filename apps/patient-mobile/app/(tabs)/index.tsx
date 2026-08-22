@@ -41,8 +41,8 @@ export default function HomeScreen() {
 
         <View style={styles.hero}>
           <Text style={styles.cardLabel}>MEU ACOMPANHAMENTO</Text>
-          <Text style={styles.cardTitle}>{patient?.plano || "Acompanhamento ativo"}</Text>
-          {!!patient?.objetivo && <Text style={styles.cardText}>{patient.objetivo}</Text>}
+          <Text style={styles.heroTitle}>{patient?.plano || "Acompanhamento ativo"}</Text>
+          {!!patient?.objetivo && <Text style={styles.heroText}>{patient.objetivo}</Text>}
         </View>
 
         <View style={styles.card}>
@@ -80,8 +80,10 @@ const styles = StyleSheet.create({
   hero: { backgroundColor: "#1F4C36", borderRadius: 24, padding: 22, marginBottom: 14 },
   card: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: 20, marginBottom: 24 },
   cardLabel: { fontSize: 11, letterSpacing: 1.3, fontWeight: "800", color: "#9BAA9F" },
-  cardTitle: { fontSize: 22, fontWeight: "800", color: "#FFFFFF", marginTop: 10 },
-  cardText: { fontSize: 14, color: "#DCE8E0", marginTop: 6 },
+  heroTitle: { fontSize: 22, fontWeight: "800", color: "#FFFFFF", marginTop: 10 },
+  heroText: { fontSize: 14, color: "#DCE8E0", marginTop: 6 },
+  cardTitle: { fontSize: 22, fontWeight: "800", color: "#17231B", marginTop: 10 },
+  cardText: { fontSize: 14, color: "#6B756E", marginTop: 6 },
   sectionTitle: { fontSize: 18, fontWeight: "800", color: "#17231B", marginBottom: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   quickCard: { width: "48%", minHeight: 110, backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16 },
