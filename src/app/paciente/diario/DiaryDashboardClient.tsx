@@ -271,7 +271,7 @@ export default function DiaryDashboardClient({ patientId, patientName, title, ta
         <section className="mb-4 rounded-[18px] bg-white p-4 shadow-sm">
           <p className="mb-3 text-sm font-black text-[#15442B]">Painel da semana</p>
           <div className="grid grid-cols-7 gap-1">{weekRows.map((row) => {
-            const t = totalsFor(row.data, mealDataForDate(row.date)); const future = row.date > new Date(); const has = Boolean(row.data && Object.keys(row.data).length); const ok = has && t.kcal <= Number(targets.kcal) * 1.05;
+            const t = totalsFor(row.data, mealDataForDate(row.date)); const future = row.date > new Date(); const has = Boolean(row.data && Object.keys(row.data).length); const ok = has && t.kcal <= Number(targets.kcal) * (isRafael ? 1 : 1.05);
             return <button key={row.key} onClick={() => void changeDate(row.date)} className={`rounded-xl py-2 text-center ${row.key === key ? "bg-[#EFFBF4]" : ""}`}><p className="text-[8px] font-black uppercase text-[#8A958D]">{new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(row.date).slice(0,3)}</p><div className={`mx-auto mt-1 grid size-8 place-items-center rounded-full border-2 text-sm ${future ? "border-dashed border-[#E7E2D4] opacity-40" : !has ? "border-dashed border-[#E7E2D4]" : ok ? "border-[#19DD7F] bg-[#EFFBF4]" : "border-[#D97A72] bg-[#FBEEEE]"}`}>{future || !has ? "" : ok ? "✓" : "!"}</div><p className="mt-1 text-[8px] text-[#8A958D]">{String(row.date.getDate()).padStart(2,'0')}</p></button>;
           })}</div>
           <div className="mt-3 flex flex-wrap gap-3 border-t border-[#EEEADF] pt-3 text-[9px] text-[#87938B]"><span>● dentro do planejado</span><span>● acima da meta</span><span>○ sem registro</span></div>
