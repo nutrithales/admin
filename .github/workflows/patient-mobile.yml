@@ -21,7 +21,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: apps/patient-mobile/package-lock.json
       - run: npm install
       - run: npx tsc --noEmit
