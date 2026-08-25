@@ -5,6 +5,10 @@ import WeeklyGoalEditor from "./WeeklyGoalEditor";
 
 export const metadata = { title: "Dashboard de Treinos | Nutri Thales Rosa" };
 
+function normalizeName(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+}
+
 export default async function PacienteTreinosPage() {
   const supabase = await createClient();
   const {
@@ -23,10 +27,11 @@ export default async function PacienteTreinosPage() {
   if (!paciente.treino_liberado) redirect("/paciente");
 
   const patientName = paciente.nome || "Paciente";
+  const adaptiveLoadEnabled = normalizeName(patientName) === "leandro borges";
   return (
     <>
       <WeeklyGoalEditor patientId={paciente.id} />
-      <WorkoutDashboardClient patientId={paciente.id} patientName={patientName} />
+      <WorkoutDashboardClient patientId={paciente.id} patientName={patientName} adaptiveLoadEnabled={adaptiveLoadEnabled} />
     </>
   );
 }

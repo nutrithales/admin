@@ -6,12 +6,14 @@ import Image from "next/image";
 import { ArrowLeft, Check, Moon, Pause, Play, RotateCcw, Sun, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND_LOGO_DATA_URI } from "@/lib/brand-logo";
+import { calculateNextLoad, formatLoad } from "@/lib/training/rir-load-guidance";
 import WorkoutEvolution from "./WorkoutEvolution";
 
 type Workout = any;
 type Exercise = any;
 type Execution = any;
-type ExerciseState = { sets: boolean[]; load: string; reps: string };
+type SetEntry = { load: string; reps: string; rir: string };
+type ExerciseState = { sets: boolean[]; load: string; reps: string; setEntries: SetEntry[] };
 type RestState = { exerciseId: string; label: string; total: number; remaining: number; paused: boolean; endAt: number | null } | null;
 type SessionState = { started: boolean; running: boolean; elapsedSec: number; timerAnchor: number | null; rest: RestState; obs: string };
 type ProgressData = {
@@ -48,7 +50,7 @@ function startOfWeek(date = new Date()) {
   return d;
 }
 
-export default function WorkoutDashboardClient({ patientId, patientName }: { patientId: string; patientName: string }) {
+export default function WorkoutDashboardClient({ patientId, patientName, adaptiveLoadEnabled = false }: { patientId: string; patientName: string; adaptiveLoadEnabled?: boolean }) {
   const supabase = useMemo(() => createClient() as any, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -211,7 +213,17 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     const count = Math.max(0, Number(ex.series || 0));
     const sets = Array.isArray(raw?.sets) ? raw.sets.slice(0, count) : [];
     while (sets.length < count) sets.push(false);
-    return { sets, load: raw?.load ?? "", reps: raw?.reps ?? "" };
+    const setEntries = Array.isArray(raw?.setEntries) ? raw.setEntries.slice(0, count) : [];
+    while (setEntries.length < count) {
+      const index = setEntries.length;
+      setEntries.push({ load: index === 0 ? raw?.load ?? "" : "", reps: index === 0 ? raw?.reps ?? "" : "", rir: "" });
+    }
+    return {
+      sets,
+      load: raw?.load ?? "",
+      reps: raw?.reps ?? "",
+      setEntries: setEntries.map((entry) => ({ load: entry?.load ?? "", reps: entry?.reps ?? "", rir: entry?.rir ?? "" })),
+    };
   }
 
   function setSession(patch: Partial<SessionState>) {
@@ -273,6 +285,33 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     if (nextSets[index]) startRest(ex);
   }
 
+  function setSetEntryField(ex: Exercise, index: number, key: keyof SetEntry, value: string) {
+    const state = getExerciseState(ex);
+    const setEntries = state.setEntries.map((entry, entryIndex) => entryIndex === index ? { ...entry, [key]: value } : entry);
+    updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, setEntries } } }));
+  }
+
+  function toggleAdaptiveSet(ex: Exercise, index: number) {
+    const state = getExerciseState(ex);
+    const nextSets = [...state.sets];
+    const setEntries = state.setEntries.map((entry) => ({ ...entry }));
+
+    if (nextSets[index]) {
+      nextSets[index] = false;
+    } else {
+      const entry = setEntries[index];
+      if (!entry.load.trim() || !entry.reps.trim() || !entry.rir.trim()) return;
+      nextSets[index] = true;
+      const suggestion = calculateNextLoad({ currentLoad: entry.load, actualRir: entry.rir, targetRir: ex.rir });
+      if (suggestion && index + 1 < setEntries.length && !nextSets[index + 1]) {
+        setEntries[index + 1] = { ...setEntries[index + 1], load: formatLoad(suggestion.nextLoad) };
+      }
+    }
+
+    updateProgress((p) => ({ ...p, exerciseState: { ...p.exerciseState, [ex.id]: { ...state, sets: nextSets, setEntries } } }));
+    if (nextSets[index]) startRest(ex);
+  }
+
   function toggleAll(ex: Exercise) {
     const state = getExerciseState(ex);
     const mark = !state.sets.every(Boolean);
@@ -309,6 +348,26 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     const snapshot = activeExercises.map((ex) => {
       const st = getExerciseState(ex);
       const doneSets = st.sets.filter(Boolean).length;
+      if (adaptiveLoadEnabled) {
+        const setDetails = st.setEntries.map((entry, index) => ({
+          set: index + 1,
+          done: Boolean(st.sets[index]),
+          load: Number(String(entry.load).replace(",", ".")) || 0,
+          reps: Number(entry.reps) || getRepsNumber(ex.repeticoes),
+          rir: entry.rir === "" ? null : Number(String(entry.rir).replace("+", "")),
+        }));
+        for (const detail of setDetails) if (detail.done) volume += detail.load * detail.reps;
+        return {
+          id: ex.id,
+          name: ex.nome,
+          doneSets,
+          sets: st.sets,
+          load: Math.max(0, ...setDetails.filter((detail) => detail.done).map((detail) => detail.load)),
+          reps: getRepsNumber(ex.repeticoes),
+          restSec: ex.descanso_seg || 0,
+          setDetails,
+        };
+      }
       const load = Number(String(st.load).replace(",", ".")) || 0;
       const reps = Number(st.reps) || getRepsNumber(ex.repeticoes);
       volume += doneSets * load * reps;
@@ -334,7 +393,9 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
     const cleared = { ...progress.exerciseState };
     for (const ex of activeExercises) {
       const st = getExerciseState(ex);
-      cleared[ex.id] = { ...st, sets: st.sets.map(() => false) };
+      cleared[ex.id] = adaptiveLoadEnabled
+        ? { ...st, sets: st.sets.map(() => false), setEntries: st.setEntries.map((entry) => ({ ...entry, reps: "", rir: "" })) }
+        : { ...st, sets: st.sets.map(() => false) };
     }
     const next: ProgressData = {
       ...progress,
@@ -423,6 +484,12 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
 
             {!session.started ? <p className="mb-4 rounded-xl border border-current/10 px-4 py-3 text-xs opacity-65">Você pode consultar cargas, vídeos e orientações sem iniciar um treino. O cronômetro geral só começa quando você tocar em <b>Iniciar treino</b>. O cronômetro de intervalo pode ser usado separadamente e não abre uma sessão de treino.</p> : null}
 
+            {adaptiveLoadEnabled ? <section className={`mb-5 rounded-2xl border p-4 ${dark ? "border-[#19DD7F]/35 bg-[#19DD7F]/10" : "border-[#0F9B5A]/30 bg-[#E9FFF4]"}`}>
+              <p className="text-[11px] font-black uppercase tracking-[.12em] text-[#19DD7F]">Ajuste automático de carga · teste</p>
+              <p className="mt-2 text-sm font-bold">Após cada série, informe a carga, as repetições e o RIR que realmente sentiu. Ao concluir, a sugestão para a próxima série será preenchida automaticamente.</p>
+              <p className="mt-2 text-xs opacity-65">O ajuste é conservador: até 5% por série, arredondado em 0,5 kg. Se a técnica piorar, surgir dor ou a máquina não tiver a carga indicada, use a opção disponível mais próxima sem forçar a progressão.</p>
+            </section> : null}
+
             {[...grouped.values()].map((group, gi) => (
               <section key={gi} className="mb-6">
                 <h2 className="mb-3 text-lg font-black">{group[0]?.bloco_nome || "Exercícios"}</h2>
@@ -437,17 +504,50 @@ export default function WorkoutDashboardClient({ patientId, patientName }: { pat
                           <h3 className="text-lg font-black">{ex.nome}</h3>
                           <p className="mt-1 text-xs opacity-60">{Number(ex.series || 0)} séries · {ex.repeticoes || "repetições livres"}{ex.rir ? ` · RIR ${ex.rir}` : ""}{ex.descanso_seg ? ` · ${ex.descanso_seg}s descanso` : ""}</p>
                         </div>
-                        <button onClick={() => toggleAll(ex)} className={`grid size-11 shrink-0 place-items-center rounded-full border-2 ${allDone ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{allDone ? <Check className="size-5" /> : null}</button>
+                        {adaptiveLoadEnabled
+                          ? <span className={`grid size-11 shrink-0 place-items-center rounded-full border-2 text-xs font-black ${allDone ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{allDone ? <Check className="size-5" /> : `${st.sets.filter(Boolean).length}/${st.sets.length}`}</span>
+                          : <button onClick={() => toggleAll(ex)} className={`grid size-11 shrink-0 place-items-center rounded-full border-2 ${allDone ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{allDone ? <Check className="size-5" /> : null}</button>}
                       </div>
                       <div className="px-4 pb-4">
-                        <div className="mb-3 flex flex-wrap items-center gap-2">
-                          {st.sets.map((done, i) => <button key={i} onClick={() => toggleSet(ex, i)} className={`size-11 rounded-xl border font-black ${done ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{i + 1}</button>)}
-                          {Number(ex.descanso_seg || 0) > 0 ? <button onClick={() => startRest(ex)} className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-black ${restActive ? "border-[#19DD7F] bg-[#19DD7F]/10 text-[#19DD7F]" : "border-current/20"}`}><Play className="size-3.5" /> {restActive ? `Intervalo ${fmtTime(currentRest?.remaining || 0)}` : `Intervalo ${ex.descanso_seg}s`}</button> : null}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Carga<input value={st.load} onChange={(e) => setExerciseField(ex, "load", e.target.value)} inputMode="decimal" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.carga_inicial ? `${ex.carga_inicial} kg` : "kg"} /></label>
-                          <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Repetições realizadas<input value={st.reps} onChange={(e) => setExerciseField(ex, "reps", e.target.value)} inputMode="numeric" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.repeticoes || "reps"} /></label>
-                        </div>
+                        {adaptiveLoadEnabled ? <div className="grid gap-3">
+                          {st.setEntries.map((entry, i) => {
+                            const done = st.sets[i];
+                            const suggestion = done && i + 1 < st.setEntries.length
+                              ? calculateNextLoad({ currentLoad: entry.load, actualRir: entry.rir, targetRir: ex.rir })
+                              : null;
+                            const ready = Boolean(entry.load.trim() && entry.reps.trim() && entry.rir.trim());
+                            const suggestionLabel = suggestion?.direction === "increase"
+                              ? `aumentar ${formatLoad(Math.abs(suggestion.changeKg))} kg`
+                              : suggestion?.direction === "decrease"
+                                ? `reduzir ${formatLoad(Math.abs(suggestion.changeKg))} kg`
+                                : "manter a carga";
+                            return <div key={i} className={`rounded-2xl border p-3 ${done ? "border-[#19DD7F]/60" : "border-current/15"}`}>
+                              <div className="mb-3 flex items-center justify-between gap-3">
+                                <b className="text-sm">Série {i + 1}</b>
+                                <span className="text-[10px] font-black uppercase tracking-[.08em] opacity-55">RIR alvo {ex.rir || "não informado"}</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Carga (kg)<input disabled={done} value={entry.load} onChange={(event) => setSetEntryField(ex, i, "load", event.target.value)} inputMode="decimal" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none disabled:opacity-60 ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={i === 0 && ex.carga_inicial ? `${ex.carga_inicial}` : "kg"} /></label>
+                                <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Repetições<input disabled={done} value={entry.reps} onChange={(event) => setSetEntryField(ex, i, "reps", event.target.value)} inputMode="numeric" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none disabled:opacity-60 ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.repeticoes || "reps"} /></label>
+                                <label className="col-span-2 text-[10px] font-black uppercase tracking-[.08em] opacity-60 sm:col-span-1">RIR percebido<select disabled={done} value={entry.rir} onChange={(event) => setSetEntryField(ex, i, "rir", event.target.value)} className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none disabled:opacity-60 ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`}><option value="">Selecione</option><option value="0">0 · falha</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5+">5+</option></select></label>
+                              </div>
+                              <button disabled={!done && !ready} onClick={() => toggleAdaptiveSet(ex, i)} className={`mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40 ${done ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{done ? <><Check className="size-4" /> Série concluída</> : "Concluir série e calcular a próxima"}</button>
+                              {!done && !ready ? <p className="mt-2 text-center text-[10px] opacity-55">Preencha carga, repetições e RIR para concluir.</p> : null}
+                              {done ? <p className="mt-2 text-center text-[10px] opacity-55">Para corrigir algum dado, toque em “Série concluída” e edite novamente.</p> : null}
+                              {suggestion ? <div className={`mt-3 rounded-xl border px-3 py-2.5 text-xs ${dark ? "border-[#19DD7F]/30 bg-[#19DD7F]/10" : "border-[#0F9B5A]/25 bg-[#E9FFF4]"}`}><b>Próxima série: {formatLoad(suggestion.nextLoad)} kg</b><span className="mt-1 block opacity-65">RIR percebido {entry.rir} vs. alvo {ex.rir}: {suggestionLabel}.</span></div> : null}
+                            </div>;
+                          })}
+                          {Number(ex.descanso_seg || 0) > 0 ? <button onClick={() => startRest(ex)} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black ${restActive ? "border-[#19DD7F] bg-[#19DD7F]/10 text-[#19DD7F]" : "border-current/20"}`}><Play className="size-3.5" /> {restActive ? `Intervalo ${fmtTime(currentRest?.remaining || 0)}` : `Iniciar intervalo de ${ex.descanso_seg}s`}</button> : null}
+                        </div> : <>
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                            {st.sets.map((done, i) => <button key={i} onClick={() => toggleSet(ex, i)} className={`size-11 rounded-xl border font-black ${done ? "border-[#19DD7F] bg-[#19DD7F] text-[#04120B]" : "border-current/20"}`}>{i + 1}</button>)}
+                            {Number(ex.descanso_seg || 0) > 0 ? <button onClick={() => startRest(ex)} className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-black ${restActive ? "border-[#19DD7F] bg-[#19DD7F]/10 text-[#19DD7F]" : "border-current/20"}`}><Play className="size-3.5" /> {restActive ? `Intervalo ${fmtTime(currentRest?.remaining || 0)}` : `Intervalo ${ex.descanso_seg}s`}</button> : null}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Carga<input value={st.load} onChange={(e) => setExerciseField(ex, "load", e.target.value)} inputMode="decimal" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.carga_inicial ? `${ex.carga_inicial} kg` : "kg"} /></label>
+                            <label className="text-[10px] font-black uppercase tracking-[.08em] opacity-60">Repetições realizadas<input value={st.reps} onChange={(e) => setExerciseField(ex, "reps", e.target.value)} inputMode="numeric" className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${dark ? "border-[#294337] bg-[#1B2F25]" : "border-black/10 bg-[#F4F6F4]"}`} placeholder={ex.repeticoes || "reps"} /></label>
+                          </div>
+                        </>}
                         {ex.observacoes ? <p className="mt-3 whitespace-pre-line text-xs leading-5 opacity-65">{ex.observacoes}</p> : null}
                         {ex.video_url ? <a href={ex.video_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-xs font-black text-[#19DD7F]"><Video className="size-4" /> Ver execução</a> : null}
                       </div>
