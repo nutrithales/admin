@@ -46,6 +46,9 @@ update public.alimentos set medidas_caseiras='[{"unidade":"Unidade media","peso_
 where id='9801950d-aef8-44dd-bfb6-ac468d3ec551';
 update public.alimentos set medidas_caseiras='[{"unidade":"Fatia media","peso_g":30}]'::jsonb
 where id='dc3e5e09-9b25-433b-8d3e-cb9c45843dac';
+update public.alimentos
+set medidas_caseiras='[{"unidade":"Unidade pequena","peso_g":300},{"unidade":"1/2 mamao papaia pequeno","peso_g":150},{"unidade":"Xicara picado","peso_g":140}]'::jsonb
+where id='8e0b3aaa-88cb-47ac-a995-81f6a981ce8c';
 
 insert into public.planos_estruturados (
   id, auth_id, protocolo_id, titulo, meta_kcal, meta_proteina_g,
@@ -78,7 +81,7 @@ insert into public.plano_refeicoes (
   meta_carboidrato_g, meta_gordura_g, observacoes, observacoes_opcoes
 )
 values
-('ba47db25-875f-4c6e-ad1d-fc75650fc06f','138b20a2-e77b-43ec-b94c-c5c187b823d2','Cafe da manha',0,610,32,75,21,
+('ba47db25-875f-4c6e-ad1d-fc75650fc06f','138b20a2-e77b-43ec-b94c-c5c187b823d2','Cafe da manha',0,620,33,74,21,
  E'A proteina continua sendo a ancora da primeira refeicao. Como o pre-treino foi retirado, o cafe da manha recebeu maior quantidade de fruta, pao e ovos para manter a oferta energetica diaria. Varie a fruta usando a lista de substituicoes e observe a tolerancia intestinal.',
  '{"1":"Prepare os ovos cozidos, mexidos ou em omelete, sem acrescentar oleo em excesso. Em uma manha corrida, priorize ovos, iogurte e pao; a fruta pode ser consumida logo depois."}'::jsonb),
 ('8c39331c-3d76-43e2-91df-da954a53982e','138b20a2-e77b-43ec-b94c-c5c187b823d2','Almoco',1,600,50,62,15,
@@ -102,7 +105,7 @@ where id='84104c1e-5042-4356-8cd4-cdd113127f8f'
 update public.plano_refeicoes set ordem=3 where id='c402218e-1810-4726-9425-edaf0b43e8fd';
 update public.plano_refeicoes set ordem=4 where id='c7d9d353-94b3-4f50-ae74-c86a28d3ff31';
 update public.plano_refeicoes
-set meta_kcal=610, meta_proteina_g=32, meta_carboidrato_g=75, meta_gordura_g=21,
+set meta_kcal=620, meta_proteina_g=33, meta_carboidrato_g=74, meta_gordura_g=21,
     observacoes=E'A proteina continua sendo a ancora da primeira refeicao. Como o pre-treino foi retirado, o cafe da manha recebeu maior quantidade de fruta, pao e ovos para manter a oferta energetica diaria. Varie a fruta usando a lista de substituicoes e observe a tolerancia intestinal.'
 where id='ba47db25-875f-4c6e-ad1d-fc75650fc06f';
 
@@ -119,10 +122,10 @@ where plano_refeicao_id in (
 with itens(refeicao_id,opcao,opcao_nome,ordem,alimento_id,quantidade_g,grupo_codigo,papel_macro,contabiliza) as (values
   -- Cafe da manha
   ('ba47db25-875f-4c6e-ad1d-fc75650fc06f'::uuid,1,'Cafe da manha habitual',0,'93498fa9-db03-432f-b597-0a9abdef659c'::uuid,80::numeric,null,null,true),
-  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',1,'8e0b3aaa-88cb-47ac-a995-81f6a981ce8c',340,'FRUTAS','carboidrato',true),
+  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',1,'8e0b3aaa-88cb-47ac-a995-81f6a981ce8c',300,'FRUTAS','carboidrato',true),
   ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',2,'59f2d808-f9ce-4d6c-b38c-26525bdf17b3',75,'C_CAFE','carboidrato',true),
   ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',3,'5893684a-aab2-4aac-88ab-32b4e59b8c5f',150,'P_SALGADA','proteina',true),
-  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',4,'962208b6-9666-4a4c-a77a-c03f60aebafe',90,'LATICINIOS','proteina',true),
+  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',4,'962208b6-9666-4a4c-a77a-c03f60aebafe',100,'LATICINIOS','proteina',true),
 
   -- Almoco 1
   ('8c39331c-3d76-43e2-91df-da954a53982e',1,'Prato com arroz e feijao',0,'4882bb92-eff2-4cf3-9a2f-5892763bb1c0',50,'VEG_A','livre',false),
@@ -163,11 +166,11 @@ with itens(refeicao_id,opcao,opcao_nome,ordem,alimento_id,quantidade_g,grupo_cod
   ('d026dc57-c4c2-4556-9bb2-4560bd036444',5,'Overnight oats',4,'a8e5814b-5602-4e91-a37d-2298f44ded04',5,'GORDURAS','gordura',true),
 
   -- Jantar 1
-  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com quinoa',0,'4882bb92-eff2-4cf3-9a2f-5892763bb1c0',50,'VEG_A','livre',false),
-  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com quinoa',1,'b5579d11-f305-4cfe-ace5-7742cd93e843',100,'VEG_B','vegetal_b',true),
-  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com quinoa',2,'77a93e52-b6b8-4838-a585-d87908647ef1',130,'P_PRATO','proteina',true),
-  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com quinoa',3,'75d07c8b-113f-4f10-8c8c-d4157cfaaf2b',180,'C_PRATO','carboidrato',true),
-  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com quinoa',4,'b388b53b-7fc1-481a-b557-a93d5467bf7f',5,'GORDURAS','gordura',true),
+  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com arroz',0,'4882bb92-eff2-4cf3-9a2f-5892763bb1c0',50,'VEG_A','livre',false),
+  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com arroz',1,'b5579d11-f305-4cfe-ace5-7742cd93e843',100,'VEG_B','vegetal_b',true),
+  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com arroz',2,'77a93e52-b6b8-4838-a585-d87908647ef1',130,'P_PRATO','proteina',true),
+  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com arroz',3,'d14ab143-5770-4a5b-9505-3ddb77381298',150,'C_PRATO','carboidrato',true),
+  ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com arroz',4,'b388b53b-7fc1-481a-b557-a93d5467bf7f',5,'GORDURAS','gordura',true),
   -- Jantar 2 - Mac Proteina
   ('c402218e-1810-4726-9425-edaf0b43e8fd',2,'Mac Proteina com frango e vegetais',0,'43c87553-2b35-4b88-9e62-e02403d99c26',100,null,'misto',true),
   ('c402218e-1810-4726-9425-edaf0b43e8fd',2,'Mac Proteina com frango e vegetais',1,'77a93e52-b6b8-4838-a585-d87908647ef1',60,'P_PRATO','proteina',true),
@@ -205,5 +208,11 @@ where not exists (
   select 1 from public.plano_refeicao_itens pri
   where pri.plano_refeicao_id=i.refeicao_id
 );
+
+-- O gatilho geral das matrizes inclui Vegetais Tipo A em todos os slots.
+-- Eles nao fazem parte do cafe da manha deste plano individual.
+delete from public.plano_refeicao_itens
+where plano_refeicao_id='ba47db25-875f-4c6e-ad1d-fc75650fc06f'
+  and papel_macro='livre';
 
 commit;
