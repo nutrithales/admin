@@ -55,9 +55,9 @@ select
   '138b20a2-e77b-43ec-b94c-c5c187b823d2'::uuid,
   p.auth_id,
   '88f9fb5b-8ae5-4e2c-8f6b-ef6c7a40d34a'::uuid,
-  'Plano alimentar - Setembro/2026', 2050, 160, 255, 45,
+  'Plano alimentar - Setembro/2026', 2060, 160, 260, 50,
   'finalizado', false,
-  E'Objetivo deste ciclo: dar continuidade a recomposicao corporal observada na avaliacao, preservando a base alimentar que ja faz parte da rotina.\n\nAs quantidades estao descritas com o alimento pronto para consumo, salvo quando a embalagem indicar o contrario. Escolha apenas uma opcao em cada refeicao. As trocas da lista devem respeitar as porcoes indicadas.\n\nNos dias sem treino, nao e necessario realizar o pre-treino. A ceia e opcional e deve ser usada somente quando houver fome real apos o jantar.\n\nVegetais Tipo A sao livres dentro de um volume confortavel. Para Vegetais Tipo B, escolha uma porcao da lista. Se houver aumento de gases ou distensao, priorize os vegetais cozidos mais bem tolerados e sinalize no acompanhamento.'
+  E'Objetivo deste ciclo: dar continuidade a recomposicao corporal observada na avaliacao, preservando a base alimentar que ja faz parte da rotina.\n\nAs quantidades estao descritas com o alimento pronto para consumo, salvo quando a embalagem indicar o contrario. Escolha apenas uma opcao em cada refeicao. As trocas da lista devem respeitar as porcoes indicadas.\n\nA ceia e opcional e deve ser usada somente quando houver fome real apos o jantar.\n\nVegetais Tipo A sao livres dentro de um volume confortavel. Para Vegetais Tipo B, escolha uma porcao da lista. Se houver aumento de gases ou distensao, priorize os vegetais cozidos mais bem tolerados e sinalize no acompanhamento.'
 from public.pacientes p
 where p.auth_id='b09d3cec-b34c-4ade-b4b6-0d50fbb8d3ff'
   and not exists (
@@ -66,8 +66,10 @@ where p.auth_id='b09d3cec-b34c-4ade-b4b6-0d50fbb8d3ff'
   );
 
 update public.planos_estruturados
-set meta_kcal=2050, meta_proteina_g=160, meta_carboidrato_g=255,
-    meta_gordura_g=45, status='finalizado', updated_at=now()
+set meta_kcal=2060, meta_proteina_g=160, meta_carboidrato_g=260,
+    meta_gordura_g=50, status='finalizado',
+    observacoes=replace(observacoes,E'Nos dias sem treino, nao e necessario realizar o pre-treino. ',''),
+    updated_at=now()
 where id='138b20a2-e77b-43ec-b94c-c5c187b823d2';
 
 -- Os IDs fixos tornam a carga rastreavel e segura contra duplicacao.
@@ -76,8 +78,8 @@ insert into public.plano_refeicoes (
   meta_carboidrato_g, meta_gordura_g, observacoes, observacoes_opcoes
 )
 values
-('ba47db25-875f-4c6e-ad1d-fc75650fc06f','138b20a2-e77b-43ec-b94c-c5c187b823d2','Cafe da manha',0,440,27,48,16,
- E'A proteina continua sendo a ancora da primeira refeicao. O ajuste reduz o volume de fruta e passa de tres para dois ovos, sem retirar a estrutura que ja vinha sendo utilizada. Varie a fruta usando a lista de substituicoes e observe a tolerancia intestinal.',
+('ba47db25-875f-4c6e-ad1d-fc75650fc06f','138b20a2-e77b-43ec-b94c-c5c187b823d2','Cafe da manha',0,610,32,75,21,
+ E'A proteina continua sendo a ancora da primeira refeicao. Como o pre-treino foi retirado, o cafe da manha recebeu maior quantidade de fruta, pao e ovos para manter a oferta energetica diaria. Varie a fruta usando a lista de substituicoes e observe a tolerancia intestinal.',
  '{"1":"Prepare os ovos cozidos, mexidos ou em omelete, sem acrescentar oleo em excesso. Em uma manha corrida, priorize ovos, iogurte e pao; a fruta pode ser consumida logo depois."}'::jsonb),
 ('8c39331c-3d76-43e2-91df-da954a53982e','138b20a2-e77b-43ec-b94c-c5c187b823d2','Almoco',1,600,50,62,15,
  E'Mantenha a proteina como prioridade do prato. No hospital, se a porcao servida vier pequena, complete com atum, ovos cozidos ou frango levado de casa. Use a opcao para intestino sensivel nos dias de maior distensao ou gases.',
@@ -85,16 +87,24 @@ values
 ('d026dc57-c4c2-4556-9bb2-4560bd036444','138b20a2-e77b-43ec-b94c-c5c187b823d2','Lanche da tarde',2,380,27,48,8,
  E'Escolha uma opcao conforme a rotina. As opcoes com mingau, overnight oats e Mac Proteina funcionam bem nos dias de treino por oferecerem mais carboidrato. Mantenha refrigerados os alimentos que precisam de frio.',
  '{"1":"Para o mingau, misture a aveia ao leite quente, espere amornar e acrescente o whey. O calor nao reduz a proteina, mas pode alterar a textura.","2":"Monte o sanduiche com antecedencia e mantenha refrigerado. Leve a fruta separada para facilitar o transporte.","3":"A receita rende quatro bolinhos. Nesta opcao, consuma dois bolinhos para que o lanche fique equivalente aos demais.","4":"Prepare um pacote inteiro conforme a embalagem. Nao e necessario acrescentar whey, ovos ou queijo.","5":"Misture os ingredientes em um pote com tampa e deixe refrigerado por pelo menos quatro horas, preferencialmente durante a noite. Se ficar espesso, acrescente um pouco de agua."}'::jsonb),
-('84104c1e-5042-4356-8cd4-cdd113127f8f','138b20a2-e77b-43ec-b94c-c5c187b823d2','Pre-treino',3,145,12,20,2,
- E'Utilize 30 a 60 minutos antes do treino quando houver intervalo maior que duas horas desde o lanche. Se o lanche tiver sido feito perto do treino e nao houver fome, esta refeicao pode ser dispensada.',
- '{"1":"Leve a banana inteira e o whey separado. Misture o whey com agua somente na hora.","2":"Deixe whey e aveia medidos na coqueteleira e acrescente agua na saida do hospital.","3":"Leve o iogurte refrigerado e acrescente o mel na hora de consumir."}'::jsonb),
-('c402218e-1810-4726-9425-edaf0b43e8fd','138b20a2-e77b-43ec-b94c-c5c187b823d2','Jantar',4,430,40,45,10,
+('c402218e-1810-4726-9425-edaf0b43e8fd','138b20a2-e77b-43ec-b94c-c5c187b823d2','Jantar',3,430,40,45,10,
  E'O jantar deve ser leve, mas nao fraco. Mantenha uma fonte proteica e escolha os vegetais conforme tolerancia. Nos dias de treino, preserve a porcao de carboidrato para apoiar a recuperacao.',
  '{"1":"Organize proteina e carboidrato ja prontos e porcionados. Prefira vegetais cozidos se folhas cruas aumentarem a distensao a noite.","2":"Prepare o pacote inteiro do Mac Proteina e acrescente o frango e os vegetais indicados. Nao adicione azeite, creme, requeijao ou grandes quantidades de queijo.","3":"Monte o sanduiche com o frango ja preparado. Acrescente tomate e folhas apenas na hora para o pao nao ficar umido.","4":"Monte como pizza e leve ao forno ou airfryer por 8 a 10 minutos, ate o queijo derreter e as bordas ficarem levemente crocantes."}'::jsonb),
-('c7d9d353-94b3-4f50-ae74-c86a28d3ff31','138b20a2-e77b-43ec-b94c-c5c187b823d2','Ceia',5,70,2,15,1,
+('c7d9d353-94b3-4f50-ae74-c86a28d3ff31','138b20a2-e77b-43ec-b94c-c5c187b823d2','Ceia',4,70,2,15,1,
  E'A ceia e opcional. Utilize apenas se houver fome real depois do jantar. Escolha uma unica porcao de fruta e, se desejar, associe a um cha sem acucar. Se acordar estufado, reduza o volume ou mantenha a ceia suspensa.',
  '{"1":"Consuma uma porcao simples, sem misturar varias frutas.","2":"Opcao de maior volume e baixa densidade energetica.","3":"Pode ser combinada com cha de cidreira ou erva-doce sem acucar."}'::jsonb)
 on conflict (id) do nothing;
+
+delete from public.plano_refeicoes
+where id='84104c1e-5042-4356-8cd4-cdd113127f8f'
+  and plano_estruturado_id='138b20a2-e77b-43ec-b94c-c5c187b823d2';
+
+update public.plano_refeicoes set ordem=3 where id='c402218e-1810-4726-9425-edaf0b43e8fd';
+update public.plano_refeicoes set ordem=4 where id='c7d9d353-94b3-4f50-ae74-c86a28d3ff31';
+update public.plano_refeicoes
+set meta_kcal=610, meta_proteina_g=32, meta_carboidrato_g=75, meta_gordura_g=21,
+    observacoes=E'A proteina continua sendo a ancora da primeira refeicao. Como o pre-treino foi retirado, o cafe da manha recebeu maior quantidade de fruta, pao e ovos para manter a oferta energetica diaria. Varie a fruta usando a lista de substituicoes e observe a tolerancia intestinal.'
+where id='ba47db25-875f-4c6e-ad1d-fc75650fc06f';
 
 -- Os gatilhos das matrizes preenchem opcoes genericas ao criar os slots.
 -- Neste plano individual, removemos apenas esse rascunho automatico para
@@ -109,9 +119,9 @@ where plano_refeicao_id in (
 with itens(refeicao_id,opcao,opcao_nome,ordem,alimento_id,quantidade_g,grupo_codigo,papel_macro,contabiliza) as (values
   -- Cafe da manha
   ('ba47db25-875f-4c6e-ad1d-fc75650fc06f'::uuid,1,'Cafe da manha habitual',0,'93498fa9-db03-432f-b597-0a9abdef659c'::uuid,80::numeric,null,null,true),
-  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',1,'8e0b3aaa-88cb-47ac-a995-81f6a981ce8c',250,'FRUTAS','carboidrato',true),
-  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',2,'59f2d808-f9ce-4d6c-b38c-26525bdf17b3',50,'C_CAFE','carboidrato',true),
-  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',3,'5893684a-aab2-4aac-88ab-32b4e59b8c5f',100,'P_SALGADA','proteina',true),
+  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',1,'8e0b3aaa-88cb-47ac-a995-81f6a981ce8c',340,'FRUTAS','carboidrato',true),
+  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',2,'59f2d808-f9ce-4d6c-b38c-26525bdf17b3',75,'C_CAFE','carboidrato',true),
+  ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',3,'5893684a-aab2-4aac-88ab-32b4e59b8c5f',150,'P_SALGADA','proteina',true),
   ('ba47db25-875f-4c6e-ad1d-fc75650fc06f',1,'Cafe da manha habitual',4,'962208b6-9666-4a4c-a77a-c03f60aebafe',90,'LATICINIOS','proteina',true),
 
   -- Almoco 1
@@ -151,14 +161,6 @@ with itens(refeicao_id,opcao,opcao_nome,ordem,alimento_id,quantidade_g,grupo_cod
   ('d026dc57-c4c2-4556-9bb2-4560bd036444',5,'Overnight oats',2,'9f5e5d29-4180-4d01-90aa-08a3bbec20a7',20,null,'proteina',true),
   ('d026dc57-c4c2-4556-9bb2-4560bd036444',5,'Overnight oats',3,'7f5e6c8e-52dd-4272-8b4e-fdc31d6c798b',60,'FRUTAS','carboidrato',true),
   ('d026dc57-c4c2-4556-9bb2-4560bd036444',5,'Overnight oats',4,'a8e5814b-5602-4e91-a37d-2298f44ded04',5,'GORDURAS','gordura',true),
-
-  -- Pre-treino
-  ('84104c1e-5042-4356-8cd4-cdd113127f8f',1,'Banana com whey',0,'7f5e6c8e-52dd-4272-8b4e-fdc31d6c798b',70,'FRUTAS','carboidrato',true),
-  ('84104c1e-5042-4356-8cd4-cdd113127f8f',1,'Banana com whey',1,'9f5e5d29-4180-4d01-90aa-08a3bbec20a7',15,null,'proteina',true),
-  ('84104c1e-5042-4356-8cd4-cdd113127f8f',2,'Whey com aveia',0,'9f5e5d29-4180-4d01-90aa-08a3bbec20a7',20,null,'proteina',true),
-  ('84104c1e-5042-4356-8cd4-cdd113127f8f',2,'Whey com aveia',1,'cc970a23-7a76-4db4-af1d-be9433f8723d',20,'C_CAFE','carboidrato',true),
-  ('84104c1e-5042-4356-8cd4-cdd113127f8f',3,'Iogurte grego com mel',0,'962208b6-9666-4a4c-a77a-c03f60aebafe',100,'LATICINIOS','proteina',true),
-  ('84104c1e-5042-4356-8cd4-cdd113127f8f',3,'Iogurte grego com mel',1,'ad469743-bb10-420c-b2ee-455f3cffd07e',10,null,'carboidrato',true),
 
   -- Jantar 1
   ('c402218e-1810-4726-9425-edaf0b43e8fd',1,'Prato leve com quinoa',0,'4882bb92-eff2-4cf3-9a2f-5892763bb1c0',50,'VEG_A','livre',false),
