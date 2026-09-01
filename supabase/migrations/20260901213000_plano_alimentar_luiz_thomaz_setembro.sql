@@ -138,8 +138,9 @@ with itens(refeicao_id,opcao,opcao_nome,ordem,alimento_id,quantidade_g,grupo_cod
   ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',0,'4882bb92-eff2-4cf3-9a2f-5892763bb1c0',50,'VEG_A','livre',false),
   ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',1,'b5579d11-f305-4cfe-ace5-7742cd93e843',100,'VEG_B','vegetal_b',true),
   ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',2,'77a93e52-b6b8-4838-a585-d87908647ef1',150,'P_PRATO','proteina',true),
-  ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',3,'4ac72052-5452-41b4-813f-b4fea5d0d9a3',200,'C_PRATO','carboidrato',true),
-  ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',4,'b388b53b-7fc1-481a-b557-a93d5467bf7f',5,'GORDURAS','gordura',true),
+  ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',3,'d14ab143-5770-4a5b-9505-3ddb77381298',150,'C_PRATO','carboidrato',true),
+  ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',4,'4ac72052-5452-41b4-813f-b4fea5d0d9a3',120,'C_PRATO','carboidrato',true),
+  ('8c39331c-3d76-43e2-91df-da954a53982e',2,'Dias com intestino sensivel',5,'b388b53b-7fc1-481a-b557-a93d5467bf7f',5,'GORDURAS','gordura',true),
 
   -- Lanche 1 - mingau
   ('d026dc57-c4c2-4556-9bb2-4560bd036444',1,'Mingau com whey e fruta',0,'cc970a23-7a76-4db4-af1d-be9433f8723d',25,'C_CAFE','carboidrato',true),
