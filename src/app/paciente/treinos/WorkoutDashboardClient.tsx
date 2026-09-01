@@ -109,8 +109,16 @@ export default function WorkoutDashboardClient({ patientId, patientName, adaptiv
   useEffect(() => {
     async function load() {
       setLoading(true);
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
       const [{ data: workoutData, error: workoutError }, { data: progressRow }, { data: historyData }, { data: patientData }] = await Promise.all([
-        supabase.from("treino_programas").select("*").eq("paciente_id", patientId).eq("status", "ativo").order("ordem"),
+        supabase
+          .from("treino_programas")
+          .select("*")
+          .eq("paciente_id", patientId)
+          .eq("status", "ativo")
+          .or(`data_inicio.is.null,data_inicio.lte.${today}`)
+          .or(`data_fim.is.null,data_fim.gte.${today}`)
+          .order("ordem"),
         supabase.from("treino_progresso").select("dados").eq("paciente_id", patientId).maybeSingle(),
         supabase.from("treino_execucoes").select("*").eq("paciente_id", patientId).eq("concluido", true).order("iniciado_em", { ascending: false }).limit(180),
         supabase.from("pacientes").select("treino_frequencia_semanal").eq("id", patientId).maybeSingle(),
