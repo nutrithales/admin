@@ -60,6 +60,7 @@ export default function WorkoutDashboardClient({ patientId, patientName, adaptiv
   const [weeklyGoal, setWeeklyGoal] = useState(3);
   const [progress, setProgress] = useState<ProgressData>({ exerciseState: {}, sessions: {} });
   const [tab, setTab] = useState<"treino" | "evolucao">("treino");
+  const [workoutSpace, setWorkoutSpace] = useState<"programa" | "wods">("programa");
   const [dark, setDark] = useState(true);
   const [clock, setClock] = useState(Date.now());
   const [saveState, setSaveState] = useState<"saved" | "saving" | "pending" | "error">("saved");
@@ -69,7 +70,10 @@ export default function WorkoutDashboardClient({ patientId, patientName, adaptiv
 
   useEffect(() => { latestProgress.current = progress; }, [progress]);
 
-  const activeWorkout = workouts.find((w) => w.id === progress.activeWorkoutId) || workouts[0] || null;
+  const mainWorkouts = workouts.filter((w) => w.bloco !== "WOD Metabólico");
+  const wodWorkouts = workouts.filter((w) => w.bloco === "WOD Metabólico");
+  const visibleWorkouts = workoutSpace === "wods" ? wodWorkouts : mainWorkouts;
+  const activeWorkout = visibleWorkouts.find((w) => w.id === progress.activeWorkoutId) || visibleWorkouts[0] || workouts[0] || null;
   const activeExercises = useMemo(() => {
     if (!activeWorkout) return [];
     return exercises
@@ -153,7 +157,13 @@ export default function WorkoutDashboardClient({ patientId, patientName, adaptiv
         stored = { ...stored, sessions, updatedAt: Date.now() };
       }
 
-      const validActive = ws.some((w: any) => w.id === stored.activeWorkoutId) ? stored.activeWorkoutId : ws[0]?.id || null;
+      const storedWorkout = ws.find((w: any) => w.id === stored.activeWorkoutId);
+      const initialSpace = storedWorkout?.bloco === "WOD Metabólico" ? "wods" : "programa";
+      setWorkoutSpace(initialSpace);
+      const defaultWorkout = initialSpace === "wods"
+        ? ws.find((w: any) => w.bloco === "WOD Metabólico")
+        : ws.find((w: any) => w.bloco !== "WOD Metabólico");
+      const validActive = storedWorkout?.id || defaultWorkout?.id || ws[0]?.id || null;
       const fallbackGoal = Number(ws.find((w: any) => Number(w.frequencia_semanal) > 0)?.frequencia_semanal || 3);
       setWeeklyGoal(Math.max(1, Number(patientData?.treino_frequencia_semanal || fallbackGoal)));
       setWorkouts(ws);
@@ -462,6 +472,15 @@ export default function WorkoutDashboardClient({ patientId, patientName, adaptiv
               </div>
             </section>
 
+            {wodWorkouts.length > 0 ? <section className={`mb-4 rounded-[22px] border p-3 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
+              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[.12em] opacity-55">Escolha seu espaço</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => { setWorkoutSpace("programa"); const first = mainWorkouts[0]; if (first) updateProgress((p) => ({ ...p, activeWorkoutId: first.id })); }} className={`min-h-11 rounded-xl px-3 text-sm font-black ${workoutSpace === "programa" ? "bg-[#19DD7F] text-[#04120B]" : "border border-current/15"}`}>Programa principal</button>
+                <button onClick={() => { setWorkoutSpace("wods"); const first = wodWorkouts[0]; if (first) updateProgress((p) => ({ ...p, activeWorkoutId: first.id })); }} className={`min-h-11 rounded-xl px-3 text-sm font-black ${workoutSpace === "wods" ? "bg-[#19DD7F] text-[#04120B]" : "border border-current/15"}`}>WODs metabólicos</button>
+              </div>
+              {workoutSpace === "wods" ? <p className="mt-3 px-1 text-xs opacity-65">10 opções de CrossFit para a academia, todas com duração máxima de 12 minutos.</p> : null}
+            </section> : null}
+
             <section className={`mb-4 rounded-[26px] border p-5 shadow-2xl ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
               <p className="text-[11px] font-black uppercase tracking-[.14em] text-[#19DD7F]">Treino de hoje</p>
               <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">{activeWorkout.nome}</h1>
@@ -481,7 +500,7 @@ export default function WorkoutDashboardClient({ patientId, patientName, adaptiv
             </section>
 
             <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-              {workouts.map((w) => <button key={w.id} onClick={() => updateProgress((p) => ({ ...p, activeWorkoutId: w.id }))} className={`whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-black ${w.id === activeWorkout.id ? "bg-[#19DD7F] text-[#04120B]" : "border border-current/15"}`}>{w.nome}</button>)}
+              {visibleWorkouts.map((w) => <button key={w.id} onClick={() => updateProgress((p) => ({ ...p, activeWorkoutId: w.id }))} className={`whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-black ${w.id === activeWorkout.id ? "bg-[#19DD7F] text-[#04120B]" : "border border-current/15"}`}>{w.nome}</button>)}
             </div>
 
             <section className={`mb-5 grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border p-4 ${dark ? "border-[#294337] bg-[#15251D]" : "border-black/10 bg-white"}`}>
