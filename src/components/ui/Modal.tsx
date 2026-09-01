@@ -11,13 +11,14 @@ export interface ModalProps {
   title: string;
   description?: string;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 const sizeStyles = {
   sm: "max-w-md",
   md: "max-w-xl",
   lg: "max-w-3xl",
+  xl: "max-w-5xl",
 };
 
 export function Modal({ open, onClose, title, description, children, size = "md" }: ModalProps) {

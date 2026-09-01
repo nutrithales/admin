@@ -3,16 +3,28 @@
 import { revalidatePath } from "next/cache";
 import { assertPermission } from "@/lib/supabase/assert-permission";
 import { createClient } from "@/lib/supabase/server";
-import { avaliacaoFisicaSchema, type AvaliacaoFisicaFormValues } from "@/utils/validation/avaliacao-fisica";
+import {
+  avaliacaoFisicaSchema,
+  buildMedidasExtra,
+  calculateAvaliacaoMetrics,
+  type AvaliacaoFisicaFormValues,
+} from "@/utils/validation/avaliacao-fisica";
 import { sendEmail } from "@/lib/email/resend";
 import { interpretarBodymetrix } from "@/lib/ai/interpretar-bodymetrix";
 import type { ActionResult } from "@/services/pacientes.actions";
+import type { Json } from "@/types/database.types";
 
 const BUCKET = "avaliacoes";
 const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 
-function toRow(data: AvaliacaoFisicaFormValues) {
+function toAssessmentDate(date: string) {
+  return new Date(`${date}T12:00:00.000Z`).toISOString();
+}
+
+function toRow(data: AvaliacaoFisicaFormValues, currentMedidasExtra?: Json | null) {
+  const calculated = calculateAvaliacaoMetrics(data);
   return {
+    data: toAssessmentDate(data.data),
     peso_kg: data.peso_kg ?? null,
     altura_cm: data.altura_cm ?? null,
     circunferencia_cintura_cm: data.circunferencia_cintura_cm ?? null,
@@ -20,8 +32,9 @@ function toRow(data: AvaliacaoFisicaFormValues) {
     circunferencia_braco_cm: data.circunferencia_braco_cm ?? null,
     circunferencia_coxa_cm: data.circunferencia_coxa_cm ?? null,
     percentual_gordura: data.percentual_gordura ?? null,
-    massa_magra_kg: data.massa_magra_kg ?? null,
-    massa_gorda_kg: data.massa_gorda_kg ?? null,
+    massa_magra_kg: calculated.massaMagraKg ?? null,
+    massa_gorda_kg: calculated.massaGordaKg ?? null,
+    medidas_extra: buildMedidasExtra(data, currentMedidasExtra),
     resumo_paciente: data.resumo_paciente || null,
   };
 }
@@ -58,16 +71,40 @@ export async function updateAvaliacaoFisicaAction(
   }
   const supabase = await createClient();
 
+  const { data: existing, error: existingError } = await supabase
+    .from("avaliacoes_fisicas")
+    .select("medidas_extra, disponivel_paciente")
+    .eq("id", id)
+    .eq("auth_id", authId)
+    .maybeSingle();
+
+  if (existingError || !existing) return { success: false, message: "Avaliação não encontrada." };
+  if (existing.disponivel_paciente && !parsed.data.resumo_paciente?.trim()) {
+    return { success: false, message: "Revogue o acesso do paciente antes de apagar o resumo liberado." };
+  }
+
   const { error } = await supabase
     .from("avaliacoes_fisicas")
     .update({
       consulta_id: parsed.data.consulta_id || null,
-      ...toRow(parsed.data),
+      ...toRow(parsed.data, existing.medidas_extra),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("auth_id", authId);
 
   if (error) return { success: false, message: `Erro ao atualizar avaliação: ${error.message}` };
+
+  if (existing.disponivel_paciente && parsed.data.resumo_paciente?.trim()) {
+    const { error: summaryError } = await supabase
+      .from("avaliacoes_resumos_paciente")
+      .update({ resumo: parsed.data.resumo_paciente.trim() })
+      .eq("avaliacao_id", id)
+      .eq("auth_id", authId);
+    if (summaryError) {
+      return { success: false, message: `As medidas foram salvas, mas o resumo liberado não foi atualizado: ${summaryError.message}` };
+    }
+  }
 
   revalidatePath(`/pacientes/${authId}`);
   return { success: true, message: "Avaliação atualizada." };
@@ -77,9 +114,16 @@ export async function deleteAvaliacaoFisicaAction(id: string, authId: string): P
   await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
 
-  const { data: existing } = await supabase.from("avaliacoes_fisicas").select("path").eq("id", id).single();
+  const { data: existing } = await supabase
+    .from("avaliacoes_fisicas")
+    .select("path")
+    .eq("id", id)
+    .eq("auth_id", authId)
+    .maybeSingle();
 
-  const { error } = await supabase.from("avaliacoes_fisicas").delete().eq("id", id);
+  if (!existing) return { success: false, message: "Avaliação não encontrada." };
+
+  const { error } = await supabase.from("avaliacoes_fisicas").delete().eq("id", id).eq("auth_id", authId);
   if (error) return { success: false, message: `Erro ao excluir avaliação: ${error.message}` };
 
   if (existing?.path) await supabase.storage.from(BUCKET).remove([existing.path]);
@@ -98,7 +142,14 @@ export async function uploadBodymetrixPdfAction(id: string, authId: string, form
 
   const supabase = await createClient();
 
-  const { data: existing } = await supabase.from("avaliacoes_fisicas").select("path").eq("id", id).single();
+  const { data: existing } = await supabase
+    .from("avaliacoes_fisicas")
+    .select("path")
+    .eq("id", id)
+    .eq("auth_id", authId)
+    .maybeSingle();
+
+  if (!existing) return { success: false, message: "Avaliação não encontrada." };
 
   const path = `${authId}/${crypto.randomUUID()}.pdf`;
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: "application/pdf" });
@@ -107,7 +158,8 @@ export async function uploadBodymetrixPdfAction(id: string, authId: string, form
   const { error: updateError } = await supabase
     .from("avaliacoes_fisicas")
     .update({ bucket: BUCKET, path, updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("auth_id", authId);
 
   if (updateError) {
     await supabase.storage.from(BUCKET).remove([path]);
@@ -140,7 +192,8 @@ export async function disponibilizarAvaliacaoAction(
     .from("avaliacoes_fisicas")
     .select("resumo_paciente")
     .eq("id", id)
-    .single();
+    .eq("auth_id", authId)
+    .maybeSingle();
 
   if (fetchError || !avaliacao) return { success: false, message: "Avaliação não encontrada." };
   if (!avaliacao.resumo_paciente?.trim()) {
@@ -158,8 +211,16 @@ export async function disponibilizarAvaliacaoAction(
   const { error: updateError } = await supabase
     .from("avaliacoes_fisicas")
     .update({ disponivel_paciente: true, disponibilizado_em: agora })
-    .eq("id", id);
-  if (updateError) return { success: false, message: `Erro ao disponibilizar: ${updateError.message}` };
+    .eq("id", id)
+    .eq("auth_id", authId);
+  if (updateError) {
+    await supabase
+      .from("avaliacoes_resumos_paciente")
+      .delete()
+      .eq("avaliacao_id", id)
+      .eq("auth_id", authId);
+    return { success: false, message: `Erro ao disponibilizar: ${updateError.message}` };
+  }
 
   let emailMessage = "";
   if (options.enviarEmail) {
@@ -184,13 +245,18 @@ export async function revogarAvaliacaoAction(id: string, authId: string): Promis
   await assertPermission("avaliacoes.editar");
   const supabase = await createClient();
 
-  const { error: deleteError } = await supabase.from("avaliacoes_resumos_paciente").delete().eq("avaliacao_id", id);
+  const { error: deleteError } = await supabase
+    .from("avaliacoes_resumos_paciente")
+    .delete()
+    .eq("avaliacao_id", id)
+    .eq("auth_id", authId);
   if (deleteError) return { success: false, message: `Erro ao revogar: ${deleteError.message}` };
 
   const { error: updateError } = await supabase
     .from("avaliacoes_fisicas")
     .update({ disponivel_paciente: false })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("auth_id", authId);
   if (updateError) return { success: false, message: `Erro ao revogar: ${updateError.message}` };
 
   revalidatePath(`/pacientes/${authId}`);
@@ -205,7 +271,8 @@ export async function interpretarBodymetrixAction(id: string, authId: string): P
     .from("avaliacoes_fisicas")
     .select("bucket, path, resumo_paciente")
     .eq("id", id)
-    .single();
+    .eq("auth_id", authId)
+    .maybeSingle();
 
   if (fetchError || !avaliacao?.path) {
     return { success: false, message: "Envie o PDF do Bodymetrix antes de interpretar." };
@@ -232,7 +299,8 @@ export async function interpretarBodymetrixAction(id: string, authId: string): P
       resumo_paciente: avaliacao.resumo_paciente?.trim() ? avaliacao.resumo_paciente : resultado.resumo_paciente_sugerido,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("auth_id", authId);
 
   if (updateError) return { success: false, message: `Erro ao salvar interpretação: ${updateError.message}` };
 
