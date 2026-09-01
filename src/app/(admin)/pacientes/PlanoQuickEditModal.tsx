@@ -125,9 +125,9 @@ export function PlanoQuickEditModal({ open = false, paciente, pacientes = [], on
             className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-brand"
           >
             {PLAN_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            {!paciente && <optgroup label="Serviços de treino">
+            <optgroup label="Serviços de treino">
               {TRAINING_PLAN_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-            </optgroup>}
+            </optgroup>
           </select>
         </FieldGroup>
         <div className="grid grid-cols-2 gap-3">
