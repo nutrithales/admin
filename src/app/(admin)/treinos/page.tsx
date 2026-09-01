@@ -30,6 +30,14 @@ function daysBetween(a:Date,b:Date){return Math.floor((startOfDay(a).getTime()-s
 function fmtDate(value:string|null){if(!value)return "—";return new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit"}).format(new Date(value))}
 function fmtDuration(sec:number){if(!sec)return "—";const m=Math.round(sec/60);return `${m} min`}
 function csvCell(v:unknown){return `"${String(v??"").replaceAll('"','""')}"`}
+function nomePacienteDoTemplate(tpl:Template){
+ if(tpl.bloco==="Hipertrofia Feminina – Ênfase em Glúteos"){
+  const codigo=tpl.nome.match(/\b([ABC])$/)?.[1];
+  return codigo?`HFEG ${codigo}`:"HFEG";
+ }
+ return tpl.nome;
+}
+
 
 export default function TreinosPage(){
  const sb=useMemo(()=>createClient() as any,[]);
@@ -98,7 +106,7 @@ export default function TreinosPage(){
  async function aplicarTemplate(tpl:Template,destino=pacienteId){
   if(!destino)return alert("Selecione um paciente para receber o treino.");setSaving(true);
   const count=todosTreinos.filter(x=>x.paciente_id===destino).length;
-  const r=await sb.from("treino_programas").insert({paciente_id:destino,nome:tpl.nome,objetivo:tpl.objetivo,bloco:tpl.bloco,observacoes:tpl.descricao,frequencia_semanal:tpl.frequencia_semanal,template_id:tpl.id,ordem:count+1,status:"ativo"}).select("id").single();
+  const nomePaciente=nomePacienteDoTemplate(tpl);const codigo=tpl.bloco==="Hipertrofia Feminina – Ênfase em Glúteos"?tpl.nome.match(/\b([ABC])$/)?.[1]??null:null;\n  const r=await sb.from("treino_programas").insert({paciente_id:destino,nome:nomePaciente,codigo,objetivo:tpl.objetivo,bloco:tpl.bloco==="Hipertrofia Feminina – Ênfase em Glúteos"?"HFEG":tpl.bloco,observacoes:tpl.descricao,frequencia_semanal:tpl.frequencia_semanal,template_id:tpl.id,ordem:count+1,status:"ativo"}).select("id").single();
   if(r.error||!r.data){setSaving(false);return alert(r.error?.message||"Não foi possível aplicar o modelo.")}
   const lista=templateEx[tpl.id]??[];if(lista.length){const ins=await sb.from("treino_exercicios").insert(lista.map((e,i)=>({treino_id:r.data.id,exercicio_biblioteca_id:e.exercicio_biblioteca_id,bloco_ordem:e.bloco_ordem||1,bloco_nome:e.bloco_nome||"Principal",ordem:e.ordem||i+1,nome:e.nome,series:e.series,repeticoes:e.repeticoes,rir:e.rir,rpe:e.rpe,descanso_seg:e.descanso_seg,carga_inicial:e.carga_inicial,video_url:e.video_url,observacoes:e.observacoes})));if(ins.error){setSaving(false);return alert("O treino foi criado, mas houve erro ao copiar os exercícios.")}}
   setSaving(false);await refreshCore();setPacienteId(destino);setView("prescricao");alert("Treino adicionado ao paciente. O modelo original permaneceu intacto.")
