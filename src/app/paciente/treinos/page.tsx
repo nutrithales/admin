@@ -9,7 +9,7 @@ function normalizeName(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 }
 
-const ADAPTIVE_LOAD_PATIENTS = new Set(["leandro borges", "pedro muniz", "thales rosa"]);
+const ADAPTIVE_LOAD_PATIENTS = new Set(["leandro borges", "pedro muniz", "thales rosa", "vinicius sales"]);
 type TrainingPatient = { id: string; nome: string | null; treino_liberado: boolean };
 
 export default async function PacienteTreinosPage() {
