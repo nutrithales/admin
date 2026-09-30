@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { SERVICOS, type ServicoKey } from "@/lib/pagamentos/catalogo";
 
-type PagamentoInsert = { paciente_id:string; servico:string; valor:number; pago_em:string; forma_pagamento?:string; observacoes?:string; descricao_nota:string; nota_emitida:boolean };
+type PagamentoInsert = { paciente_id:string|null; servico:string; valor:number; pago_em:string; forma_pagamento?:string; observacoes?:string; descricao_nota:string; nota_emitida:boolean };
 
 export async function listPagamentos() {
   const supabase = await createClient();
@@ -11,9 +11,16 @@ export async function listPagamentos() {
   if (error) return [];
   return data ?? [];
 }
-export async function createPagamentoAction(form: { paciente_id:string; servico:ServicoKey; valor:number; pago_em:string; forma_pagamento?:string; observacoes?:string }) {
+export async function createPagamentoAction(form: { paciente_id?:string; servico:ServicoKey; valor:number; pago_em:string; forma_pagamento?:string; observacoes?:string }) {
   const supabase = await createClient();
-  const payload: PagamentoInsert = { ...form, descricao_nota: SERVICOS[form.servico].descricao, nota_emitida:false };
+  const isAvulso = form.servico === "lancamento_avulso";
+  if (!isAvulso && !form.paciente_id) return { success:false, message:"Selecione um paciente para este serviço." };
+  const payload: PagamentoInsert = {
+    ...form,
+    paciente_id: form.paciente_id || null,
+    descricao_nota: SERVICOS[form.servico].descricao,
+    nota_emitida:false,
+  };
   const { error } = await (supabase as any).from("pagamentos").insert(payload);
   if (error) return { success:false, message:error.message };
   revalidatePath("/pagamentos"); return { success:true, message:"Pagamento registrado." };
