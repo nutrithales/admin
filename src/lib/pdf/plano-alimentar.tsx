@@ -65,6 +65,7 @@ export interface PlanoPdfItem {
 }
 
 export interface PlanoPdfOpcao {
+  observacoes?: string | null;
   numero: number;
   nome?: string | null;
   itens: PlanoPdfItem[];
@@ -149,7 +150,7 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
             </View>
             {refeicao.opcoes.length > 1 && <Text style={styles.escolhaText}>Escolha uma das opções abaixo.</Text>}
             {refeicao.opcoes.map((opcao) => (
-              <View key={opcao.numero} style={styles.opcaoBox} wrap={false}>
+              <View key={opcao.numero} style={styles.opcaoBox}>
                 <View style={styles.opcaoHeader}>
                   <Text style={styles.opcaoBadge}>OPÇÃO {opcao.numero}</Text>
                   <Text style={styles.opcaoNome}>{opcao.nome || (opcao.numero === 1 ? "Principal" : "Alternativa")}</Text>
@@ -163,6 +164,7 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
                     {item.ingredientes?.map((ing, k) => <Text key={k} style={styles.ingredienteLine}>• {ing.nome} ({Math.round(ing.quantidade_g)}g)</Text>)}
                   </View>
                 ))}
+                {opcao.observacoes && <Text style={styles.refeicaoObservacoesText}>{opcao.observacoes}</Text>}
               </View>
             ))}
             {refeicao.observacoes && (
@@ -174,7 +176,7 @@ export function PlanoAlimentarPdf({ data }: { data: PlanoPdfData }) {
         ))}
 
         {data.observacoes && (
-          <View style={styles.observacoesBox} wrap={false}>
+          <View style={styles.observacoesBox}>
             <Text style={styles.observacoesTitle}>Orientações</Text>
             <Text style={styles.observacoesText}>{data.observacoes}</Text>
           </View>
