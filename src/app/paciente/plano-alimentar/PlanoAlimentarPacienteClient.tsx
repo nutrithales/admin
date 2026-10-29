@@ -1,5 +1,6 @@
 "use client";
 
+import { baixarMeuPlanoPdfAction } from "@/services/paciente-plano-pdf.actions";
 import { useMemo, useState } from "react";
 import {
   ChevronDown,
@@ -46,6 +47,26 @@ function dicaDaOpcao(refeicao: string, nomeOpcao?: string | null) {
 function slugRefeicao(id: string) { return `refeicao-${id}`; }
 
 export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDashboard }) {
+  const [baixandoPdf, setBaixandoPdf] = useState(false);
+  const [erroPdf, setErroPdf] = useState("");
+  async function baixarPdf() {
+    setBaixandoPdf(true);
+    setErroPdf("");
+    try {
+      const result = await baixarMeuPlanoPdfAction();
+      if (!result.success) { setErroPdf(result.message); return; }
+      const bytes = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Meu_plano_alimentar.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch { setErroPdf("Não foi possível baixar o PDF. Tente novamente."); }
+    finally { setBaixandoPdf(false); }
+  }
   const [opcaoPorRefeicao, setOpcaoPorRefeicao] = useState<Record<string, number>>({});
   const [subAberta, setSubAberta] = useState<Record<string, boolean>>({});
   const [vegetalAberto, setVegetalAberto] = useState<Record<string, boolean>>({});
@@ -81,6 +102,14 @@ export function PlanoAlimentarPacienteClient({ plano }: { plano: PacientePlanoDa
           </div>
         </div>
       </section>
+
+      <div>
+        <button type="button" onClick={baixarPdf} disabled={baixandoPdf} aria-busy={baixandoPdf}
+          className="min-h-12 w-full rounded-2xl bg-ink-deep px-4 py-3 text-sm font-bold text-white disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto">
+          {baixandoPdf ? "Gerando PDF…" : "Baixar dieta em PDF"}
+        </button>
+        {erroPdf && <p role="alert" className="mt-2 text-sm text-red-700">{erroPdf}</p>}
+      </div>
 
       <section id="refeicoes" className="scroll-mt-3 rounded-[20px] border border-border/80 bg-surface p-3 shadow-card sm:p-4">
         <div className="flex items-center justify-between gap-3 px-1">
