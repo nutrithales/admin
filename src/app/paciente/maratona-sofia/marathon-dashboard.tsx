@@ -3,11 +3,11 @@ import { useMemo, useState } from "react";
 import { Check, ChevronRight, Droplets, Flag, HeartPulse, ListChecks, MapPin, PackageCheck, Utensils, Zap } from "lucide-react";
 type Meal=[string,string[]];
 const regular:Meal[]=[
-["Café da manhã",["Pão integral 75 g","Ovos cozidos 100 g (2 unidades)","Banana 80 g","Mel 15 g","Creme de ricota 20 g"]],
+["Café da manhã",["Pão integral 75 g (3 fatias de aproximadamente 25 g)","Ovos cozidos 100 g (2 unidades)","Banana 80 g","Mel 15 g","Creme de ricota 20 g"]],
 ["Lanche da manhã",["Iogurte desnatado 170 g","Banana 80 g","Aveia 10 g"]],
 ["Almoço",["Arroz branco cozido 150 g","Feijão cozido 80 g","Frango 100 g","Cenoura cozida 100 g","Azeite 5 g"]],
-["Lanche energético",["Pão integral 50 g","Doce de leite 30 g","Banana 80 g"]],
-["Lanche da tarde",["Pão integral 75 g","Frango desfiado 50 g","Creme de ricota 20 g","Maçã 130 g"]],
+["Lanche energético",["Pão integral 50 g (2 fatias de aproximadamente 25 g)","Doce de leite 30 g","Banana 80 g"]],
+["Lanche da tarde",["Pão integral 75 g (3 fatias de aproximadamente 25 g)","Frango desfiado 50 g","Creme de ricota 20 g","Maçã 130 g"]],
 ["Jantar",["Arroz cozido 150 g","Frango 90 g","Cenoura cozida 100 g","Azeite 5 g"]],
 ["Ceia substitutiva (somente se pulou o lanche da manhã)",["Iogurte 170 g","Aveia 20 g","Banana 50 g"]]
 ];
@@ -28,7 +28,7 @@ const fri:Meal[]=[
 ["Ceia",["Banana 100 g","Mel 20 g"]]
 ];
 const sat:Meal[]=[...fri.slice(0,1),["Lanche da manhã",["Iogurte desnatado 170 g","Banana 100 g","Suco de laranja 250 ml"]],...fri.slice(2,3),["Lanche da tarde",["Pão francês 50 g (1 unidade)","Geleia 40 g","Banana 100 g"]],["Jantar especial: nhoque",["Nhoque de batata cozido 250 g","Molho de tomate suave 100 g","Frango desfiado 80 g","Azeite 5 g"]],["Ceia opcional",["Suco de laranja 250 ml","Biscoito de maisena 30 g"]]];
-const days:{label:string;date:string;title:string;meals:Meal[]}[]=[{label:"Seg",date:"09/11",title:"Manter a rotina",meals:regular},{label:"Ter",date:"10/11",title:"Recuperação e constância",meals:regular},{label:"Qua",date:"11/11",title:"Preparar o abastecimento",meals:regular},{label:"Qui",date:"12/11",title:"Mais carboidrato, sem exageros",meals:thu},{label:"Sex",date:"13/11",title:"Distribuir a energia",meals:fri},{label:"Sáb",date:"14/11",title:"Véspera: nhoque no jantar",meals:sat},{label:"Dom",date:"15/11",title:"Dia da maratona",meals:[["02h–02h30 • Café da manhã",["Pão branco 100 g","Geleia 30 g","Banana 80 g","Água fracionada conforme sede"]],["05h • Largada",["Conferir sua onda de largada"]],["Durante a prova",["Seguir a programação de géis já testada","Beber nos postos conforme sede e estratégia testada"]],["Depois da chegada",["Líquidos conforme perdas","Carboidratos + 20–40 g de proteínas conforme tolerância"]]]}];
+const days:{label:string;date:string;title:string;meals:Meal[]}[]=[{label:"Seg",date:"09/11",title:"Manter a rotina",meals:regular},{label:"Ter",date:"10/11",title:"Recuperação e constância",meals:regular},{label:"Qua",date:"11/11",title:"Preparar o abastecimento",meals:regular},{label:"Qui",date:"12/11",title:"Mais carboidrato, sem exageros",meals:thu},{label:"Sex",date:"13/11",title:"Distribuir a energia",meals:fri},{label:"Sáb",date:"14/11",title:"Véspera: nhoque no jantar",meals:sat},{label:"Dom",date:"15/11",title:"Dia da maratona",meals:[["02h–02h30 • Café da manhã",["Pão branco de forma 100 g (4 fatias de aproximadamente 25 g)","Geleia 30 g","Banana 80 g","Água fracionada conforme sede"]],["05h • Largada",["Conferir sua onda de largada"]],["Durante a prova",["Seguir a programação de géis já testada","Beber nos postos conforme sede e estratégia testada"]],["Depois da chegada",["Líquidos conforme perdas","Carboidratos + 20–40 g de proteínas conforme tolerância"]]]}];
 const gels=[["00h20","Carbs 40 sem cafeína",40,0],["00h50","Carbs Maracujá",21,0],["01h20","Carbs 40 sem cafeína",40,0],["01h50","Carbs 40 sem cafeína",40,0],["02h20","Guaraná",20,75],["02h50","Carbs 40 sem cafeína",40,0],["03h20","BT400 NIT",20,100],["03h40","Carbs Maracujá",21,0],["04h00","Carbs Maracujá",21,0]] as const;
 const checklist=[["Documentos","Documento com foto, comprovante da inscrição e termo assinado"],["Kit oficial","Retirar no Museu Oscar Niemeyer, de 12 a 14/11, no horário agendado"],["Equipamentos","Tênis e meias já usados, roupa, número de peito, relógio carregado"],["Nutrição","Separar e identificar os 9 géis do cronograma; conferir embalagem e validade"],["Véspera","Planejar deslocamento, jantar conhecido, alarmes e descanso"],["Largada","Chegar com antecedência; confirmar portão, onda e banheiros"]];
 const times=[5,10,15,20,21.097,25,30,35,40,42.195].map(km=>({km,time:Math.round(km*6)}));
