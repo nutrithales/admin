@@ -31,7 +31,7 @@ const sabado=[
 sexta[5]
 ] as const;
 const resumo={
-"12/11 • Quinta":{kcal:2180,carbo:430,proteina:99,gordura:25},
+"12/11 • Quinta":{kcal:2279,carbo:429,proteina:97,gordura:24},
 "13/11 • Sexta":{kcal:2744,carbo:529,proteina:110,gordura:27},
 "14/11 • Sábado":{kcal:2856,carbo:551,proteina:106,gordura:28}
 } as const;
@@ -45,7 +45,7 @@ const dias=[
 ["09/11 • Segunda","Rotina habitual / reduzir cargas conforme treino",base],
 ["10/11 • Terça","Rotina habitual / recuperar bem",base],
 ["11/11 • Quarta","Rotina habitual / evitar déficit calórico",base],
-["12/11 • Quinta","Aumento inicial • cerca de 430 g de carboidratos",quinta],
+["12/11 • Quinta","Aumento inicial • cerca de 429 g de carboidratos",quinta],
 ["13/11 • Sexta","Carga de carboidratos • cerca de 529 g",sexta],
 ["14/11 • Sábado","Véspera — nhoque no jantar • cerca de 551 g",sabado],
 ["15/11 • Domingo","MARATONA — largada e recuperação",prova]
@@ -69,7 +69,7 @@ if(user.id!=="856fb8c0-8972-456e-8cb5-6602a25faeee")redirect("/paciente");
 return <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 text-slate-800">
 <a href="/paciente" className="underline text-sm">← Voltar à área do paciente</a>
 <header className="rounded-3xl bg-emerald-950 text-white p-7"><p className="text-emerald-200 text-sm">SOFIA ROMAY OLIVEIRA</p><h1 className="text-3xl font-bold mt-2">Dashboard da semana da maratona</h1><p className="mt-2">Curitiba • 09 a 15 de novembro de 2026</p><div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">{[["Peso de referência","60 kg"],["Prova","42,195 km"],["Pace","6:00 min/km"],["Previsão","4h13min"]].map(([a,b])=><div className="bg-white/10 rounded-xl p-3" key={a}><p className="text-xs text-emerald-200">{a}</p><strong>{b}</strong></div>)}</div></header>
-<section className="bg-amber-50 rounded-2xl p-5 text-sm"><strong>Plano especial para avaliação nutricional</strong><p className="mt-2">As porções são uma proposta baseada na alimentação atual e não substituem a avaliação clínica. Nos dias 13–14/11, os cardápios calculados fornecem aproximadamente 529 g e 551 g de carboidratos (8,8 e 9,2 g/kg para 60 kg). Na quinta, aproximadamente 430 g. São estimativas para marcas e alimentos padronizados, com necessidade de conferir rótulos do nhoque, geleia, pães e preparações; a ingestão pode ser reduzida se ocorrer distensão ou desconforto. Ajustar volume e alimentos à tolerância nos treinos. Evitar testes novos na prova. O plano alimentar habitual permanece separado.</p></section>
+<section className="bg-amber-50 rounded-2xl p-5 text-sm"><strong>Plano especial para avaliação nutricional</strong><p className="mt-2">As porções são uma proposta baseada na alimentação atual e não substituem a avaliação clínica. Nos dias 13–14/11, os cardápios calculados fornecem aproximadamente 529 g e 551 g de carboidratos (8,8 e 9,2 g/kg para 60 kg). Na quinta, aproximadamente 429 g. São estimativas para marcas e alimentos padronizados, com necessidade de conferir rótulos do nhoque, geleia, pães e preparações; a ingestão pode ser reduzida se ocorrer distensão ou desconforto. Ajustar volume e alimentos à tolerância nos treinos. Evitar testes novos na prova. O plano alimentar habitual permanece separado.</p></section>
 
 <section className="rounded-2xl border p-5 space-y-4">
 <h2 className="text-2xl font-bold">Como seguir esta semana — passo a passo</h2>
