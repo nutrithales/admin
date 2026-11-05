@@ -43,7 +43,7 @@ export default function IntestinalTracker({ patientId, initialRecords }: {
   async function save() {
     setSaving(true);setError("");setMessage("");
     try {
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(form.data)) throw new Error("Escolha uma data válida.");
+      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(form.data)) throw new Error("Escolha uma data válida.");
       const supabase = createClient();
       const payload = {
         paciente_id: patientId, data: form.data,
