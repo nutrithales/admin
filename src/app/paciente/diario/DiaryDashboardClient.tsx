@@ -16,6 +16,9 @@ type RecordRow = { data: string; dados: DayData };
 
 const NONE_OPTION: MealOption = { id: "none", label: "Não fiz essa refeição", kcal: 0, p: 0, c: 0, f: 0 };
 const RAFAEL_GROLLA_ID = "8616a411-b34c-46c3-876d-27325827610c";
+const VINICIUS_SALES_ID = "20c469e7-43c6-41c3-9f19-b5704ced772b";
+type DiaryHistoryMeta = { effectiveFrom: string; previous: MealData; previousTargets: Macro };
+
 
 function dateKey(date: Date) {
   const y = date.getFullYear();
@@ -91,7 +94,15 @@ export default function DiaryDashboardClient({ patientId, patientName, title, ta
 
   const isRafael = patientId === RAFAEL_GROLLA_ID;
 
+  const historyMeta = patientId === VINICIUS_SALES_ID
+    ? (mealData as unknown as { __meta?: DiaryHistoryMeta }).__meta
+    : undefined;
+
   function mealDataForDate(date: Date): MealData {
+    if (historyMeta) {
+      if (dateKey(date) < historyMeta.effectiveFrom) return historyMeta.previous;
+      return Object.fromEntries(Object.entries(mealData).filter(([key]) => key !== "__meta"));
+    }
     if (!isRafael) return mealData;
 
     const day = date.getDay();
@@ -121,12 +132,15 @@ export default function DiaryDashboardClient({ patientId, patientName, title, ta
   }
 
   const key = dateKey(currentDate);
+  const activeTargets = historyMeta && key < historyMeta.effectiveFrom
+    ? historyMeta.previousTargets
+    : targets;
   const dayData = records[key] || {};
   const activeMealData = useMemo(() => mealDataForDate(currentDate), [currentDate, isRafael, mealData]);
   const totals = useMemo(() => totalsFor(dayData, activeMealData), [dayData, activeMealData]);
   const mealIds = Object.keys(activeMealData);
   const doneMeals = mealIds.filter((id) => Boolean(dayData[id])).length;
-  const kcalPct = Math.min(100, Math.round((totals.kcal / Math.max(1, Number(targets.kcal))) * 100));
+  const kcalPct = Math.min(100, Math.round((totals.kcal / Math.max(1, Number(activeTargets.kcal))) * 100));
   const rafaelPlanLabel = isRafael
     ? currentDate.getDay() === 2 || currentDate.getDay() === 4
       ? "Plano B · Terça e Quinta"
@@ -251,12 +265,12 @@ export default function DiaryDashboardClient({ patientId, patientName, title, ta
         <section className="mb-4 overflow-hidden rounded-[22px] bg-[#15442B] p-5 text-white shadow-[0_14px_35px_rgba(21,68,43,.18)]">
           <div className="flex items-center gap-5">
             <div className="relative grid size-[104px] shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#19DD7F ${kcalPct * 3.6}deg, rgba(255,255,255,.12) 0deg)` }}>
-              <div className="grid size-[82px] place-items-center rounded-full bg-[#15442B] text-center"><div><b className="text-[22px] leading-none">{round(totals.kcal)}</b><p className="mt-0.5 text-[9px] uppercase tracking-[.1em] text-white/55">de {round(targets.kcal)} kcal</p></div></div>
+              <div className="grid size-[82px] place-items-center rounded-full bg-[#15442B] text-center"><div><b className="text-[22px] leading-none">{round(totals.kcal)}</b><p className="mt-0.5 text-[9px] uppercase tracking-[.1em] text-white/55">de {round(activeTargets.kcal)} kcal</p></div></div>
             </div>
             <div className="min-w-0 flex-1 space-y-3">
               {([['Proteína','p'],['Carbo','c'],['Gordura','f']] as const).map(([label, macro]) => {
-                const pct = Math.min(100, Number(totals[macro]) / Math.max(1, Number(targets[macro])) * 100);
-                return <div key={macro}><div className="mb-1 flex justify-between text-[10px] font-bold"><span className="text-white/65">{label}</span><span>{round(totals[macro])} / {round(targets[macro])}g</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#19DD7F]" style={{ width: `${pct}%` }} /></div></div>;
+                const pct = Math.min(100, Number(totals[macro]) / Math.max(1, Number(activeTargets[macro])) * 100);
+                return <div key={macro}><div className="mb-1 flex justify-between text-[10px] font-bold"><span className="text-white/65">{label}</span><span>{round(totals[macro])} / {round(activeTargets[macro])}g</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#19DD7F]" style={{ width: `${pct}%` }} /></div></div>;
               })}
             </div>
           </div>
@@ -271,7 +285,7 @@ export default function DiaryDashboardClient({ patientId, patientName, title, ta
         <section className="mb-4 rounded-[18px] bg-white p-4 shadow-sm">
           <p className="mb-3 text-sm font-black text-[#15442B]">Painel da semana</p>
           <div className="grid grid-cols-7 gap-1">{weekRows.map((row) => {
-            const t = totalsFor(row.data, mealDataForDate(row.date)); const future = row.date > new Date(); const has = Boolean(row.data && Object.keys(row.data).length); const ok = has && t.kcal <= Number(targets.kcal) * (isRafael ? 1 : 1.05);
+            const t = totalsFor(row.data, mealDataForDate(row.date)); const future = row.date > new Date(); const has = Boolean(row.data && Object.keys(row.data).length); const dayTarget = historyMeta && row.key < historyMeta.effectiveFrom ? historyMeta.previousTargets.kcal : targets.kcal; const ok = has && t.kcal <= Number(dayTarget) * (isRafael ? 1 : 1.05);
             return <button key={row.key} onClick={() => void changeDate(row.date)} className={`rounded-xl py-2 text-center ${row.key === key ? "bg-[#EFFBF4]" : ""}`}><p className="text-[8px] font-black uppercase text-[#8A958D]">{new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(row.date).slice(0,3)}</p><div className={`mx-auto mt-1 grid size-8 place-items-center rounded-full border-2 text-sm ${future ? "border-dashed border-[#E7E2D4] opacity-40" : !has ? "border-dashed border-[#E7E2D4]" : ok ? "border-[#19DD7F] bg-[#EFFBF4]" : "border-[#D97A72] bg-[#FBEEEE]"}`}>{future || !has ? "" : ok ? "✓" : "!"}</div><p className="mt-1 text-[8px] text-[#8A958D]">{String(row.date.getDate()).padStart(2,'0')}</p></button>;
           })}</div>
           <div className="mt-3 flex flex-wrap gap-3 border-t border-[#EEEADF] pt-3 text-[9px] text-[#87938B]"><span>● dentro do planejado</span><span>● acima da meta</span><span>○ sem registro</span></div>
