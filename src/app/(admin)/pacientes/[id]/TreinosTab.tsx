@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Dumbbell, ExternalLink, Timer, Video } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { createClient } from "@/lib/supabase/client";
@@ -34,10 +35,12 @@ export function TreinosTab({ pacienteId }: { pacienteId: string }) {
   const ativos = treinos.filter((t) => t.status === "ativo");
 
   if (loading) return <Card><CardContent className="py-10 text-center text-sm text-muted">Carregando treinos...</CardContent></Card>;
-  if (!treinos.length) return <Card><CardContent className="py-10 text-center text-sm text-muted">Nenhum treino cadastrado para este paciente.</CardContent></Card>;
+  const runningLink = <Link href={`/pacientes/${pacienteId}/corrida`} className="inline-flex min-h-12 items-center rounded-xl bg-brand-light px-4 py-3 font-bold text-brand-dark">Corridas, conclusões e feedbacks</Link>;
+  if (!treinos.length) return <div className="space-y-4">{runningLink}<Card><CardContent className="py-10 text-center text-sm text-muted">Nenhum treino de musculação cadastrado para este paciente.</CardContent></Card></div>;
 
   return (
     <div className="space-y-5">
+      {runningLink}
       <div>
         <h2 className="text-base font-bold text-ink">Treinos cadastrados</h2>
         <p className="text-sm text-muted">Visualização da prescrição atual e dos exercícios vinculados ao paciente.</p>
