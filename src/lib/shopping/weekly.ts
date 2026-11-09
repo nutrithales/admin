@@ -17,19 +17,25 @@ export function productOptions(name: string): string[] {
 }
 
 // Quantities remain in their prescribed state. Raw purchase estimates are a separate display.
-export function ingredients(name: string, q: number, product?: string): Grocery[] {
+export function ingredients(name: string, q: number, product?: string, measure?: string | null): Grocery[] {
   const n = normalize(name);
   const g = (name: string, quantity = q, extra: Partial<Grocery> = {}): Grocery => ({ name, quantity, unit: "g", ...extra });
   const u = (name: string, quantity: number, note?: string): Grocery => ({ name, quantity, unit: "un", note });
+  if (n.includes("salada") && q > 1) return [g(name, q, { note: "Quantidade prescrita de vegetais; variar os ingredientes conforme as escolhas" })];
   if (n.includes("salada") || n.includes("vegetais tipo") || n.includes("cafe preto")) return [{ name, quantity: 0, unit: "livre", note: "À vontade; quantidade não prescrita" }];
   if (n.startsWith("2 ovos inteiros +")) return [u("Ovo", q / 120 * 2), g("Queijo muçarela", q / 120 * 20)];
   if (n.startsWith("peito de peru (60 g)")) return [g("Peito de peru fatiado", q / 110 * 60), u("Ovo", q / 110)];
   if (n.startsWith("arroz cozido (75 g)")) return [g("Arroz cozido", q / 90 * 75, { preparation: "rice" }), g("Farofa", q / 90 * 15)];
   if (n.includes("fruta de sua preferencia")) return [u(product || "Banana prata", q)];
-  if (n.includes("ovo inteiro") || n === "ovo cozido") return [u("Ovo", q / 50)];
-  if (n.includes("banana prata")) return [u("Banana prata", q / 70, "Referência: 70 g de parte comestível por unidade")];
-  if (n === "maca") return [u("Maçã", q / 130)];
-  if (n === "pera") return [u("Pera", q / 110)];
+  if (n.includes("ovo inteiro") || n === "ovo cozido" || /^ovo de galinha(?:,| )/.test(n)) return [u("Ovo", q / 50)];
+  // Prefer the serving shown in the patient's plan over a universal fruit size.
+  const fruitUnits = normalize(measure ?? "").match(/^(?:≈\s*)?(\d+(?:[.,]\d+)?)\s+(?:unidade|banana|maca|pera)/);
+  const count = fruitUnits ? Number(fruitUnits[1].replace(",", ".")) : undefined;
+  if (n.includes("banana prata")) return [u("Banana prata", count ?? q / 70, count ? "Tamanhos conforme as porções escolhidas no plano" : "Referência: 70 g de parte comestível por unidade")];
+  if (/^maca(?: |$)/.test(n)) return [u("Maçã", count ?? q / 130, count ? "Tamanhos conforme as porções escolhidas no plano" : undefined)];
+  if (/^pera(?: |$)/.test(n)) return [u("Pera", count ?? q / 110)];
+  if (n.includes("yopro") && n.includes("250 ml")) return [u(name, q / 250, "Embalagens de 250 ml; conferir 15 g de proteína por embalagem")];
+  if (n.startsWith("pao de queijo")) return [g("Pão de queijo", q, { note: "Conferir no rótulo se a porção do plano corresponde ao peso cru ou assado" })];
   if (n.includes("barra de proteina")) return [u("Barra de proteína (mínimo 15 g de proteína)", q)];
   if (n === "bombom") return [u("Bombom", q)];
   if (n.includes("atum em agua")) return [u("Atum em água — lata pequena", q * 2, "Escorrer antes de consumir; tamanho da lata conforme o plano")];
@@ -38,18 +44,22 @@ export function ingredients(name: string, q: number, product?: string): Grocery[
   if (n.includes("pao frances")) return [u("Pão francês — 50 g", q / 50)];
   if (n.includes("pao de hamburguer")) return [u("Pão de hambúrguer — 50 g", q / 50)];
   if (n.includes("pao australiano")) return [u("Pão australiano — 50 g", q / 50)];
-  if (n.includes("pao de forma")) return [u("Pão de forma integral — fatia de 25 g", q / 25)];
+  if (n.includes("pao de forma")) return [u(`Pão de forma ${n.includes("integral") ? "integral" : "tradicional"} — fatia de 25 g`, q / 25)];
   if (n.includes("bisnaguinha")) return [u("Bisnaguinha — 20 g", q / 20)];
   if (n.includes("rap10 ou tortilha")) return [u(`${product || "Rap10"} — unidade de 45 g`, q / 45)];
+  if (n === "rap10 fit") return [u("Rap10 Fit — unidade de 33 g", q / 33, "Conferir o peso por unidade no rótulo")];
   if (n.includes("leite desnatado")) return [{ name: "Leite desnatado", quantity: q, unit: "ml" }];
   if (n.includes("azeite")) return [{ name: "Azeite de oliva", quantity: q / 0.91, unit: "ml" }];
   if (n.includes("peito de frango pronto")) return [g("Peito de frango pronto", q, { preparation: "protein" })];
+  if (n.includes("peito") && n.includes("frango") && /grelhado|cozido/.test(n)) return [g("Peito de frango pronto", q, { preparation: "protein" })];
   if (n.includes("patinho moido refogado")) return [g("Patinho moído pronto", q, { preparation: "protein" })];
   if (n.includes("carne bovina magra pronta")) return [g("Carne bovina magra pronta", q, { preparation: "protein" })];
   if (n.includes("carne de porco magra pronta")) return [g("Carne suína magra pronta", q, { preparation: "protein" })];
   if (n.includes("peixe grelhado")) return [g("Peixe grelhado", q, { preparation: "protein" })];
-  if (n.includes("arroz branco cozido") || n.includes("arroz integral cozido")) return [g(n.includes("integral") ? "Arroz integral cozido" : "Arroz cozido", q, { preparation: "rice" })];
+  if (n.includes("arroz") && /branco|polido|integral/.test(n) && n.includes("cozido")) return [g(n.includes("integral") ? "Arroz integral cozido" : "Arroz cozido", q, { preparation: "rice" })];
   if (n.includes("feijao cozido com caldo")) return [g("Feijão cozido com caldo", q, { preparation: "beans" })];
+  if (n.includes("feijao") && n.includes("cozido") && n.includes("caldo")) return [g("Feijão cozido com caldo", q, { preparation: "beans" })];
+  if (n.includes("atum") && n.includes("conserva")) return [g(name, q, { note: "Peso escorrido; conferir o peso drenado da embalagem" })];
   return [g(product || name, q, n.includes("cozid") || n.includes("airfryer") || n.includes("pure") ? { note: "Peso pronto para consumo; rendimento cru não definido" } : {})];
 }
 
@@ -71,7 +81,7 @@ export function buildList(plan: PacientePlanoDashboard, week: Week): Grocery[] {
       const selected = getSelectedItem(plan, item, choice);
       const expanded = !selected.sub && item.ingredientes?.length
         ? item.ingredientes.flatMap(i => ingredients(i.nome, i.quantidadeG))
-        : ingredients(selected.name, selected.q, choice.products[item.id]);
+        : ingredients(selected.name, selected.q, choice.products[item.id], selected.sub?.medidaCaseira ?? item.medidaCaseira);
       for (const row of expanded) {
         const key = `${normalize(row.name)}:${row.unit}`;
         const old = totals.get(key);
