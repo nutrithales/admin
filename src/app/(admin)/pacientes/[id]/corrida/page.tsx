@@ -8,5 +8,5 @@ export default async function AdminRunningPage({ params }: { params: Promise<{ i
   const data = await getRunningData(id);
   if (!data) notFound();
   if (!data.cycles.length) return <main className="p-6"><Link href={`/pacientes/${id}`}>Voltar ao perfil</Link><h1 className="mt-5 text-xl font-bold">Nenhum plano de corrida cadastrado.</h1></main>;
-  return <RunningDashboard data={data} admin backHref={`/pacientes/${id}`} />;
+  return <RunningDashboard data={data} admin backHref={`/pacientes/${id}`} syncHref={`/pacientes/${id}/corrida/garmin`} />;
 }

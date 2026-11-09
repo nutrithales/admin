@@ -15,6 +15,8 @@ const PUBLIC_PATHS = [
   "/api/pacientes/self-register",
   "/api/pacientes/forgot-password",
   "/api/agenda/webhook",
+  // Private iCal subscriptions authenticate with a high-entropy bearer URL in the handler.
+  "/api/corrida/calendario",
 ];
 
 function isPublicPath(pathname: string) {
