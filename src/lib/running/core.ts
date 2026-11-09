@@ -1,8 +1,11 @@
 import { z } from "zod";
 
-export type RunningCycle = { id: string; paciente_id: string; mes: string; liberar_em: string; titulo: string; objetivo: string; orientacoes: string; ativo: boolean };
-export type RunningWorkout = { id: string; ciclo_id: string; data_planejada: string; nome: string; aquecimento: string; principal: string; finalizacao: string; esforco: string; minutos_previstos: number | null; distancia_prevista: number | null; observacoes: string; ordem: number };
-export type RunningRecord = { id: string; treino_id: string; paciente_id: string; data_realizada: string; concluido: boolean; duracao_seg: number | null; distancia_km: number | null; rpe: number | null; dor: number | null; sono_horas: number | null; fc_media: number | null; terreno: string; feedback: string; updated_at: string };
+export type RunningBlock = { id: string; nome: string; descricao: string; tipo: "caminhada" | "leve" | "recuperacao" | "controlado" | "prova"; segundos: number | null; pace_min: number | null; pace_max: number | null; adaptavel: boolean };
+export type BlockResult = { bloco_id: string; segundos: number | null; distancia_km: number | null; comparavel: boolean };
+export type TargetSnapshot = { bloco_id: string; pace_min: number | null; pace_max: number | null; ajuste: number };
+export type RunningCycle = { id: string; paciente_id: string; mes: string; liberar_em: string; titulo: string; objetivo: string; orientacoes: string; ativo: boolean; pace_automatico?: boolean };
+export type RunningWorkout = { id: string; ciclo_id: string; data_planejada: string; nome: string; aquecimento: string; principal: string; finalizacao: string; esforco: string; minutos_previstos: number | null; distancia_prevista: number | null; observacoes: string; ordem: number; blocos?: RunningBlock[] };
+export type RunningRecord = { id: string; treino_id: string; paciente_id: string; data_realizada: string; concluido: boolean; duracao_seg: number | null; distancia_km: number | null; rpe: number | null; dor: number | null; sono_horas: number | null; fc_media: number | null; terreno: string; feedback: string; updated_at: string; resultados_blocos?: BlockResult[]; alvos_snapshot?: TargetSnapshot[] };
 export type RunningData = { patientName: string; today: string; cycles: RunningCycle[]; workouts: RunningWorkout[]; records: RunningRecord[] };
 
 export function brasilDate(now = new Date()) {
@@ -40,4 +43,58 @@ export const recordInput = z.object({
   tempo: z.string().max(12), distancia_km: optionalNumber(0.01, 1000), rpe: optionalNumber(0, 10, true), dor: optionalNumber(0, 10, true),
   sono_horas: optionalNumber(0, 24), fc_media: optionalNumber(30, 250, true),
   terreno: z.enum(["", "Rua", "Esteira", "Pista", "Trilha"]), feedback: z.string().trim().max(3000),
+  blocos: z.array(z.object({ bloco_id: z.string().min(1).max(80), tempo: z.string().max(12), distancia_km: optionalNumber(0.01, 100), comparavel: z.boolean() }).strict()).max(32).optional(),
 }).strict();
+
+const day = (date: string) => Date.parse(`${date}T12:00:00Z`) / 86400000;
+/** Conservative product rule, not a physiological threshold model. Only comparable easy blocks qualify. */
+export function adaptivePace(workouts: RunningWorkout[], records: RunningRecord[], today: string) {
+  const index = new Map(workouts.map(w => [w.id, w]));
+  const recent = records.filter(r => r.concluido && r.data_realizada <= today);
+  const blocked = recent.some(r => {
+    if (day(today) - day(r.data_realizada) > 7) return false;
+    const planned = index.get(r.treino_id);
+    const hardSession = planned?.blocos?.some(b => b.tipo === "controlado" || b.tipo === "prova");
+    return (r.dor != null && r.dor > 0) || (r.rpe != null && (r.rpe >= 9 || (!!planned && !hardSession && r.rpe >= 5)));
+  });
+  if (blocked) return { seconds: 0, evidence: 0, blocked: true, history: [] as { date: string; seconds: number }[] };
+  let seconds = 0;
+  let batch: string[] = [];
+  let lastChange = -Infinity;
+  let lastRun = -Infinity;
+  let lastTerrain = "";
+  const history: { date: string; seconds: number }[] = [];
+  const seen = new Set<string>();
+  // A single date counts once, even with multiple blocks or duplicated activity entries.
+  for (const r of [...recent].sort((a, b) => a.data_realizada.localeCompare(b.data_realizada))) {
+    const w = index.get(r.treino_id);
+    if (!w || seen.has(r.data_realizada) || r.rpe == null || r.rpe < 1 || r.rpe > 3 || r.dor !== 0 || r.sono_horas == null || r.sono_horas < 6 || !["Rua", "Pista", "Esteira"].includes(r.terreno)) continue;
+    if (day(r.data_realizada) - lastRun > 14 && Number.isFinite(lastRun)) { seconds = 0; batch = []; lastChange = -Infinity; history.length = 0; }
+    const qualifies = (r.resultados_blocos ?? []).some(result => {
+      const b = w.blocos?.find(b => b.id === result.bloco_id);
+      if (!b || b.tipo !== "leve" || !b.adaptavel || !b.pace_min || !result.comparavel || !result.segundos || result.segundos < 600 || !result.distancia_km || result.distancia_km < 1) return false;
+      const p = result.segundos / result.distancia_km;
+      // Reject implausible entries and require evidence faster than the current fast edge.
+      return p >= b.pace_min * 0.8 && p <= b.pace_min - seconds - 10;
+    });
+    if (!qualifies) continue;
+    seen.add(r.data_realizada);
+    if (lastTerrain !== r.terreno) batch = [];
+    lastTerrain = r.terreno;
+    lastRun = day(r.data_realizada);
+    batch = batch.filter(date => day(r.data_realizada) - day(date) <= 21);
+    batch.push(r.data_realizada);
+    if (batch.length >= 3 && day(batch.at(-1)!) - day(batch[0]) >= 7 && day(r.data_realizada) - lastChange >= 14 && seconds < 20) {
+      seconds += 5; lastChange = day(r.data_realizada); history.push({ date: r.data_realizada, seconds }); batch = [];
+    }
+  }
+  if (day(today) - lastRun > 14) return { seconds: 0, evidence: batch.length, blocked: false, history: [] as { date: string; seconds: number }[] };
+  return { seconds, evidence: batch.length, blocked: false, history };
+}
+export function blockTargets(workout: RunningWorkout, record: RunningRecord | undefined, offset: number, today: string): TargetSnapshot[] {
+  if (record?.concluido && record.alvos_snapshot?.length) return record.alvos_snapshot;
+  return (workout.blocos ?? []).map(b => {
+    const adjustment = !record?.concluido && workout.data_planejada >= today && b.adaptavel ? offset : 0;
+    return { bloco_id: b.id, pace_min: b.pace_min == null ? null : b.pace_min - adjustment, pace_max: b.pace_max == null ? null : b.pace_max - adjustment, ajuste: adjustment };
+  });
+}

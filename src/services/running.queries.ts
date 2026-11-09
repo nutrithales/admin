@@ -14,7 +14,7 @@ export async function getRunningData(adminPatientId?: string): Promise<RunningDa
   if (patientError) throw new Error("Não foi possível carregar o cadastro.");
   if (!patient) return null;
   const [{ data: cycles, error: cError }, { data: records, error: rError }] = await Promise.all([
-    sb.from("corrida_ciclos").select("id,paciente_id,mes,liberar_em,titulo,objetivo,orientacoes,ativo").eq("paciente_id", patient.id).eq("ativo", true).order("mes"),
+    sb.from("corrida_ciclos").select("id,paciente_id,mes,liberar_em,titulo,objetivo,orientacoes,ativo,pace_automatico").eq("paciente_id", patient.id).eq("ativo", true).order("mes"),
     sb.from("corrida_registros").select("*").eq("paciente_id", patient.id).order("data_realizada", { ascending: false }),
   ]);
   if (cError || rError) throw new Error("Não foi possível carregar as corridas. Tente novamente.");

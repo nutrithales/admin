@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRunningData } from "@/services/running.queries";
 import RunningDashboard from "./RunningDashboard";
-export const metadata = { title: "Corrida e evolução | Nutri Thales" };
+export const metadata = { title: "Corrida | Nutri Thales" };
 export default async function RunningPage() {
   const data = await getRunningData();
   if (!data) redirect("/paciente/login");
