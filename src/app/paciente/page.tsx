@@ -10,6 +10,7 @@ import {
   Dumbbell,
   FileText,
   MessageCircle,
+  ShoppingBasket,
   Sparkles,
   Utensils,
 } from "lucide-react";
@@ -96,7 +97,8 @@ export default async function PacienteDashboardPage() {
   const totalRealizadas = Math.max(0, Number(consultasRealizadas || 0) + consultasIniciais);
   const progresso = consultasIncluidas ? Math.min(100, Math.round((totalRealizadas / consultasIncluidas) * 100)) : 0;
 
-  const paginasAtivas = paginas || [];
+  // Shopping is a standard feature now; omit the older per-patient shortcut.
+  const paginasAtivas = (paginas || []).filter((pagina: { url_pagina?: string | null }) => pagina.url_pagina?.replace(/\/+$/, "") !== "/paciente/lista-de-compras");
   const termosDeTreino = ["treino", "hiit", "muscula", "alongamento", "mobilidade", "corrida"];
   const temTreinoEspecifico = paginasAtivas.some((pagina: any) => {
     const titulo = String(pagina?.titulo || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -111,6 +113,15 @@ export default async function PacienteDashboardPage() {
       title: "Plano alimentar",
       active: Boolean(plano),
       status: plano ? "Disponível" : "Em breve",
+      external: false,
+    },
+    {
+      key: "lista-de-compras",
+      href: "/paciente/lista-de-compras",
+      icon: <ShoppingBasket className="size-[18px]" />,
+      title: "Lista de compras semanal",
+      active: Boolean(plano),
+      status: plano ? "Monte sua semana" : "Aguardando plano",
       external: false,
     },
     ...(temTreinoEspecifico
